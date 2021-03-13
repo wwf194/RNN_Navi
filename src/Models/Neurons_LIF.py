@@ -26,8 +26,8 @@ class Neurons_LIF(nn.Module):
                 self.b = self.dict['b'] = torch.nn.Parameter(torch.zeros((self.dict['input_num']), device=self.device))
             else:
                 self.b = self.dict['b'] = 0.0
-            self.f = self.dict['f'] = self.f = nn.Parameter(torch.zeros((self.dict['input_num'], self.dict['output_num']), device=self.device, requires_grad=True))
-            self.r = self.dict['r'] = self.r = nn.Parameter(torch.zeros((self.dict['input_num'], self.dict['input_num']), device=self.device, requires_grad=True))
+            self.f = self.dict['f'] = nn.Parameter(torch.zeros((self.dict['input_num'], self.dict['output_num']), device=self.device, requires_grad=True))
+            self.r = self.dict['r'] = nn.Parameter(torch.zeros((self.dict['input_num'], self.dict['input_num']), device=self.device, requires_grad=True))
             init_weight(self.r, self.dict['init_weight']['r'])
             init_weight(self.f, self.dict['init_weight']['f'])              
         
