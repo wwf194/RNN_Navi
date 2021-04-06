@@ -30,7 +30,7 @@ class Agent(object):
             self.receive_options(options)
         '''
         self.dict = dict_
-
+        '''
         if self.dict.get('arena_types_test') is not None:
             self.dict['arenas_test'] = []
             self.dict['arena_dicts_test'] = []
@@ -43,14 +43,15 @@ class Agent(object):
             self.box_width_test = self.dict['box_width_test']
             self.box_height_test = self.dict['box_height_test']
             print(self.box_width_test)   
+        '''
         self.stop_prob = self.dict.setdefault('stop_prob', 0.0)
         self.step_num = self.dict.setdefault('step_num', 100)
         self.plot_heat_map = self.plot_act_map
         self.input_mode = self.dict['input_mode']
     def train(self, batch_size):
         path = self.walk_random(num=batch_size)
-        self.optimizer.train(path)
-
+        data = self.prep_path(path)
+        self.optimizer.train(data)
     def receive_options(self, options):
         self.options = options
         self.device = self.options.device
