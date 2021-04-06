@@ -9,7 +9,6 @@ import torch.nn.functional as F
 from Place_Cells import Place_Cells
 from Neurons_LIF import Neurons_LIF
 
-
 class Linear_Navi(nn.Module):
     def __init__(self, dict_=None, load=False, f=None):
         super(Linear_Navi, self).__init__()

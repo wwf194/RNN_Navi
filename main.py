@@ -21,8 +21,8 @@ import importlib
 import shutil
 
 sys.path.append('./src/')
-
 import config_sys
+#print(sys.path)
 from utils import build_model, build_agent, build_arenas, build_optimizer, build_trainer
 from utils import scan_files, copy_files, path_to_module, remove_suffix, select_file, ensure_path, get_device
 from config import Options
@@ -42,13 +42,10 @@ parser.add_argument('-tr', '--trainer', dest='trainer', type=str, default=None, 
 parser.add_argument('-m', '--model', dest='model', type=str, default=None, help='model type. RSLP, RMLP, RSLCNN, RMLCNN, etc.')
 parser.add_argument('-a', '-arenas', dest='arenas', type=str, default='rec', help='arenas param file')
 parser.add_argument('-dl', '--agent', dest='agent', type=str, default=None, help='data loader type.')
-parser.add_argument('-pp', '--param_path', dest='param_path', type=str, default=None, help='path to folder that stores param dict files.')
 parser.add_argument('-cf', '--config', dest='config', type=str, default=None, help='name of config file')
-args = parser.parse_args()
-parser.add_argument('-d', '-device', dest='device', type=str, default='None', help='device')
 #parser.add_argument('-ei', '-separate_ei', dest='separate_ei', type=str, default=None)
 parser.add_argument('-nabt', '-no_anal_before_train', dest='no_anal_before_train', action='store_true')
-parser.add_argument('-pp', '-params_path', dest='params_path', type=str, default=None, help='path to folder that stores params files.')
+parser.add_argument('-pp', '-param_path', dest='param_path', type=str, default=None, help='path to folder that stores params files.')
 args = parser.parse_args()
 
 def main():
@@ -216,9 +213,7 @@ def train(args=None, param_path=None, **kw):
     trainer = build_trainer(trainer_dict)
     agent = build_agent(agent_dict)
     arenas = build_arenas(arenas_dict)
-    # model can be RSLP, RMLP, RCNN ...
     model = build_model(model_dict)
-    # optimizer can be BP, TP or CHL optimizer.
     optimizer = build_optimizer(optimizer_dict)
     optimizer.bind_model(model)
     optimizer.bind_trainer(trainer)
@@ -242,13 +237,14 @@ def train_simplified():
     options.trainer.train()
     options.save(save_path='./config/afterTrain/')
 
-def scan_param_files(path):
+def scan_param_file(path):
     if not path.endswith('/'):
         path.append('/')
     model_files = scan_files(path, r'dict_model(.*)\.py', raise_not_found_error=False)
     optimizer_files = scan_files(path, r'dict_optimizer(.*)\.py', raise_not_found_error=False)
     trainer_files = scan_files(path, r'dict_trainer(.*)\.py', raise_not_found_error=False)
     agent_files = scan_files(path, r'dict_agent(.*)\.py', raise_not_found_error=False)
+    arenas_files = scan_files(path, r'dict_arenas(.*)\.py', raise_not_found_error=False)
     config_files = scan_files(path, r'config(.*)\.py', raise_not_found_error=False)
 
     '''
@@ -267,7 +263,8 @@ def scan_param_files(path):
         'optimizer_files': optimizer_files,
         'trainer_files': trainer_files,
         'agent_files': agent_files,
-        'config_files': config_files
+        'arenas_files': arenas_files,
+        'config_files': config_files,
     }
     '''
     files_path = os.listdir(path)
@@ -300,13 +297,13 @@ def scan_param_files(path):
     return model_files, optimizer_files, trainer_files, agent_files
     '''
 
-def get_param_files(args, verbose=True):
+def get_param_file(args, verbose=True):
     path = args.param_path
     if path is None:
         path = './params/'
     if not path.endswith('/'):
         path += '/'
-    files = scan_param_files(path)
+    files = scan_param_file(path)
     
     model_files = files['model_files']
     agent_files = files['agent_files']
@@ -320,7 +317,7 @@ def get_param_files(args, verbose=True):
     #print(trainer_files)
     #print(agent_files)
 
-    model_str, = args.model
+    model_str = args.model
     agent_str = args.agent
     arenas_str = args.arenas
     optimizer_str = args.optimizer
@@ -329,21 +326,24 @@ def get_param_files(args, verbose=True):
     files_str = [model_str, optimizer_str, trainer_str, agent_str, arenas_str]
     component_files = [model_files, agent_files, arenas_files, optimizer_files, trainer_files]
     
-    use_config_file = False
-    if len(config_files)==1:
-        sig = True
-        for files in component_files:
-            if len(files)>1 or len(files)==0:
-                sig = False
-        if sig:
+    if args.config is None:
+        use_config_file = False
+    else:
+        use_config_file = False
+        if len(config_files)==1:
+            sig = True
+            for files in component_files:
+                if len(files)>1 or len(files)==0:
+                    sig = False
+            if sig:
+                use_config_file = True
+        if args.config is not None:
             use_config_file = True
-    if args.config is not None:
-        use_config_file = True
 
     if use_config_file: # get param files according to a config file.
         if verbose:
             print('Setting params according to config file.')
-        config_file = select_file(args.config, config_files, default_file=None, 
+        config_file = select_file(args.config, config_files, default_file='config_rnn_ei_pc', 
             match_prefix='config_', match_suffix='.py', file_type='config')
         print(config_file)
         Config_Param = importlib.import_module(path_to_module(path) + remove_suffix(config_file))
@@ -352,6 +352,7 @@ def get_param_files(args, verbose=True):
             optimizer_file = Config_Param.optimizer_file
             trainer_file = Config_Param.trainer_file
             agent_file = Config_Param.agent_file
+            arenas_file = Config_Param.arenas_file
         except Exception:
             raise Exception('Cannot read file name from %s'%(path + config_file))
     
@@ -362,13 +363,14 @@ def get_param_files(args, verbose=True):
             'model_file': model_file,
             'optimizer_file': optimizer_file,
             'trainer_file': trainer_file,
+            'arenas_file': arenas_file,
             'agent_file': agent_file,
             'config_file': config_file,
             'files_path': path,
         }
     else: # get param files directly
         if verbose:
-            print('Setting params according to model, optimzier, trainer, and agent param files.')
+            print('Setting params according to model, optimzier, agent, arenas param files.')
         if len(model_files)==0:
             raise Exception('No available model param file.')
         elif len(model_files)==1:
@@ -390,15 +392,19 @@ def get_param_files(args, verbose=True):
                 match_prefix='dict_agent_', match_suffix='.py', file_type='data loader')
 
         if len(arenas_files)==0:
-            raise Exception('No available agent param file.')
+            #print('aaa')
+            raise Exception('No available arenas param file.')
         elif len(arenas_files)==1:
-            agent_file = arenas_files[0]
+            #print('bbb')
+            arenas_file = arenas_files[0]
             if verbose:
-                print('Using the only available agent file: %s'%agent_file)
+                print('Using the only available arenas file: %s'%arenas_file)
         else:
+            #print('ccc')
             arenas_file = select_file(arenas_str, arenas_files, default_file='dict_arenas_squaqre.py', 
-                match_prefix='dict_agent_', match_suffix='.py', file_type='arenas')
-        
+                match_prefix='dict_arenas_', match_suffix='.py', file_type='arenas')
+            #print(arenas_file)
+
         if len(optimizer_files)==0:
             raise Exception('No available optimizer param file.')
         elif len(optimizer_files)==1:
@@ -427,14 +433,15 @@ def get_param_files(args, verbose=True):
         
         return {
             'model_file': model_file,
-            'arenas_file': arenas_file,
             'agent_file': agent_file,
+            'arenas_file': arenas_file,
             'optimizer_file': optimizer_file,
             'trainer_file': trainer_file,
             'files_path': path,
         }
 def get_param_dicts(args):
-    component_files = get_param_files(args)
+    component_files = get_param_file(args)
+    #print(component_files.keys())
     model_file = component_files['model_file']
     agent_file = component_files['agent_file']
     arenas_file = component_files['arenas_file']
@@ -450,7 +457,7 @@ def get_param_dicts(args):
     agent_dict = Agent_Param.dict_
 
     Arenas_Param = importlib.import_module(path_to_module(files_path) + remove_suffix(arenas_file))
-    agent_dict = Arenas_Param.dict_
+    arenas_dict = Arenas_Param.dict_
 
     Optimizer_Param = importlib.import_module(path_to_module(files_path) + remove_suffix(optimizer_file))
     optimizer_dict = Optimizer_Param.dict_
@@ -466,6 +473,7 @@ def get_param_dicts(args):
         'optimizer_dict': optimizer_dict,
         'trainer_dict': trainer_dict,
         'agent_dict': agent_dict,
+        'arenas_dict': arenas_dict,
         'device': device
     }
 
@@ -473,9 +481,15 @@ def get_param_dicts(args):
     Optimizer_Param.interact(env_info)
     Trainer_Param.interact(env_info)
     Agent_Param.interact(env_info)
+    Arenas_Param.interact(env_info)
 
-    return model_dict, optimizer_dict, trainer_dict, agent_dict
-
+    return {
+        'model_dict': model_dict,
+        'optimizer_dict': optimizer_dict,
+        'trainer_dict': trainer_dict,
+        'agent_dict': agent_dict,
+        'arenas_dict': arenas_dict
+    }
 def copy_project_files(args):
     path = args.path
     if path is None:
@@ -511,7 +525,7 @@ def copy_project_files(args):
         'params/__init__.py'
     ]
     copy_files(file_list, path_from='./', path_to=path)
-    param_files = get_param_files(args)
+    param_files = get_param_file(args)
     #param_files = list(map(lambda file:param_path + file, param_files))
     model_file = param_files['model_file']
     agent_file = param_files['agent_file']

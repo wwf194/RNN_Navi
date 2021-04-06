@@ -10,8 +10,6 @@ from config import *
 from utils_anal import *
 from Place_Cells import Place_Cells
 
-
-
 class LSTM_Navi(nn.Module):
     def __init__(self, dict_=None, load=False, f=None):
         super(LSTM_Navi, self).__init__()

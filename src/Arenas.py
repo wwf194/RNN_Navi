@@ -14,24 +14,26 @@ from utils import get_from_dict, ensure_path, write_dict_info, set_instance_vari
 from utils_arena import *
 
 class Arenas():
-    def __init__(self, dict_, options=None, load=False):
+    def __init__(self, dict_, load=False):
+        '''
         if options is not None:
             self.receive_options(options)
         else:
             raise Exception('Arenas: options must not be None.')
+        '''
         self.dict = dict_
         self.arenas = []
         for arena_dict in self.dict['arena_dicts']:
-            self.arenas.append(self.build_arena(arena_dict, options=self.options, load=load))
+            self.arenas.append(self.build_arena(arena_dict, load=load))
     
         self.set_current_arena(0)
 
-    def build_arena(self, arena_dict, options, load):
+    def build_arena(self, arena_dict, load):
         type_ = arena_dict['type']
         if type_ in ['sqaure', 'polygon', 'square_max', 'rec', 'rectangle', 'rec_max'] or isinstance(type_, int):
-            return Arena_Polygon(arena_dict, self.options, load=load)    
+            return Arena_Polygon(arena_dict, load=load)    
         elif type_ in ['circle']:
-            return Arena_Circle(arena_dict, self.options, load=load)
+            return Arena_Circle(arena_dict, load=load)
         else:
             raise Exception('Arenas: Unsupported arena_type: '+str(type_))
     
@@ -68,10 +70,8 @@ class Arenas():
         return self.arenas[index]
 
 class Arena(abc.ABC):
-    def __init__(self, dict_, options=None, load=False):
+    def __init__(self, dict_, load=False):
         self.dict = dict_
-
-        
     #@abc.abstractmethod
     def get_random_xy(self): # must be implemented by child class.
         return
@@ -124,15 +124,18 @@ class Arena(abc.ABC):
         return arena_mask
 
 class Arena_Polygon(Arena):
-    def __init__(self, dict_, options=None, load=False):
-        super().__init__(dict_, options, load)
+    def __init__(self, dict_, load=False):
+        super().__init__(dict_, load)
         
-        set_instance_variable(self, self.dict, ['width', 'height', 'type'])
-        #self.width = self.dict['width'] # maximum rectangle
-        #self.height =self.dict['height']
-        #self.type_ = self.type = self.dict['type']
+        #set_instance_variable(self, self.dict, ['width', 'height', 'type'])
+        self.width = self.dict['width'] # maximum rectangle
+        self.height =self.dict['height']
+        self.type_ = self.type = self.dict['type']
         
         self.center_coord = get_from_dict(self.dict, 'center_coord', default=[0.0, 0.0], write_default=True)
+        #print(self.center_coord)
+        #print(self.width)
+        #print(self.height)
         # By opencv convention, origin is at the top-left corner of the pircture.
         self.x0 = self.center_coord[0] - self.width / 2
         self.x1 = self.center_coord[0] + self.width / 2
@@ -348,8 +351,8 @@ class Arena_Polygon(Arena):
             return # to be implemented
 
 class Arena_Circle(Arena):
-    def __init__(self, dict_, options=None, load=False):
-        super().__init__(dict_, options, load)
+    def __init__(self, dict_, load=False):
+        super().__init__(dict_, load)
 
         self.type = self.dict['type'] = 'circle'
         self.radius = get_from_dict(self.dict, 'radius', default=None, write_default=True)

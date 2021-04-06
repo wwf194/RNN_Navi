@@ -24,9 +24,11 @@ from utils_plot import get_res_xy, plot_polyline, get_int_coords_np, norm_and_ma
 from anal_grid import get_score
 
 class Agent(object):
-    def __init__(self, dict_, options):
+    def __init__(self, dict_, load=False):
+        '''
         if options is not None:
             self.receive_options(options)
+        '''
         self.dict = dict_
 
         if self.dict.get('arena_types_test') is not None:
@@ -43,8 +45,12 @@ class Agent(object):
             print(self.box_width_test)   
         self.stop_prob = self.dict.setdefault('stop_prob', 0.0)
         self.step_num = self.dict.setdefault('step_num', 100)
-
         self.plot_heat_map = self.plot_act_map
+        self.input_mode = self.dict['input_mode']
+    def train(self, batch_size):
+        path = self.walk_random(num=batch_size)
+        self.optimizer.train(path)
+
     def receive_options(self, options):
         self.options = options
         self.device = self.options.device
@@ -80,6 +86,20 @@ class Agent(object):
         else:
             print('invalid random_init value:'+str(random_init))
         '''
+    def prep_path(self, path): # prep data from path to feed to rnn model.
+        if self.input_mode in ['v_xy']:
+            inputs = torch.from_numpy(path['xy_delta']).float() # [batch_size, step_num, (vx, vy)]
+            outputs = torch.from_numpy(path['xy']).float() # [batch_size, step_num, (x, y)]
+        elif self.input_mode in ['v_hd']:
+            inputs = torch.from_numpy(np.stack((path['theta_xy'][:,:,0], path['theta_xy'][:,:,1], path['delta_xy']), axis=-1)).float() # [batch_size, step_num, (cos, sin, v)]
+            outputs = torch.from_numpy(path['xy']).float() # [batch_size, step_num, (x, y)]
+        else:
+            raise Exception('Unknown input mode:'+str(self.input_mode))
+        init = torch.from_numpy(path['xy_init']).float() # [batch_size, 2]
+        inputs = inputs.to(self.device)
+        init = init.to(self.device)
+        outputs = outputs.to(self.device)
+        return (inputs, init), outputs
     def walk_random(self, step_num=None, **kw): # step_num, t_total, random_init=False, arena_index=None, use_test_arenas_=None, full_info=False): #return random trajectories
         step_num = self.step_num if step_num is None else step_num
         batch_size = search_dict(kw, ['batch_size', 'num'], default=100)

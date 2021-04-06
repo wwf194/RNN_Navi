@@ -49,7 +49,7 @@ class RNN_Navi(nn.Module):
             self.get_perform = self.get_loss = self.get_perform_pc
             self.perform_list = {'pc':0.0, 'act':0.0, 'weight':0.0}
             self.dict_N['i0_size'] = self.pc_num
-            self.prepare_x0 = self.prepare_x0_pc
+            self.prep_x0 = self.prep_x0_pc
             self.output_mode = self.dict['output_mode'] = 'pc'
         elif self.target in ['pc_coords', 'coords_pc']:
             self.place_cells = Place_Cells(dict_ = self.dict['place_cells'], options=options, load=self.load)
@@ -61,7 +61,7 @@ class RNN_Navi(nn.Module):
             self.get_perform = self.get_loss = self.get_perform_coords
             self.perform_list = {'coords':0.0, 'act':0.0, 'weight':0.0}
             self.dict_N['i0_size'] = self.input_num
-            self.prepare_x0 = self.prepare_x0_null
+            self.prep_x0 = self.prep_x0_null
             self.output_mode = self.dict['output_mode'] = 'coords'
         else:
             raise Exception('RNN_Navi: Invalid target: %s'%str(target))
@@ -124,7 +124,7 @@ class RNN_Navi(nn.Module):
         x = x.view(x_size[0] * x_size[1], x_size[2])
         i_ = ( x.mm(self.get_i()) ) # [batch_size, step_num, N_num]
         i_ = i_.view(x_size[0], x_size[1], -1)
-        r0 = self.N.reset(x=x, i0=self.prepare_x0(x0))
+        r0 = self.N.reset(x=x, i0=self.prep_x0(x0))
         '''
         if pre_input:
             x0 = torch.squeeze(x[:, 0, :]).detach().cpu().numpy() #(batch_size, input_num)
@@ -150,11 +150,11 @@ class RNN_Navi(nn.Module):
         act = torch.cat(act_list, dim=1)
         return output, act
         #return output_list, act_list
-    def prepare_x0_pc(self, x0): # [batch_size, input_num]
+    def prep_x0_pc(self, x0): # [batch_size, input_num]
         #return torch.squeeze(self.place_cells.get_act(torch.unsqueeze(x0, 1))) # [batch_size, pc_num]
         # to be implemented: batch_size must be > 1.
         return torch.squeeze(self.place_cells.get_act(torch.unsqueeze(x0, 1))).float() # [batch_size, pc_num]
-    def prepare_x0_null(self, x0):
+    def prep_x0_null(self, x0):
         return x0 # [batch_size, input_num]
     def report_perform(self, prefix=''):
         print(prefix, end='')
@@ -175,10 +175,10 @@ class RNN_Navi(nn.Module):
             self.perform_list[key] = 0.0
     def get_perform(self):
         return # to be implemented
-    def get_perform_coords(self, path):
-        x, y = self.prepare_path(path)
-        #x: [batch_size, sequence_length, input_num]
-        #y: [batch_size, sequence_length, output_num]
+    def get_perform_coords(self, data):
+        x, y = self.prep_path(path)
+        #x: [batch_size, step_num, input_num]
+        #y: [batch_size, step_num, output_num]
         output, act = self.forward(x)
         self.dict['act_avg'] = torch.mean(torch.abs(act))
         loss_coords = self.main_coeff * F.mse_loss(output, y, reduction='mean')
@@ -204,7 +204,7 @@ class RNN_Navi(nn.Module):
         return loss_coords + loss_act + loss_weight
 
     def get_perform_pc(self, path):
-        x, y = self.prepare_path(path)
+        x, y = self.prep_path(path)
         pc_output = self.place_cells.get_act(y)
         output, act = self.forward(x)
         
@@ -247,7 +247,7 @@ class RNN_Navi(nn.Module):
         self.batch_count += 1
         return loss_pc + loss_act + loss_weight
     def get_perform_pc_coords(self, path):
-        x, y = self.prepare_path(path)
+        x, y = self.prep_path(path)
         output, act = self.forward(x)
         self.dict['act_avg'] = torch.mean(torch.abs(act))
         pc_output = self.place_cells.get_act(y)
@@ -273,7 +273,7 @@ class RNN_Navi(nn.Module):
         if verbose:
             print('alternating pc peak activation from %.3e to %.3e'%(act_center_0, act_center_1))
     def get_output_ratio_pc(self, path, verbose):
-        x, y = self.prepare_path(path)
+        x, y = self.prep_path(path)
         pc_output = self.place_cells.get_act(y)
         output, act = self.forward(x)
         pc_mean = torch.mean(pc_output).item()
@@ -320,9 +320,10 @@ class RNN_Navi(nn.Module):
                     print( np.sum(np.abs(value_np-self.cache[name])) / np.sum(np.abs(self.cache[name])) )
 
                 self.cache[name] = value_np
-    def prepare_path(self, path):
+    '''
+    def prep_path(self, path):
         if self.input_mode in ['v_xy']:
-            inputs = torch.from_numpy(path['xy_delta']).float() # [batch_size, sequence_length, (vx, vy)]
+            inputs = torch.from_numpy(path['xy_delta']).float() # [batch_size, step_num, (vx, vy)]
             outputs = torch.from_numpy(path['xy']).float() # [batch_size, step_num, (x, y)]
         elif self.input_mode in ['v_hd']:
             inputs = torch.from_numpy(np.stack((path['theta_xy'][:,:,0], path['theta_xy'][:,:,1], path['delta_xy']), axis=-1)).float() # [batch_size, step_num, (cos, sin, v)]
@@ -330,11 +331,11 @@ class RNN_Navi(nn.Module):
         else:
             raise Exception('Unknown input mode:'+str(self.input_mode))
         init = torch.from_numpy(path['xy_init']).float() # [batch_size, 2]
-
         inputs = inputs.to(self.device)
         init = init.to(self.device)
         outputs = outputs.to(self.device)
         return (inputs, init), outputs
+    '''
     def plot_recurrent_weight(self, ax, cmap):
         weight_r = self.get_r().detach().cpu().numpy()
         weight_r_mapped, weight_min, weight_max = norm_and_map(weight_r, cmap=cmap, return_min_max=True) # weight_r_mapped: [N_num, res_x, res_y, (r,g,b,a)]
