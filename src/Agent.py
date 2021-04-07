@@ -17,7 +17,7 @@ import cv2 as cv
 
 import config_sys
 config_sys.set_sys_path()
-from utils import get_from_dict, search_dict, get_name_args, ensure_path, contain, remove_suffix, get_ax
+from utils import get_from_dict, get_items_from_dict, search_dict, get_name_args, ensure_path, contain, remove_suffix, get_ax
 from utils_plot import *
 from utils_plot import get_res_xy, plot_polyline, get_int_coords_np, norm_and_map
 
@@ -56,16 +56,32 @@ class Agent(object):
 
         if self.task in ['pc', 'pc_coords']:
             self.place_cells = Place_Cells(dict_ = self.dict['place_cells'], load=self.load)
-
+    def prep_data(self, path):
+        dxy, xy_init, xy = get_items_from_dict(self.prep_path(path), ['input', 'input_init', 'output'])
+        if self.task in ['pc']:
+            data = {
+                'input': dxy,
+                'input_init': self.place_cells.get_act_batch(xy_init),
+                'output': self.place_cells.get_act(xy),
+            }
+        elif self.task in ['coords']:
+            data = {
+                'input': dxy,
+                'input_init': xy_init,
+                'output': xy
+            }
+        return data        
     def train(self, batch_size):
         path = self.walk_random(num=batch_size)
-        data = self.prep_path(path)
+        data = self.prep_data(path)
         self.optimizer.train(data)
+    '''
     def receive_options(self, options):
         self.options = options
         self.device = self.options.device
         self.arenas = self.options.arenas
         self.model = self.options.model if hasattr(options, 'model') else None
+    '''
     def get_init_xy(self, init_method, arena, batch_size):
         init_method, init_args = get_name_args(init_method)
         
@@ -96,20 +112,26 @@ class Agent(object):
         else:
             print('invalid random_init value:'+str(random_init))
         '''
+
     def prep_path(self, path): # prep data from path to feed to rnn model.
         if self.input_mode in ['v_xy']:
-            inputs = torch.from_numpy(path['xy_delta']).float() # [batch_size, step_num, (vx, vy)]
-            outputs = torch.from_numpy(path['xy']).float() # [batch_size, step_num, (x, y)]
+            i = torch.from_numpy(path['dx_dy']).float() # [batch_size, step_num, (v_x, v_y)]
+            o = torch.from_numpy(path['xy']).float() # [batch_size, step_num, (x, y)]
         elif self.input_mode in ['v_hd']:
-            inputs = torch.from_numpy(np.stack((path['theta_xy'][:,:,0], path['theta_xy'][:,:,1], path['delta_xy']), axis=-1)).float() # [batch_size, step_num, (cos, sin, v)]
-            outputs = torch.from_numpy(path['xy']).float() # [batch_size, step_num, (x, y)]
+            i = torch.from_numpy(np.stack((path['theta_xy'][:,:,0], path['theta_xy'][:,:,1], path['delta_xy']), axis=-1)).float() # [batch_size, step_num, (cos, sin, v)]
+            o = torch.from_numpy(path['xy']).float() # [batch_size, step_num, (x, y)]
         else:
             raise Exception('Unknown input mode:'+str(self.input_mode))
-        init = torch.from_numpy(path['xy_init']).float() # [batch_size, 2]
-        inputs = inputs.to(self.device)
-        init = init.to(self.device)
-        outputs = outputs.to(self.device)
-        return (inputs, init), outputs
+        i_init = torch.from_numpy(path['xy_init']).float() # [batch_size, 2]
+        #i = inputs.to(self.device)
+        #i_iniy = init.to(self.device)
+        #o = outputs.to(self.device)
+        return {
+            'input': i,
+            'input_init': i_init,
+            'output': o,
+        }
+        # return (inputs, init), outputs
     def walk_random(self, step_num=None, **kw): # step_num, t_total, random_init=False, arena_index=None, use_test_arenas_=None, full_info=False): #return random trajectories
         step_num = self.step_num if step_num is None else step_num
         batch_size = search_dict(kw, ['batch_size', 'num'], default=100)
@@ -182,12 +204,13 @@ class Agent(object):
         sig = False
         if mode in ['train', 'full']:
             path['theta_xy'] = np.stack( [np.cos(theta), np.sin(theta)], axis=1 )[:,:-1,:] # head direction.
-            path['theta_init'], path['xy_init'] = theta[:,0], xy[:,0,:]
+            path['theta_init'] = theta[:,0]
+            path['xy_init'] = xy[:,0,:]
             #path['x_init'] = xy[:,1,0,None]
             #path['y_init'] = xy[:,1,1,None]
             #path['theta_target'] = theta[:,1:-1] # [batch_size, step_num, (hd)]
             path['xy'] = xy[:,1:,:] # [batch_size, step_num, 2]
-            path['xy_delta'] = np.diff(xy, axis=1) # [batch_size, step_num, 2]. position difference between current position and previous position.
+            path['dx_dy'] = np.diff(xy, axis=1) # [batch_size, step_num, 2]. position difference between current position and previous position.
             #path['target_x'] = xy[:,1:-1,0] # [batch_size, step_num, (x)]
             #path['target_y'] = xy[:,1:-1,1] # [batch_size, step_num, (y)]
             sig = True
@@ -285,21 +308,22 @@ class Agent(object):
 
         return ax
     def plot_path(self, model=None, plot_num=5, arena=None, save=True, save_path='./', save_name='path_plot', cmap='jet', **kw):
-        arena = self.arenas.get_current_arena() if arena is None else arena
-        
+        if arena is None:
+            arena = self.arenas.get_current_arena()
         # generate path
         path = self.walk_random(num=plot_num, arena=arena, mode='full', **kw)
         
         # get model prediction
         model = self.model if model is None else model
         if model is None:
-            raise Exception('Agent.plot_heat_map: Error: model is None.')        
-        output, act = model.forward(model.prepare_path(path)[0]) # act: [plot_num, step_num, N_num]
+            raise Exception('Agent.plot_heat_map: Error: model is None.')  
+        print(model.forward(self.prep_data(path)).keys())      
+        output = get_items_from_dict(model.forward(self.prep_data(path)), ['output']) # act: [plot_num, step_num, N_num]
         output = output.detach().cpu().numpy()
-        if model.output_mode in ['xy', 'coords']:
+        if self.task in ['coords']:
             xy_pred = output # [plot_num, step_num, (x, y)]
-        elif model.output_mode in ['pc', 'place_cells']:
-            xy_pred = model.place_cells.get_coords_from_act(output) # [plot_num, step_num, sample_num, (x, y)]
+        elif self.task in ['pc']:
+            xy_pred = self.place_cells.get_coords_from_act(output) # [plot_num, step_num, sample_num, (x, y)]
             print(xy_pred.shape)
             xy_pred = xy_pred.mean(axis=2) # [plot_num, step_num, (x, y)]
             print(xy_pred.shape)
@@ -414,7 +438,7 @@ class Agent(object):
             with torch.no_grad():
                 model.eval()
                 path = self.walk_random(num=batch_size, arena=arena, step_num=step_num)
-                output, act = model.forward(model.prepare_path(path)[0]) # act: [batch_size, step_num, N_num]
+                output, act = get_items_from_dict(model.forward(self.prep_data(path)), ['output', 'act']) # act: [batch_size, step_num, N_num]
                 #print(act[0])
                 #input()
                 xy_float = path['xy'] # [batch_size, step_num, 2]
@@ -482,7 +506,7 @@ class Agent(object):
         act_map, point_count = act_map_info['act_map'], act_map_info['point_count']
 
         self.plot_sample_num(point_count, arena, save_path=save_path)
-        if model.output_mode in ['pc']:
+        if self.task in ['pc']:
             self.plot_place_cells_prediction(model=model, act_map_info=act_map_info, save_path=save_path)
         self.plot_act_map(save=True, save_path=save_path, plot_num='all', model=model, trainer=trainer, arena=arena, separate_ei=separate_ei, act_map_info=act_map_info)
 
@@ -790,11 +814,15 @@ class Agent(object):
         act_map = act_map.transpose((1, 0)) # [res_x * res_y, N_num]
         pc_map = model.get_output_from_act(act_map) # [res_x * res_y, place_cells_num]
         pc_map = pc_map.transpose((1, 0)) # [place_cells_num, res_x * res_y]
-        pc_map = pc_map.reshape([model.place_cells.N_num, res_x, res_y])
-        model.place_cells.plot_place_cells(act_map=pc_map, arena=arena, save_path=save_path, save_name='place_cells_predicted.png')
+        pc_map = pc_map.reshape([self.place_cells.N_num, res_x, res_y])
+        self.place_cells.plot_place_cells(act_map=pc_map, arena=arena, save_path=save_path, save_name='place_cells_predicted.png')
 
         '''
         if save:
             ensure_path(save_path)
             plt.savefig(save_path + save_name)
         '''
+    def bind_arenas(self, arenas):
+        self.arenas = arenas
+        if hasattr(self, 'place_cells'):
+            self.place_cells.bind_arenas(arenas)

@@ -4,20 +4,28 @@ main_loss = 'MSE'
 act_coeff = 0.0
 weight_coeff = 0.0
 noise_coeff = 0.0
-bias = True
+r_bias = True # whether to add bias when cal h from u through recurrent weight.
 time_const = 0.1
-act_func = 'tanh'
-init_method = 'mlp'
-if init_method in ['mlp']:
+act_func = 'relu'
+init_method = 'linear'
+if init_method in ['linear']:
     init_method_dict = {
-        'type': 'mlp',
-        'act_func': decoder_act_func,
+        'type': 'linear',
+        #'act_func': decoder_act_func,
         'bias': True,
-        'lr': lr_decoder,
-        'batch_norm': decoder_batch_norm, # batch norm automatically alterate scale of weights and biases are to appropriate scale.
+        #'batch_norm': decoder_batch_norm, # batch norm automatically alterate scale of weights and biases are to appropriate scale.
         'act_func_on_last_layer': False,
         'bias_on_last_layer': False,
-    },
+    }
+
+input_method = 'linear'
+if input_method in ['linear']:
+    input_method_dict = {
+        'type': 'linear',
+        'bias': True,
+        'bias_on_last_layer': True,
+        'act_func_on_last_layer': False,
+    }
 
 if separate_ei:
     E_ratio = 0.8
@@ -50,17 +58,19 @@ disable_connection = []
 
 dict_ = {
     'name': 'Navi',
-    'type': 'rnn', # 'rnn' for RNN_Navi, 'lstm' for LSTM_Navi, 'linear' for Linear_Navi.
+    'type': 'rslp', # 'rslp' for RSLP_Navi, 'lstm' for LSTM_Navi, 'linear' for Linear_Navi.
     #'task': None, # to be determined
     'input_num': None, # to be determined,
-    'output_num': None, # to be determined
+    'input_init_num': None, # to be determined,
+    'output_num': None, # to be determined,
     'N_num': N_num,
     'init_weight': init_weight,
-    'init_method': 'mlp', # method to init network state at t=0.
+    'init_method': init_method_dict, # method to init network state at t=0.
+    'input_method': input_method_dict,
     'separate_ei': separate_ei,
     'cons_method': 'abs',
     'input_mode': None, # to be determined
-    'bias': bias,
+    'r_bias': r_bias,
     'loss':{
         'main':{
             'type': main_loss,
@@ -71,9 +81,6 @@ dict_ = {
         'dynamic_weight_coeff': dynamic_weight_coeff,
     },
     'mask': [],
-    'bias': bias,
-    'input_num': N_num,
-    'output_num': None,
     'no_self': True,
     'init_weight': init_weight, # method to init weight.
     'N_num': N_num,
@@ -89,10 +96,16 @@ if separate_ei:
     dict_['I_num'] = N_num - dict_['E_num']
     dict_['cons_weight'] = dict_['cons_weight'] = cons_weight
     dict_['cons_method'] = 'abs'
-    dict_['time_const_e'] = time_const_e
-    dict_['time_const_i'] = time_const_i
-    dict_['act_func_e'] = act_func_e
-    dict_['act_func_i'] = act_func_i
+    if time_const_e == time_const_i:
+        dict_['time_const'] = time_const_e
+    else:
+        dict_['time_const_e'] = time_const_e
+        dict_['time_const_i'] = time_const_i
+    if act_func_e == act_func_i:
+        dict_['act_func'] = act_func_e
+    else:
+        dict_['act_func_e'] = act_func_e
+        dict_['act_func_i'] = act_func_i
 else:
     dict_['time_const'] = time_const
     dict_['act_func'] = act_func

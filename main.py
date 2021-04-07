@@ -207,7 +207,7 @@ def train(args=None, param_path=None, **kw):
     model_dict = component_dicts['model_dict']
     arenas_dict = component_dicts['arenas_dict']
     agent_dict = component_dicts['agent_dict']
-    optimizer_dict = component_dicts['model_dict']
+    optimizer_dict = component_dicts['optimizer_dict']
     trainer_dict = component_dicts['trainer_dict']
     
     trainer = build_trainer(trainer_dict)
@@ -218,12 +218,14 @@ def train(args=None, param_path=None, **kw):
     optimizer.bind_model(model)
     optimizer.bind_trainer(trainer)
 
-    trainer.bind_arenas(arenas)
+    #trainer.bind_arenas(arenas)
     trainer.bind_model(model)
     trainer.bind_optimizer(optimizer)
     trainer.bind_agent(agent)
-    trainer.train() # the model needs some data from agent to get response properties.
 
+    agent.bind_arenas(arenas)
+
+    trainer.train() # the model needs some data from agent to get response properties.
 def load():
     loaded_items = {}
 

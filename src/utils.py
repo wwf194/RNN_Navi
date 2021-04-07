@@ -6,8 +6,8 @@ def build_model(dict_, load=False):
 
     type_ = dict_['type']
     print('Options: model_type:%s'%type_)
-    if type_ in ['rnn']:
-        return Models.RNN_Navi(dict_=dict_, load=load)
+    if type_ in ['rnn', 'rslp']:
+        return Models.RSLP_Navi(dict_=dict_, load=load)
     else:
         raise Exception('Options: Invalid model type: %s'%str(type_))
 

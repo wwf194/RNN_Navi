@@ -18,6 +18,8 @@ class Optimizer_BP(Optimizer):
     def bind_model(self, model):
         self.model = model
         self.build_optimizer()
+    def bind_trainer(self, trainer):
+        self.trainer = trainer
         self.update_epoch_init()
         if self.scheduler is not None:
             self.dict['scheduler_dict'] = None
@@ -34,8 +36,9 @@ class Optimizer_BP(Optimizer):
                 self.model.alt_pc_act_strength(path)
             else:
                 raise Exception('Invalid update_before_train item: %s'%str(item))
+    
     def build_optimizer(self, load=False):
-        self.optimizer = utils_model.build_optimizer(self.dict['optimizer'], model=self.model, load=load)
+        self.optimizer = utils_model.build_optimizer(self.dict['optimizer_dict'], model=self.model, load=load)
     def train(self, data):
         self.optimizer.zero_grad()
         loss = self.model.get_loss(data)

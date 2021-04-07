@@ -19,18 +19,18 @@ from utils_model import *
 from utils_plot import get_float_coords, get_float_coords_np, get_res_xy
 
 class Place_Cells(object):
-    def __init__(self, dict_, options=None, load=False):
+    def __init__(self, dict_, load=False):
         self.dict = dict_
         #print(self.dict.keys())
         try:
             self.N_num = self.dict["N_num"]        
-        except Exception: #to support older version
+        except Exception: # to support older version
             self.N_num = self.dict["cell_num"]
         self.load = load
-    def receive_options(self, options):
-        self.options = options
-        self.device = self.options.device
-        self.arenas = self.options.arenas
+
+        self.device = self.dict['device']
+    def bind_arenas(self, arenas):
+        self.arenas = arenas
         self.arena = self.arenas.get_arena(self.dict["arena_index"])
         if self.load:
             self.coords = self.dict["coords"].to(self.device)
@@ -43,7 +43,7 @@ class Place_Cells(object):
             torch.nn.init.uniform_(x, a=-self.box_width/2, b=self.box_width/2)
             y = torch.zeros((self.N_num)).to(device)
             torch.nn.init.uniform_(y, a=-self.box_height/2, b=self.box_height/2)
-            self.coords = torch.stack([x, y], dim=1) #[place_cell_num, 2]
+            self.coords = torch.stack([x, y], dim=1) #[pc_num, 2]
             self.dict["coords"] = self.coords
             '''
         self.xy = self.coords
@@ -54,7 +54,6 @@ class Place_Cells(object):
         self.act_center = search_dict(self.dict, ["act_center", "peak"])
         self.norm_local = search_dict(self.dict, ["norm_local"], default=True, write_default=True)
 
-        
         
         print("PlaceCells: type:%s"%self.type)
         if self.type in ["diff_gaussian"]:
@@ -70,14 +69,17 @@ class Place_Cells(object):
             print("act_positive:%s"%(str(self.act_positive)))
         else:
             self.get_act = self.get_activation = self.get_act_single
-
         print("act_decay:%f act_center:%f norm_local:%s"%(self.act_decay, self.act_center, str(self.norm_local)))
-        
-    def get_act_single(self, points): #points:[batch_size, step_num, (x,y)]
+    def get_act_batch(self, points): # points: [batch_size, (x,y)]
+        points = torch.unsqueeze(points, dim=1) # [batch_size, 1, (x, y)]
+        pc_act = self.get_act(points) # [batch_size, 1, pc_num]
+        return torch.squeeze(pc_act, dim=1) # [batch_size, pc_num]
+    def get_act_single(self, points): # points: [batch_size, step_num, (x,y)]
+        points = points.to(self.device)
         points_expand = torch.unsqueeze(points, dim=2) #points_expand:[batch_size, step_num, (x,y), 1]
         coords_expand = torch.unsqueeze(torch.unsqueeze(self.coords, dim=0), dim=0) #points_expand:[place_cells_num, (x,y )]
-        vec = points_expand - coords_expand # [batch_size, step_num, place_cell_num, (x,y)]
-        dist = torch.sum(vec ** 2, dim=3) # [batch_size, step_num, place_cell_num, 1]
+        vec = points_expand - coords_expand # [batch_size, step_num, pc_num, (x,y)]
+        dist = torch.sum(vec ** 2, dim=3) # [batch_size, step_num, pc_num, 1]
         dist = torch.squeeze(dist)
         act = torch.exp(- dist / (2 * self.act_decay_2))
         if self.norm_local:
@@ -85,12 +87,13 @@ class Place_Cells(object):
         return self.act_center * act # pos:[batch_size, step_num, act]
 
     def get_act_dual(self, points): # pos:[batch_size, step_num, (x,y)]
+        points = points.to(self.device)
         points_expand = torch.unsqueeze(points, dim=2)
         #print(list(expand_pos.size()))
         coords_expand = torch.unsqueeze(torch.unsqueeze(self.coords, dim=0), dim=0)
         #print(list(expand_coords.size()))
-        vec = points_expand - coords_expand # [batch_size, step_num, place_cell_num, (x,y)]
-        dist = torch.sum(vec ** 2, dim=3, keepdim=True) # [batch_size, step_num, place_cell_num, 1]
+        vec = points_expand - coords_expand # [batch_size, step_num, pc_num, (x,y)]
+        dist = torch.sum(vec ** 2, dim=3, keepdim=True) # [batch_size, step_num, pc_num, 1]
         #print("dist:")
         #print(dist.size())
         #print(dist[:,:,0,:])

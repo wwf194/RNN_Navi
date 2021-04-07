@@ -68,7 +68,6 @@ class Trainer:
         self.train_performs = self.dict['train_performs'] = {}
 
     def train(self, report_in_batch=None, report_interval=None):
-
         if report_in_batch is None:
             if not hasattr(self, 'report_in_batch'):
                 report_in_batch = True
@@ -140,10 +139,12 @@ class Trainer:
         self.agent = options.agent
         #self.model = options.model
         self.arenas = options.arenas
-
+    def bind_agent(self, agent):
+        self.agent = agent
     def bind_model(self, model):
         self.model = model
-
+    def bind_optimizer(self, optimizer):
+        self.optimizer = optimizer
     def anal(self):
         save_path = self.anal_path + 'epoch=%d/'%(self.epoch_index)
         print('Analying...epoch=%d'%(self.epoch_index))
@@ -151,5 +152,8 @@ class Trainer:
         self.agent.plot_path(save_path=save_path, save_name='path_plot.png', model=self.model, plot_num=2)
         print('plotting act map.')
         self.agent.anal_act(save_path=save_path,
-                            model=self.optimizer.model, trainer=self, arena=self.arenas.current_arena(),
-                            separate_ei=self.optimizer.model.separate_ei)
+                            model=self.optimizer.model,
+                            trainer=self,
+                            arena=self.agent.arenas.current_arena(),
+                            separate_ei=self.optimizer.model.separate_ei
+                        )

@@ -1,5 +1,6 @@
 dict_ = {
     'epoch_num': 800,
+    'batch_num': 1000 * 2,
     'batch_size': 500,
     # params about saving model.
     'save_model':True,
