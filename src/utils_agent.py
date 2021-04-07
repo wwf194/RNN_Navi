@@ -33,9 +33,9 @@ def set_constraint_names(net):
         net.weight_names.append(name+".f")
         net.weight_names.append(name+".l")
         net.weight_names.append(name+".r")
-        if(net.f_Dale==True):
+        if(net.f_cons_weight==True):
             net.constraint_names.append(name+".f")
-        if(net.rl_Dale==True):
+        if(net.rl_cons_weight==True):
             net.constraint_names.append(name+".l")
             net.constraint_names.append(name+".r")
 

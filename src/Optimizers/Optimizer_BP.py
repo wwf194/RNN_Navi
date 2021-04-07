@@ -49,7 +49,6 @@ class Optimizer_BP(Optimizer):
         # in **kw: epoch_ratio: epoch_current / epoch_num_in_total
         for func in self.update_func_list:
             func(**kw)
-
     def update_lr_init(self): # define self.scheduler and return an update_lr method according to settings in self.dict_.
         #self.lr_decay = self.dict['lr_decay']
         lr_decay = self.lr_decay = self.dict['lr_decay']

@@ -23,6 +23,8 @@ from utils_plot import get_res_xy, plot_polyline, get_int_coords_np, norm_and_ma
 
 from anal_grid import get_score
 
+from Models.Place_Cells import Place_Cells
+
 class Agent(object):
     def __init__(self, dict_, load=False):
         '''
@@ -30,6 +32,8 @@ class Agent(object):
             self.receive_options(options)
         '''
         self.dict = dict_
+        self.task = self.dict['task']
+        self.input_mode = self.dict['input_mode']
         '''
         if self.dict.get('arena_types_test') is not None:
             self.dict['arenas_test'] = []
@@ -47,7 +51,12 @@ class Agent(object):
         self.stop_prob = self.dict.setdefault('stop_prob', 0.0)
         self.step_num = self.dict.setdefault('step_num', 100)
         self.plot_heat_map = self.plot_act_map
-        self.input_mode = self.dict['input_mode']
+
+        self.load = load
+
+        if self.task in ['pc', 'pc_coords']:
+            self.place_cells = Place_Cells(dict_ = self.dict['place_cells'], load=self.load)
+
     def train(self, batch_size):
         path = self.walk_random(num=batch_size)
         data = self.prep_path(path)

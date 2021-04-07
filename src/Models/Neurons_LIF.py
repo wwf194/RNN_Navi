@@ -8,15 +8,17 @@ from utils_model import *
 from utils import get_name, get_name_args, set_instance_variable
 
 class Neurons_LIF(nn.Module):
-    def __init__(self, dict_, load=False, options=None): #input_num is neuron_num.
+    def __init__(self, dict_, load=False): #input_num is neuron_num.
         super(Neurons_LIF, self).__init__()
+        '''
         if options is not None:
             self.receive_options(options)
+        '''
         self.dict = dict_
         set_instance_variable(self, self.dict, keys=['N_num', 'time_const', 'input_num', 'output_num', 'no_self'])
 
         if self.dict['separate_ei']:
-            set_instance_variable(self, self.dict, keys=['E_num', 'I_num', 'Dale'])
+            set_instance_variable(self, self.dict, keys=['E_num', 'I_num', 'cons_weight'])
         
         if load:
             self.f, self.r, self.b = self.dict['f'], self.dict['r'], self.dict['b']
@@ -32,7 +34,7 @@ class Neurons_LIF(nn.Module):
             init_weight(self.f, self.dict['init_weight']['f'])              
         
         self.init_mode, init_args = get_name_args(self.dict['init_mode'])
-        print('inide_method: %s'%self.init_mode)
+        print('init_method: %s'%self.init_mode)
         if self.init_mode in ['zero']:
             self.reset = self.reset_zero
         elif self.init_mode in ['fixed']:
@@ -83,7 +85,7 @@ class Neurons_LIF(nn.Module):
         else:
             raise Exception('Neurons_LIF: Invalid init_mode:'+str(self.init_mode))
 
-        #set recurrent
+        # set up recurrent weight
         if self.no_self:
             self.r_self_mask = torch.ones( (self.N_num, self.N_num), device=self.device, requires_grad=False )
             for i in range(self.dict['N_num']):
@@ -92,7 +94,7 @@ class Neurons_LIF(nn.Module):
         else:
             self.get_r_noself = lambda :self.r
         self.ei_mask = None
-        if self.dict['separate_ei'] and 'r' in self.Dale:
+        if self.dict['separate_ei'] and 'r' in self.cons_weight:
             self.ei_mask = get_ei_mask(E_num=self.dict['E_num'], N_num=self.dict['N_num'], device=self.device)
             self.get_r_ei = lambda :torch.mm(self.ei_mask, torch.abs(self.get_r_noself()))
         else:
@@ -125,7 +127,7 @@ class Neurons_LIF(nn.Module):
         #print(self.get_r())
         #input()
         #set forward weight
-        if(self.dict['separate_ei'] and 'f' in self.dict['Dale']): #set mask for EI separation
+        if(self.dict['separate_ei'] and 'f' in self.dict['cons_weight']): #set mask for EI separation
             if(self.ei_mask is None):
                 self.ei_mask = get_ei_mask(E_num=self.dict['E_num'], N_num=self.dict['N_num'], device=device)
             self.get_f_ei = lambda :torch.mm(self.ei_mask, torch.abs(self.f))

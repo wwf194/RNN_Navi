@@ -1,11 +1,31 @@
 separate_ei = True
-N_num = 
+N_num = 1024
 main_loss = 'MSE'
 act_coeff = 0.0
 weight_coeff = 0.0
 noise_coeff = 0.0
 bias = True
+time_const = 0.1
+act_func = 'tanh'
+init_method = 'mlp'
+if init_method in ['mlp']:
+    init_method_dict = {
+        'type': 'mlp',
+        'act_func': decoder_act_func,
+        'bias': True,
+        'lr': lr_decoder,
+        'batch_norm': decoder_batch_norm, # batch norm automatically alterate scale of weights and biases are to appropriate scale.
+        'act_func_on_last_layer': False,
+        'bias_on_last_layer': False,
+    },
 
+if separate_ei:
+    E_ratio = 0.8
+    cons_weight = ['r', 'f']
+    time_const_e = time_const_i = time_const
+    act_func_e = act_func_i = act_func
+
+# init weight params
 if separate_ei:
     coeff = 1.0e-1
 else:
@@ -16,17 +36,27 @@ init_weight = {
     'r': ['glorot', coeff],
 }
 
-input_mode = 'v_xy'
+#input_mode = 'v_xy'
+
+dynamic_weight_coeff = {
+    'enable': True,
+    'ratio_to_main_loss': 0.10,
+    'ratio_to_main_loss_min': 0.05,
+    'ratio_to_main_loss_max': 0.20,
+    'target':['r']
+}
+
+disable_connection = []
 
 dict_ = {
     'name': 'Navi',
     'type': 'rnn', # 'rnn' for RNN_Navi, 'lstm' for LSTM_Navi, 'linear' for Linear_Navi.
-    'task': None, # to be determined
-    'input_num': None,# to be determined,
+    #'task': None, # to be determined
+    'input_num': None, # to be determined,
     'output_num': None, # to be determined
     'N_num': N_num,
     'init_weight': init_weight,
-    'init_method':'zero',
+    'init_method': 'mlp', # method to init network state at t=0.
     'separate_ei': separate_ei,
     'cons_method': 'abs',
     'input_mode': None, # to be determined
@@ -34,73 +64,44 @@ dict_ = {
     'loss':{
         'main':{
             'type': main_loss,
-            'coeff':1.0
+            'coeff': 1.0
         },
         'act': act_coeff,
         'weight': weight_coeff,
         'dynamic_weight_coeff': dynamic_weight_coeff,
     },
     'mask': [],
-}
-dict_N={
     'bias': bias,
     'input_num': N_num,
-    'output_num': output_num,
-    'no_self': no_self,
-    'init_method': init_method, # method to init network state at t=0.
+    'output_num': None,
+    'no_self': True,
     'init_weight': init_weight, # method to init weight.
     'N_num': N_num,
-    'Dale': Dale,
-    'separate_ei': separate_ei,
+    'cons_weight': cons_weight,
+    #'separate_ei': separate_ei,
     'mask': [],
-    'cons_method': cons_method,
     'separate_ei': separate_ei,
     'disable_connection': disable_connection,
 }
-dict_N = dict_N
 
 if separate_ei:
-    dict_N['E_num'] = int(N_num * e_ratio)
-    dict_N['I_num'] = N_num - dict_N['E_num']
-    dict_['Dale'] = Dale
-    dict_N['Dale'] = Dale
-    if locals().get('time_const_e') is None:
-        dict_N['time_const'] = dict_N['time_const_e'] = dict_N['time_const_i'] = time_const
-    else:
-        dict_N['time_const_e'] = time_const_e
-        dict_N['time_const_i'] = time_const_i
-    if locals().get('act_func_e') is None:
-        dict_N['act_func'] = dict_N['act_func_e'] = dict_N['act_func_i'] = act_func
-    else:
-        dict_N['act_func_e'] = act_func_e
-        dict_N['act_func_i'] = act_func_i
+    dict_['E_num'] = int(N_num * E_ratio)
+    dict_['I_num'] = N_num - dict_['E_num']
+    dict_['cons_weight'] = dict_['cons_weight'] = cons_weight
+    dict_['cons_method'] = 'abs'
+    dict_['time_const_e'] = time_const_e
+    dict_['time_const_i'] = time_const_i
+    dict_['act_func_e'] = act_func_e
+    dict_['act_func_i'] = act_func_i
 else:
-    dict_N['time_const'] = time_const
-    dict_N['act_func'] = act_func
-
-if task in ['pc', 'pc_coords']:
-    dict_place_cells = {
-        'type': pc_type,
-        'N_num': pc_num,
-        'act_center': act_center, # peak activation.
-        'act_decay': act_decay, # distance when place cells activation decays to exp{-1}.
-        'norm_local': norm_local,
-        'arena_index': place_cells_arena_index,
-    }
-    if pc_type in ['diff_gaussian']:
-        dict_place_cells.update({
-            'act_positive': act_positive, # for diff_gaussian mode
-            'act_ratio': act_ratio # for diff_gaussian mode
-        })
-    dict_['place_cells'] = dict_place_cells 
-
+    dict_['time_const'] = time_const
+    dict_['act_func'] = act_func
 
 def interact(env_info):
     agent_dict = env_info['agent_dict']
     task = agent_dict['task']
+    dict_['device'] = env_info['device']
+    '''
     if task in ['pc', 'pc_coords']:
-        
-    
-
-
+    '''
     return
