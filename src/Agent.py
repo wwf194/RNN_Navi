@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 #import tensorflow as tf
-import torch
+
 import os
 import math
 import random
 import sys
 import warnings
 
+import torch
+import torch.nn.functional as F
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -18,7 +20,6 @@ import cv2 as cv
 import config_sys
 config_sys.set_sys_path()
 from utils import get_from_dict, get_items_from_dict, search_dict, get_name_args, ensure_path, contain, remove_suffix, get_ax
-from utils_plot import *
 from utils_plot import get_res_xy, plot_polyline, get_int_coords_np, norm_and_map
 
 from anal_grid import get_score
@@ -54,8 +55,63 @@ class Agent(object):
 
         self.load = load
 
-        if self.task in ['pc', 'pc_coords']:
+        if self.task in ['pc', 'pc_coord']:
             self.place_cells = Place_Cells(dict_ = self.dict['place_cells'], load=self.load)
+
+        # loss settings
+        self.loss_dict = self.dict['loss']
+        #print(self.loss_dict)
+        #print(self.loss_dict['main'])
+        self.main_loss = self.loss_dict['main']['type']
+        self.main_coeff = self.loss_dict['main']['coeff']
+        self.act_coeff = self.loss_dict['act']
+        self.weight_coeff = self.loss_dict['weight']
+        
+        self.dynamic_weight_coeff = self.loss_dict['dynamic_weight_coeff']['enable']
+        if self.dynamic_weight_coeff:
+            self.alt_weight_coeff_count = 0
+            self.weight_ratio = self.loss_dict['dynamic_weight_coeff']['ratio_to_main_loss']
+            self.weight_ratio_min = self.loss_dict['dynamic_weight_coeff']['ratio_to_main_loss_min']
+            self.weight_ratio_max = self.loss_dict['dynamic_weight_coeff']['ratio_to_main_loss_max']
+            #self.weight_coeff_0 = self.loss_dict['weight_coeff_0'] = self.weight_coeff      
+
+        self.perform_list = {'main':0.0, 'act':0.0, 'weight':0.0}
+        self.init_perform()
+        self.loss_dict = self.dict['loss']
+        print(self.loss_dict)
+        print(self.loss_dict['main'])
+        self.main_loss = self.loss_dict['main']['type']
+        self.main_coeff = self.loss_dict['main']['coeff']
+        self.act_coeff = self.loss_dict['act']
+        self.weight_coeff = self.loss_dict['weight']
+
+        '''
+        if self.task in ['pc', 'pc_coord']:
+            self.dict['pc_error'] = 0.0
+        '''
+        self.sample_count = 0
+        self.batch_count = 0
+    def report_perform(self, prefix='', verbose=True):
+        report = prefix
+        for key in self.perform_list.keys():
+            report += '%s:%.4e '%(key, self.perform_list[key]/self.batch_count)
+        #report += '\n'
+        if verbose:
+            print(report)
+        return verbose
+    def init_perform(self):
+        self.batch_count = 0
+        self.sample_count = 0
+        if self.main_loss in ['mse', 'MSE']:
+            self.perform_list['output_error_ratio'] = 0.0
+    def reset_perform(self):
+        self.batch_count = 0
+        self.sample_count = 0
+        for key in self.perform_list.keys():
+            self.perform_list[key] = 0.0
+    def get_perform(self):
+        return # to be implemented
+
     def prep_data(self, path):
         dxy, xy_init, xy = get_items_from_dict(self.prep_path(path), ['input', 'input_init', 'output'])
         if self.task in ['pc']:
@@ -64,17 +120,114 @@ class Agent(object):
                 'input_init': self.place_cells.get_act_batch(xy_init),
                 'output': self.place_cells.get_act(xy),
             }
-        elif self.task in ['coords']:
+        elif self.task in ['coord']:
             data = {
                 'input': dxy,
                 'input_init': xy_init,
                 'output': xy
             }
-        return data        
+        return data
+
     def train(self, batch_size):
         path = self.walk_random(num=batch_size)
         data = self.prep_data(path)
         self.optimizer.train(data)
+    def cal_perform_coord(self, data):
+        output_truth = get_items_from_dict(data, ['output'])
+        # x: [batch_size, step_num, input_num]
+        # y: [batch_size, step_num, output_num]
+        output, act = get_items_from_dict(self.forward(data), ['output', 'act'])
+        self.dict['act_avg'] = torch.mean(torch.abs(act))
+        loss_coord = self.main_coeff * F.mse_loss(output, y, reduction='mean')
+        loss_act = self.act_coeff * torch.mean(act ** 2)
+        loss_weight = self.weight_coeff * ( torch.mean(self.get_o() ** 2) + torch.mean(self.get_i() ** 2) )
+        self.perform_list['weight'] += loss_weight.item()
+        self.perform_list['act'] += loss_act.item()
+        self.perform_list['coord'] += + loss_coord.item()
+        self.batch_count += 1
+        #self.sample_count += self
+        return loss_coord + loss_act + loss_weight
+    def cal_perform_pc(self, data):
+        x, x_init, output_truth = get_items_from_dict(data, ['input', 'input_init', 'output'])
+        batch_size = x.size(0)
+        output, act = get_items_from_dict(self.forward(data), ['output', 'act'])
+        
+        self.dict['act_avg'] = torch.mean(torch.abs(act))
+        
+        if self.main_loss in ['mse', 'MSE']:
+            loss_main = self.main_coeff * F.mse_loss(output, output_truth, reduction='mean')
+            self.perform_list['output_error_ratio'] += ( torch.sum(torch.abs(output - output_truth)) / torch.sum(torch.abs(output_truth)) ).item() # relative place cells prediction error
+        elif self.main_loss in ['cel', 'CEL']:
+            loss_main = - self.main_coeff * torch.mean( output_truth * F.log_softmax(output, dim=2) )
+        else:
+            raise Exception('Invalid main loss: %s'%str(self.main_loss))
+        
+        self.dict['pc_avg'] = torch.mean(torch.abs(output_truth))
+        loss_act = self.act_coeff * torch.mean(act ** 2)
+        
+        loss_weight_0 = self.cal_loss_weight()
+        #loss_weight_0 = self.weight_coeff * torch.mean(self.get_r() ** 2)
+        #print(loss_weight_0)
+        # dynamically alternate weight coefficient
+        #print(loss_weight_0.size())
+        if self.weight_coeff > 0.0:
+            if self.dynamic_weight_coeff:
+                loss_ratio = loss_weight_0.item() / loss_main.item() # ratio of weight loss to pc loss.
+                #print('loss_ratio:%.3f'%loss_ratio)
+                if self.weight_ratio_min < loss_ratio < self.weight_ratio_max:
+                    loss_weight = loss_weight_0
+                else:
+                    weight_coeff_0 = self.weight_coeff
+                    self.weight_coeff = self.weight_coeff * self.weight_ratio / loss_ratio # alternating weight cons index so that loss_weight == loss_main * dynamic_weight_ratio
+                    self.alt_weight_coeff_count += 1
+                    if self.alt_weight_coeff_count > 50:
+                        print('alternating weight_coeff from %.3e to %.3e'%(weight_coeff_0, self.weight_coeff))  
+                        self.alt_weight_coeff_count = 0
+                    loss_weight = self.weight_coeff / weight_coeff_0 * loss_weight_0
+            else:
+                loss_weight = loss_weight_0
+        
+        self.perform_list['weight'] += loss_weight.item()
+        self.perform_list['act'] += loss_act.item()
+        self.perform_list['main'] += loss_main.item()
+        
+        self.batch_count += 1
+        self.sample_count += batch_size
+        return {
+            'loss_main': loss_main,
+            'loss_act': loss_act,
+            'loss_weight': loss_weight,
+            'loss': loss_main + loss_act + loss_weight
+        }
+    def cal_perform_pc_coord(self, data):
+        #x, y = self.prep_path(path)
+        y = get_items_from_dict(data, ['output'])
+        batch_size = y.size(0)
+        output, act = get_items_from_dict(self.forward(data), ['output', 'act'])
+        self.dict['act_avg'] = torch.mean(torch.abs(act))
+        pc_output = self.place_cells.get_act(y)
+        loss_coord =self.main_coeff_pc * F.mse_loss(output[:, :, 0:2], pc_output, reduction='mean')
+        loss_main = self.main_coeff_coords * F.mse_loss(output[:, :, 2:-1], pc_output, reduction='mean')
+        self.perform_list['pc_error_ratio'] += ( torch.sum(torch.abs(output[:, :, 2:-1] - pc_output)) / torch.sum(torch.abs(pc_output)) ).item() #relative place cells prediction error
+        
+        loss_act = self.act_coeff * torch.mean(act ** 2)
+        
+        loss_weight = self.weight_coeff * ( torch.mean(self.get_o() ** 2) + torch.mean(self.get_i() ** 2) )
+        
+        self.perform_list['weight'] += loss_weight.item()
+        self.perform_list['act'] += loss_act.item()
+        self.perform_list['coord'] += loss_coord.item()
+        self.perform_list['pc'] += loss_main.item()
+        
+        self.batch_count += 1
+        self.sample_count += batch_size
+        return {
+            'loss_main': loss_main,
+            'loss_coord': loss_coord,
+            'loss_act': loss_act,
+            'loss_weight': loss_weight,
+            'loss': loss_main + loss_coord + loss_act + loss_weight
+        }
     '''
     def receive_options(self, options):
         self.options = options
@@ -320,7 +473,7 @@ class Agent(object):
         print(model.forward(self.prep_data(path)).keys())      
         output = get_items_from_dict(model.forward(self.prep_data(path)), ['output']) # act: [plot_num, step_num, N_num]
         output = output.detach().cpu().numpy()
-        if self.task in ['coords']:
+        if self.task in ['coord']:
             xy_pred = output # [plot_num, step_num, (x, y)]
         elif self.task in ['pc']:
             xy_pred = self.place_cells.get_coords_from_act(output) # [plot_num, step_num, sample_num, (x, y)]
@@ -826,3 +979,20 @@ class Agent(object):
         self.arenas = arenas
         if hasattr(self, 'place_cells'):
             self.place_cells.bind_arenas(arenas)
+    def bind_optimizer(self, optimizer):
+        self.optimizer = optimizer
+    def bind_model(self, model):
+        self.model = model
+        # to be modified
+        if self.task in ['pc']:
+            self.cal_perform = self.cal_perform_pc
+        elif self.task in ['coord']:
+            self.cal_perform = self.cal_perform_coord
+        else:
+            raise Exception('Invalid task: %s'%self.task)
+    def save(self, save_path, save_name):
+        ensure_path(save_path)
+        with open(save_path + save_name) as f:
+                
+        
+

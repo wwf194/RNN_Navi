@@ -25,7 +25,7 @@ import config_sys
 #print(sys.path)
 from utils import build_model, build_agent, build_arenas, build_optimizer, build_trainer
 from utils import scan_files, copy_files, path_to_module, remove_suffix, select_file, ensure_path, get_device
-from config import Options
+#from config import Options
 from utils_anal import compare_traj, get_input_output
 
 from Trainers import Trainer
@@ -178,7 +178,7 @@ def train_():
     optimizer.bind_model(model)
     optimizer.scheduler.verbose = True
     
-    if options.task in ['pc', 'pc_coords']:
+    if options.task in ['pc', 'pc_coord']:
         options.model.place_cells.plot_place_cells(save=True, save_path='../anal/', save_name='place_cells_plot.png')
     '''
     options.agent.plot_walk_random(save=True, save_path='../anal/beforeTrain/')
@@ -209,6 +209,10 @@ def train(args=None, param_path=None, **kw):
     agent_dict = component_dicts['agent_dict']
     optimizer_dict = component_dicts['optimizer_dict']
     trainer_dict = component_dicts['trainer_dict']
+
+    # overwrite dict items from args
+    if args.no_anal_before_train:
+        trainer_dict['anal_before_train'] = False
     
     trainer = build_trainer(trainer_dict)
     agent = build_agent(agent_dict)
@@ -222,9 +226,9 @@ def train(args=None, param_path=None, **kw):
     trainer.bind_model(model)
     trainer.bind_optimizer(optimizer)
     trainer.bind_agent(agent)
-
+    agent.bind_optimizer(optimizer)
     agent.bind_arenas(arenas)
-
+    agent.bind_model(model)
     trainer.train() # the model needs some data from agent to get response properties.
 def load():
     loaded_items = {}
@@ -508,7 +512,7 @@ def copy_project_files(args):
         'Agent.py',
         'Arenas.py',
         'Trainers.py',
-        'Optimizers.py',
+        'Optimizers',
         'Analyzer.py',
         #'config.py',
         'main.py',
@@ -519,6 +523,7 @@ def copy_project_files(args):
         'utils_arena.py',
         'utils_plot.py',
         'utils_anal.py',
+        'utils_model.py',
         'config_sys.py',
     ]
     copy_files(file_list, path_from='./src/', path_to=path + 'src/')
@@ -546,12 +551,11 @@ if __name__=='__main__':
         warnings.warn('Task is not given from args. Using default task: train.')
     else:
         task = args.task
-
     if task in ['copy', 'copy_files', 'copy_file']: # copy necessary files for training and 
         copy_project_files(args)
     elif task in ['train']:
         train(args)
-    elif task in ['train']:
+    elif task in ['backup']:
         train()
     elif task in ['train_sim']:
         train_simplified()

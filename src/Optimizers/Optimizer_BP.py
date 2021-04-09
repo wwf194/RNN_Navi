@@ -1,7 +1,7 @@
 
 import torch
 
-from utils import search_dict
+from utils import search_dict, get_items_from_dict
 import utils_model
 from Optimizers.Optimizer import *
 
@@ -27,7 +27,7 @@ class Optimizer_BP(Optimizer):
             self.dict['scheduler_dict'] = self.scheduler.state_dict()
         self.get_lr = self.get_current_lr
     def update_before_train(self):
-        print(self.dict['update_before_train'])
+        #print(self.dict['update_before_train'])
         self.update_before_train_items = search_dict(self.dict, ['update_before_train'], default=[], write_default=True)
         
         for item in self.update_before_train_items:
@@ -36,12 +36,11 @@ class Optimizer_BP(Optimizer):
                 self.model.alt_pc_act_strength(path)
             else:
                 raise Exception('Invalid update_before_train item: %s'%str(item))
-    
     def build_optimizer(self, load=False):
         self.optimizer = utils_model.build_optimizer(self.dict['optimizer_dict'], model=self.model, load=load)
     def train(self, data):
         self.optimizer.zero_grad()
-        loss = self.model.get_loss(data)
+        loss = get_items_from_dict(self.model.cal_perform(data), ['loss'])
         #loss = results['loss']
         loss.backward()
         self.optimizer.step()

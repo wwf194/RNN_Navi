@@ -7,7 +7,7 @@ import time
 
 from utils import ensure_path
 
-def get_score(act_maps, coord_range, save_path='./', save_name='plot_scores.png', plot=False, nbins=20, cm="jet", sort_by_score_60=False, verbose=True):
+def get_score(act_maps, coord_range, save_path='./', save_name='plot_scores.png', plot=False, nbins=20, cm="jet", sort_by_score_60=False, verbose=False):
     
     starts = [0.2] * 10
     ends = np.linspace(0.4, 1.0, num=10)

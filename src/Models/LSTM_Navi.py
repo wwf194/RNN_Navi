@@ -6,7 +6,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 #training parameters.
-from config import *
 from utils_anal import *
 from Place_Cells import Place_Cells
 

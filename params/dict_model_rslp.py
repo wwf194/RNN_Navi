@@ -1,8 +1,6 @@
-separate_ei = True
-N_num = 1024
-main_loss = 'MSE'
-act_coeff = 0.0
-weight_coeff = 0.0
+separate_ei = False
+N_num = 1024 * 2
+
 noise_coeff = 0.0
 r_bias = True # whether to add bias when cal h from u through recurrent weight.
 time_const = 0.1
@@ -29,7 +27,7 @@ if input_method in ['linear']:
 
 if separate_ei:
     E_ratio = 0.8
-    cons_weight = ['r', 'f']
+    weight_Dale = ['r', 'f']
     time_const_e = time_const_i = time_const
     act_func_e = act_func_i = act_func
 
@@ -45,15 +43,6 @@ init_weight = {
 }
 
 #input_mode = 'v_xy'
-
-dynamic_weight_coeff = {
-    'enable': True,
-    'ratio_to_main_loss': 0.10,
-    'ratio_to_main_loss_min': 0.05,
-    'ratio_to_main_loss_max': 0.20,
-    'target':['r']
-}
-
 disable_connection = []
 
 dict_ = {
@@ -71,20 +60,10 @@ dict_ = {
     'cons_method': 'abs',
     'input_mode': None, # to be determined
     'r_bias': r_bias,
-    'loss':{
-        'main':{
-            'type': main_loss,
-            'coeff': 1.0
-        },
-        'act': act_coeff,
-        'weight': weight_coeff,
-        'dynamic_weight_coeff': dynamic_weight_coeff,
-    },
+    'loss': None, # to be set
     'mask': [],
     'no_self': True,
     'init_weight': init_weight, # method to init weight.
-    'N_num': N_num,
-    'cons_weight': cons_weight,
     #'separate_ei': separate_ei,
     'mask': [],
     'separate_ei': separate_ei,
@@ -94,7 +73,7 @@ dict_ = {
 if separate_ei:
     dict_['E_num'] = int(N_num * E_ratio)
     dict_['I_num'] = N_num - dict_['E_num']
-    dict_['cons_weight'] = dict_['cons_weight'] = cons_weight
+    dict_['weight_Dale'] = weight_Dale
     dict_['cons_method'] = 'abs'
     if time_const_e == time_const_i:
         dict_['time_const'] = time_const_e
@@ -114,7 +93,9 @@ def interact(env_info):
     agent_dict = env_info['agent_dict']
     task = agent_dict['task']
     dict_['device'] = env_info['device']
+    dict_['loss'] = agent_dict['loss']
+    print(dict_['loss'])
     '''
-    if task in ['pc', 'pc_coords']:
+    if task in ['pc', 'pc_coord']:
     '''
     return
