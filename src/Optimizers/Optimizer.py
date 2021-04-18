@@ -15,16 +15,15 @@ class Optimizer(abc.ABC):
         self.dict = dict_
         self.verbose = get_from_dict(self.dict, 'verbose', default=True, write_default=True)
         #set_instance_variable(self, self.dict)
-    def bind_model(self, model):
-        print('eee')
+    def bind_model(self, model, verbose=True):
         if self.model is not None:
-            if self.options.verbose:
+            if verbose:
                 print('Optimizer: binding new model. warning: this optimizer has already bound a model, and it will be detached.')
         else:
             self.model = model
-    def detach_model(self, model):
+    def detach_model(self, verbose=True):
         if self.model is None:
-            if self.options.verbose:
+            if verbose:
                 print('Optimizer: detaching model. this optimizer hasn\'t bound a model.')
         else:
             self.model = None

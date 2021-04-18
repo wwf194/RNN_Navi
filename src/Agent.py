@@ -126,7 +126,65 @@ class Agent(object):
             }
         return data
 
-    def train(self, batch_size):
+    def train(self, dict_, report_in_batch=None, report_interval=None):
+        epoch_start, epoch_num, epoch_end = self.get_epoch_info(dict_)
+        if report_in_batch is None:
+            if not hasattr(self, 'report_in_batch'):
+                report_in_batch = True
+            else:
+                report_in_batch = self.report_in_batch
+        if report_in_batch:
+            if report_interval is None:
+                if not hasattr(self, 'report_interval'):    
+                    report_interval = int(self.batch_num / 40)
+                else:
+                    report_interval = self.report_interval
+        if self.save_before_train:
+            agent.save(self.save_path, agent.dict['name'] + '_epoch=beforeTrain')
+
+        if self.anal_before_train:
+            self.anal(title='beforeTrain')
+
+        self.optimizer.update_before_train()
+
+        #print('epoch_index:%d epoch_end:%d'%(epoch_index, epoch_end))
+        while epoch_index <= epoch_end:
+            print('epoch=%d/%d'%(epoch_index, epoch_end), end=' ')
+            # train model
+            agent.reset_perform()
+            #batch_num = 0
+            for batch_index in range(self.batch_num):
+                #print(batch_index)
+                # prepare_data
+                '''
+                path = agent.walk_random(num=self.batch_size)
+                self.optimizer.train(path)
+                '''
+                agent.train(self.batch_size)
+                if report_in_batch:
+                    if batch_index % report_interval == 0:
+                        print('batch=%d/%d' % (batch_index, self.batch_num))
+                        agent.report_perform()
+                        agent.reset_perform()
+                        print('lr: %.3e'%self.optimizer.get_lr())
+                #batch_num += 1
+            train_perform = agent.report_perform(prefix='train: ')
+
+            #print('save:%s save_interval:%d'%(self.save, self.save_interval))
+            if self.save_model and epoch_index % self.save_interval == 0:
+                print('saving_model at this epoch')
+                agent.save(self.save_path, agent.dict['name'] + '_epoch=%d' % epoch_index)
+            
+            if self.anal_model and epoch_index % self.anal_interval == 1:
+                self.anal()
+            
+            self.optimizer.update_epoch()
+            epoch_index += 1
+        if self.save_after_train:
+            agent.save(self.save_path, agent.dict['name'] + '_epoch=afterTrain')
+
+
+    def train_once(self, batch_size):
         path = self.walk_random(num=batch_size)
         data = self.prep_data(path)
         self.optimizer.train(data)
