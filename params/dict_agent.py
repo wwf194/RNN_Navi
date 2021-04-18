@@ -49,15 +49,14 @@ if task in ['pc', 'pc_coord']:
         pc_dict['act_positive'] = True # raise pc act level so that minimum activation is above zero.
     #dict_['place_cells'] = pc_dict
 
-
 dict_ = {
+    'name': None, # to be set
     'step_num': step_num,
     'input_mode': input_mode,
     'task': task,
     'loss': loss_dict,
     'place_cells': pc_dict,
 }
-
 
 def interact(env_info):
     device = env_info['device']
@@ -78,4 +77,7 @@ def interact(env_info):
         model_dict['output_num'] = 2 # (x, y)
     else:
         raise Exception('Invalid task: %s'%task)
+    
+    if dict_.get('name') is None:
+        dict_['name'] = 'agent_%s'%model_dict['name']
     return

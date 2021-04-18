@@ -1,17 +1,11 @@
 width = 2.20
 height = 2.20
 
-arena_files = {
-    './dict_arena/dict_arena_rec_max.py'
-}
-
 import os
 import sys
 import importlib
 
 from utils import path_to_module, remove_suffix, import_file
-
-Arena_Params = []
 
 dict_ = {
     'width': width,
@@ -20,8 +14,14 @@ dict_ = {
     ]
 }
 
+arena_files = {
+    './dict_arena_rec_max.py'
+}
+
+Arena_Params = []
+
 for arena_file in arena_files:
-    Arena_Param = import_file(path_rel=arena_file, path_start=__file__, path_main=sys.path[0])
+    Arena_Param = import_file(arena_file, start_path=__file__, main_path=sys.path[0])
     Arena_Params.append(Arena_Param)
     arena_dict = Arena_Param.dict_
     '''
@@ -56,6 +56,3 @@ def interact(env_info):
     for Arena_Param in Arena_Params:
         Arena_Param.interact(env_info)
     return
-
-file_required = arena_files
-file_self = __file__

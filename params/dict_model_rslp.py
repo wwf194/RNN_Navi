@@ -94,7 +94,6 @@ def interact(env_info):
     task = agent_dict['task']
     dict_['device'] = env_info['device']
     dict_['loss'] = agent_dict['loss']
-    print(dict_['loss'])
     '''
     if task in ['pc', 'pc_coord']:
     '''

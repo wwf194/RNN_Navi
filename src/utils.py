@@ -3,11 +3,10 @@ from utils_ import get_best_gpu
 
 def build_model(dict_, load=False):
     import Models
-
     type_ = dict_['type']
-    print('Options: model_type:%s'%type_)
+    print('build_model: model_type: %s'%type_)
     if type_ in ['rnn', 'rslp']:
-        return Models.RSLP_Navi(dict_=dict_, load=load)
+        return Models.RSLP_LIF(dict_=dict_, load=load)
     else:
         raise Exception('Options: Invalid model type: %s'%str(type_))
 

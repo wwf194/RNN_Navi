@@ -12,12 +12,22 @@ class Optimizer_BP(Optimizer):
         self.options = options
         self.device = options.device
         #self.model = options.model
+        self.agent = options.agent
         self.trainer = options.trainer
         #print('options.model:'+str(options.model))
         #self.build_optimizer()
+    '''
     def bind_model(self, model):
         self.model = model
         self.build_optimizer()
+    def detach_model(self):
+        self.model = None
+    '''
+    def bind_agent(self, agent):
+        self.build_optimizer()
+        self.agent = agent
+    def detach_agent(self):
+        self.agent = None
     def bind_trainer(self, trainer):
         self.trainer = trainer
         self.update_epoch_init()
@@ -29,18 +39,17 @@ class Optimizer_BP(Optimizer):
     def update_before_train(self):
         #print(self.dict['update_before_train'])
         self.update_before_train_items = search_dict(self.dict, ['update_before_train'], default=[], write_default=True)
-        
         for item in self.update_before_train_items:
             if item in ['alt_pc_act_strength', 'alt_pc_strength']:
                 path = self.trainer.agent.walk_random(num=self.trainer.batch_size)
-                self.model.alt_pc_act_strength(path)
+                self.agent.alt_pc_act_strength(path)
             else:
                 raise Exception('Invalid update_before_train item: %s'%str(item))
     def build_optimizer(self, load=False):
-        self.optimizer = utils_model.build_optimizer(self.dict['optimizer_dict'], model=self.model, load=load)
+        self.optimizer = utils_model.build_optimizer(self.dict['optimizer_dict'], model=self.agent.model, load=load)
     def train(self, data):
         self.optimizer.zero_grad()
-        loss = get_items_from_dict(self.model.cal_perform(data), ['loss'])
+        loss = get_items_from_dict(self.agent.cal_perform(data), ['loss'])
         #loss = results['loss']
         loss.backward()
         self.optimizer.step()
@@ -79,5 +88,3 @@ class Optimizer_BP(Optimizer):
         self.scheduler.step()
     def update_lr_none(self, **kw):
         return
-    def detach_model(self):
-        self.model = None

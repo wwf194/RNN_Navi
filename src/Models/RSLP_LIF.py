@@ -1,10 +1,11 @@
 import numpy as np
-from numpy.lib.function_base import select
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 import matplotlib as mpl
+from matplotlib import pyplot as plt
 
 from utils import set_instance_variable, contain, get_name, get_items_from_dict, get_name_args, ensure_path
 #from utils_anal import *
@@ -13,9 +14,9 @@ from utils_plot import norm_and_map
 #from Place_Cells import Place_Cells
 #from Neurons_LIF import Neurons_LIF
 
-class RSLP_Navi(nn.Module):
+class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integrate-and-fire cell state
     def __init__(self, dict_=None, load=False):
-        super(RSLP_Navi, self).__init__()
+        super(RSLP_LIF, self).__init__()
         self.dict = dict_
         
         #set_instance_variable(self, self.dict)
@@ -26,7 +27,7 @@ class RSLP_Navi(nn.Module):
         self.input_num = self.dict['input_num']
         self.input_init_num = self.dict['input_init_num']
         self.output_num = self.dict['output_num']
-        if self.dict.get('time_const_e') is not None:
+        if self.dict.get('time_const_e') is not None and self.dict.get('time_const_i') is not None:
             self.time_const_e = self.dict['time_const_e']
             self.time_const_i = self.dict['time_const_i']
         else:
@@ -36,7 +37,7 @@ class RSLP_Navi(nn.Module):
             self.I_num = self.dict['I_num']
             self.weight_Dale = self.dict['weight_Dale']
             #set_instance_variable(self, self.dict, keys=['E_num', 'I_num', 'weight_Dale'])
-        
+
         # set up weights and biases
         if load:
             '''
@@ -263,7 +264,6 @@ class RSLP_Navi(nn.Module):
         else:
             raise Exception('RNN_Navi: Invalid task: %s'%str(self.task))
         '''
-
         
         if self.dict.get('weight_cons_name') is None:
             self.dict['weight_cons_name'] = ['r']
@@ -537,10 +537,10 @@ class RSLP_Navi(nn.Module):
             print('pc_act mean: %.3e pc_act_pred_mean: %.3e'%(pc_mean, pc_pred_mean))
         return pc_mean, pc_pred_mean
     def get_output_from_act(self, act, to_array=True):
-        if type(act) is np.ndarray:
+        if isinstance(act, np.ndarray):
             # isinstance(act, type(np.ndarray)) does not work.
             act = torch.from_numpy(act).to(self.device).float()
-        print(act.size())
+        #print(act.size())
         output = torch.mm(act, self.get_o())
         if to_array:
             output = output.detach().cpu().numpy()

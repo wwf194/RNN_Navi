@@ -78,8 +78,6 @@ class Agent(object):
         self.perform_list = {'main':0.0, 'act':0.0, 'weight':0.0}
         self.init_perform()
         self.loss_dict = self.dict['loss']
-        print(self.loss_dict)
-        print(self.loss_dict['main'])
         self.main_loss = self.loss_dict['main']['type']
         self.main_coeff = self.loss_dict['main']['coeff']
         self.act_coeff = self.loss_dict['act']
@@ -990,9 +988,21 @@ class Agent(object):
             self.cal_perform = self.cal_perform_coord
         else:
             raise Exception('Invalid task: %s'%self.task)
+    def anal(self, save_path, trainer=None, items=['']):
+        if trainer is None:
+            trainer = self.trainer
+        print('Analying...epoch=%d'%(trainer.epoch_index))
+        print('Agent: Plotting agent path.')
+        self.plot_path(save_path=save_path, save_name='path_plot.png', model=self.model, plot_num=2)
+        print('Agent: Plotting act map.')
+        self.anal_act(save_path=save_path,
+                            model=self.model,
+                            trainer=trainer,
+                            arena=self.arenas.current_arena(),
+                            separate_ei=self.model.separate_ei
+                        )
     def save(self, save_path, save_name):
         ensure_path(save_path)
-        with open(save_path + save_name) as f:
-                
-        
-
+        with open(save_path + save_name, 'wb') as f:
+            torch.save(self.dict, f)
+        self.model.save(save_path, '%s_model'%save_name)

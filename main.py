@@ -23,8 +23,8 @@ import shutil
 sys.path.append('./src/')
 import config_sys
 #print(sys.path)
-from utils import build_model, build_agent, build_arenas, build_optimizer, build_trainer
-from utils import scan_files, copy_files, path_to_module, remove_suffix, select_file, ensure_path, get_device
+from utils import build_model, build_agent, build_arenas, build_optimizer, build_trainer, copy_folder, cal_path_rel_main, get_items_from_dict
+from utils import scan_files, copy_files, path_to_module, remove_suffix, select_file, ensure_path, get_device, import_file
 #from config import Options
 from utils_anal import compare_traj, get_input_output
 
@@ -87,8 +87,10 @@ def test_anal_act():
     options.model.to(options.model.device)
     model, trainer, optimizer = options.model, options.trainer, options.optimizer
     model.plot_weight(save_path=save_path+'model/', save_name='model_weight_plot.png')
-    trainer.bind_model(model)
-    optimizer.bind_model(model)
+    #trainer.bind_model(model)
+    trainer.bind_agent(agent)
+    #optimizer.bind_model(model)
+    optimizer.bind_agent(agent)
     print('test_load_model: plotting heat map after load.')
     options.agent.plot_path(save=True, save_path=save_path, save_name='path_plot.png', model=options.model)
     options.agent.anal_act(save_path=save_path,
@@ -203,12 +205,12 @@ def train(args=None, param_path=None, **kw):
             param_path = './params/'
         #sys.path.append(param_path)
 
-    component_dicts = get_param_dicts(args)
-    model_dict = component_dicts['model_dict']
-    arenas_dict = component_dicts['arenas_dict']
-    agent_dict = component_dicts['agent_dict']
-    optimizer_dict = component_dicts['optimizer_dict']
-    trainer_dict = component_dicts['trainer_dict']
+    param_dict = get_param_dict(args)
+    model_dict = param_dict['model_dict']
+    arenas_dict = param_dict['arenas_dict']
+    agent_dict = param_dict['agent_dict']
+    optimizer_dict = param_dict['optimizer_dict']
+    trainer_dict = param_dict['trainer_dict']
 
     # overwrite dict items from args
     if args.no_anal_before_train:
@@ -304,24 +306,20 @@ def scan_param_file(path):
     '''
 
 def get_param_file(args, verbose=True):
-    path = args.param_path
-    if path is None:
-        path = './params/'
-    if not path.endswith('/'):
-        path += '/'
-    files = scan_param_file(path)
-    
+    param_path = args.param_path
+    if param_path is None:
+        param_path = './params/'
+    if not param_path.endswith('/'):
+        param_path += '/'
+    files = scan_param_file(param_path)
+
+
     model_files = files['model_files']
     agent_files = files['agent_files']
     arenas_files = files['arenas_files']
     optimizer_files = files['optimizer_files']
     trainer_files = files['trainer_files']
     config_files = files['config_files']
-
-    #print(model_files)
-    #print(optimizer_files)
-    #print(trainer_files)
-    #print(agent_files)
 
     model_str = args.model
     agent_str = args.agent
@@ -330,7 +328,7 @@ def get_param_file(args, verbose=True):
     trainer_str = args.trainer
     
     files_str = [model_str, optimizer_str, trainer_str, agent_str, arenas_str]
-    component_files = [model_files, agent_files, arenas_files, optimizer_files, trainer_files]
+    param_file = [model_files, agent_files, arenas_files, optimizer_files, trainer_files]
     
     if args.config is None:
         use_config_file = False
@@ -338,7 +336,7 @@ def get_param_file(args, verbose=True):
         use_config_file = False
         if len(config_files)==1:
             sig = True
-            for files in component_files:
+            for files in param_file:
                 if len(files)>1 or len(files)==0:
                     sig = False
             if sig:
@@ -351,8 +349,9 @@ def get_param_file(args, verbose=True):
             print('Setting params according to config file.')
         config_file = select_file(args.config, config_files, default_file='config_rnn_ei_pc', 
             match_prefix='config_', match_suffix='.py', file_type='config')
-        print(config_file)
-        Config_Param = importlib.import_module(path_to_module(path) + remove_suffix(config_file))
+        #print(config_file)
+        Config_Param = import_file(param_path + config_file)
+        #Config_Param = importlib.import_module(path_to_module(param_path) + remove_suffix(config_file))
         try:
             model_file = Config_Param.model_file
             optimizer_file = Config_Param.optimizer_file
@@ -360,19 +359,32 @@ def get_param_file(args, verbose=True):
             agent_file = Config_Param.agent_file
             arenas_file = Config_Param.arenas_file
         except Exception:
-            raise Exception('Cannot read file name from %s'%(path + config_file))
-    
-        for file in [model_file, optimizer_file, trainer_file, agent_file]:
-            if not os.path.exists(path + file):
-                raise Exception('FileNotFoundError: %s'%(path + file))
-        return {
+            raise Exception('Cannot read file name from %s'%(param_path + config_file))
+        '''
+        files = [model_file, optimizer_file, trainer_file, agent_file, arenas_file]
+        for i, file in enumerate(files):
+            if files[i].startswith('./'):
+                files[i] = files[i].lstrip('./')
+            if not os.path.exists(param_path + file):
+                raise Exception('FileNotFoundError: %s'%(param_path + file))
+        '''
+        result = {
             'model_file': model_file,
             'optimizer_file': optimizer_file,
             'trainer_file': trainer_file,
             'arenas_file': arenas_file,
             'agent_file': agent_file,
             'config_file': config_file,
-            'files_path': path,
+        }
+        for key, value in result.items():
+            if result[key].startswith('./'):
+                result[key] = result[key].lstrip('./')
+            result[key] = param_path + result[key]
+            if not os.path.exists(result[key]):
+                raise Exception('FileNotFoundError: %s'%(result[key]))
+        return {
+            'param_file': result,
+            'param_path': param_path,
         }
     else: # get param files directly
         if verbose:
@@ -437,38 +449,51 @@ def get_param_file(args, verbose=True):
         #print(trainer_file)
         #print(agent_file)
         
-        return {
+        result = {
             'model_file': model_file,
-            'agent_file': agent_file,
-            'arenas_file': arenas_file,
             'optimizer_file': optimizer_file,
             'trainer_file': trainer_file,
-            'files_path': path,
+            'arenas_file': arenas_file,
+            'agent_file': agent_file,
         }
-def get_param_dicts(args):
-    component_files = get_param_file(args)
-    #print(component_files.keys())
-    model_file = component_files['model_file']
-    agent_file = component_files['agent_file']
-    arenas_file = component_files['arenas_file']
-    optimizer_file = component_files['optimizer_file']
-    trainer_file = component_files['trainer_file']
-    files_path = component_files['files_path']
+        for key, value in result.items():
+            if result[key].startswith('./'):
+                result[key] = result[key].lstrip('./')
+            result[key] = param_path + result[key]
+            if not os.path.exists(result[key]):
+                raise Exception('FileNotFoundError: %s'%(result[key]))
+        return {
+            'param_file': result,
+            'param_path': param_path,
+        }
+def get_param_dict(args):
+    param_file, param_path = get_items_from_dict(get_param_file(args), ['param_file', 'param_path'])
+    #print(param_file.keys())
+    model_file = param_file['model_file'] # model_file are in form of relevant path to ./
+    agent_file = param_file['agent_file']
+    arenas_file = param_file['arenas_file']
+    optimizer_file = param_file['optimizer_file']
+    trainer_file = param_file['trainer_file']
     
-    #print(path_to_module(files_path) + remove_suffix(model_file))
-    Model_Param = importlib.import_module(path_to_module(files_path) + remove_suffix(model_file))
+    #print(path_to_module(param_path) + remove_suffix(model_file))
+    Model_Param = import_file(model_file)
+    #Model_Param = importlib.import_module(path_to_module(param_path) + remove_suffix(model_file))
     model_dict = Model_Param.dict_
 
-    Agent_Param = importlib.import_module(path_to_module(files_path) + remove_suffix(agent_file))
+    Agent_Param = import_file(agent_file)
+    #Agent_Param = importlib.import_module(path_to_module(param_path) + remove_suffix(agent_file))
     agent_dict = Agent_Param.dict_
 
-    Arenas_Param = importlib.import_module(path_to_module(files_path) + remove_suffix(arenas_file))
+    Arenas_Param = import_file(arenas_file)
+    #Arenas_Param = importlib.import_module(path_to_module(param_path) + remove_suffix(arenas_file))
     arenas_dict = Arenas_Param.dict_
 
-    Optimizer_Param = importlib.import_module(path_to_module(files_path) + remove_suffix(optimizer_file))
+    Optimizer_Param = import_file(optimizer_file)
+    #Optimizer_Param = importlib.import_module(path_to_module(param_path) + remove_suffix(optimizer_file))
     optimizer_dict = Optimizer_Param.dict_
 
-    Trainer_Param = importlib.import_module(path_to_module(files_path) + remove_suffix(trainer_file))
+    Trainer_Param = import_file(trainer_file)
+    #Trainer_Param = importlib.import_module(path_to_module(param_path) + remove_suffix(trainer_file))
     trainer_dict = Trainer_Param.dict_
 
     device = get_device(args)
@@ -514,9 +539,6 @@ def copy_project_files(args):
         'Trainers.py',
         'Optimizers',
         'Analyzer.py',
-        #'config.py',
-        'main.py',
-        'config.py',
         'anal_grid.py',
         'utils.py',
         'utils_agent.py',
@@ -529,22 +551,60 @@ def copy_project_files(args):
     copy_files(file_list, path_from='./src/', path_to=path + 'src/')
     file_list = [
         'main.py',
-        'params/__init__.py'
+        #'params/__init__.py'
     ]
     copy_files(file_list, path_from='./', path_to=path)
-    param_files = get_param_file(args)
-    #param_files = list(map(lambda file:param_path + file, param_files))
-    model_file = param_files['model_file']
-    agent_file = param_files['agent_file']
-    arenas_file = param_files['arenas_file']
-    optimizer_file = param_files['optimizer_file']
-    trainer_file = param_files['trainer_file']
+    param_file, param_path = get_items_from_dict(get_param_file(args), ['param_file', 'param_path'])
+    #param_file = list(map(lambda file:param_path + file, param_file))
+    #print(param_file)
+    #input()
+    param_file = get_required_file(list(param_file.values()))
 
-    component_files = [model_file, agent_file, arenas_file, optimizer_file, trainer_file, agent_file]
-    #print(component_files)
-    copy_files(component_files, path_from=param_path, path_to=path + param_path)
+    '''
+    model_file = param_file['model_file']
+    agent_file = param_file['agent_file']
+    arenas_file = param_file['arenas_file']
+    optimizer_file = param_file['optimizer_file']
+    trainer_file = param_file['trainer_file']
+    '''
+
+    #param_file = [model_file, agent_file, arenas_file, optimizer_file, trainer_file, agent_file]
+    #print(param_file)
+    copy_files(param_file, path_from=os.path.abspath('./'), path_to=path)
+
+def get_required_file(file_start):
+    if isinstance(file_start, str):
+        file_start = [file_start] 
+    file_list = file_start
+    for file in file_start:
+        get_required_file_recur(file, file_list)
+    return file_list
+
+def get_required_file_recur(file, file_list):
+    # file_list: stores required files in format of relative path to ./
+    if not file.startswith('/') and not file.startswith('./'):
+        file = './' + file
+    if not file in file_list:
+        file_list.append(file)
+    File = import_file(file)
+    #print(dir(File))
+
+    if 'file_required' in dir(File):
+        file_required = File.file_required
+        for file_rel in file_required:
+            file_rel_main = cal_path_rel_main(path_rel=file_rel, path_start=File.__file__, path_main=__file__)
+            #print('file_rel_main: %s'%file_rel_main)
+            get_required_file_recur(file_rel_main, file_list)
+
+def backup(args):
+    if args.path is None:
+        path_to = '/data4/wangweifan/.backup/Navi-v3/' # default backup path
+    else:
+        path_to = args.path
+    copy_folder(path_from=os.path.abspath('../'), path_to=path_to, exceptions=['../Instances/'])
 
 if __name__=='__main__':
+    #print(os.path.abspath('../'))
     #task = 'train' if args.task is None else args.task
     if args.task is None:
         task = 'train'
@@ -556,7 +616,7 @@ if __name__=='__main__':
     elif task in ['train']:
         train(args)
     elif task in ['backup']:
-        train()
+        backup(args)
     elif task in ['train_sim']:
         train_simplified()
     elif task in ['test_model']:
