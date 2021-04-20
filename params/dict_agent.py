@@ -60,7 +60,7 @@ dict_ = {
 
 def interact(env_info):
     device = env_info['device']
-    model_dict = env_info['model_dict']
+    model_dict = env_info['model']
     pc_dict['device'] = device
     if input_mode in ['v_xy']:
         model_dict['input_num'] = 2 # (v_x, v_y)
@@ -68,7 +68,6 @@ def interact(env_info):
         model_dict['input_num'] = 3 # (cos, sin, v)
     else:
         raise Exception('Invalid input mode: %s'%input_mode)
-
     if task in ['pc']:
         model_dict['input_init_num'] = pc_num
         model_dict['output_num'] = pc_num # pc_act
@@ -77,7 +76,6 @@ def interact(env_info):
         model_dict['output_num'] = 2 # (x, y)
     else:
         raise Exception('Invalid task: %s'%task)
-    
     if dict_.get('name') is None:
         dict_['name'] = 'agent_%s'%model_dict['name']
     return

@@ -20,7 +20,11 @@ import cv2 as cv
 import config_sys
 config_sys.set_sys_path()
 from utils import get_from_dict, get_items_from_dict, search_dict, get_name_args, ensure_path, contain, remove_suffix, get_ax
+from utils import build_optimizer
 from utils_plot import get_res_xy, plot_polyline, get_int_coords_np, norm_and_map
+import utils_train
+from utils_train import set_train_info
+import utils_train
 
 from anal_grid import get_score
 
@@ -89,6 +93,8 @@ class Agent(object):
         '''
         self.sample_count = 0
         self.batch_count = 0
+
+        self.cache = {}
     def report_perform(self, prefix='', verbose=True):
         report = prefix
         for key in self.perform_list.keys():
@@ -125,9 +131,23 @@ class Agent(object):
                 'output': xy
             }
         return data
+    def train(self, dict_, report_in_batch=None, report_interval=None, save_path=None, save_name=None, verbose=True):
+        optimizer = self.cache['optimizer'] = build_optimizer(dict_['optimizer'])
+        epoch_start, epoch_num, epoch_end = utils_train.get_epoch_info(dict_)
+        utils_train.set_train_info(dict_)
+        if save_path is None:
+            save_path = dict_['save_path']
+        else:
+            dict_['save_path'] = save_path
+        ensure_path(save_path)
+        save, save_interval, save_before_train, save_after_train = get_items_from_dict(dict_,
+            ['save', 'save_interval', 'save_before_train', 'save_after_train'])
+        anal, anal_interval, anal_before_train, anal_after_train = get_items_from_dict(dict_,
+            ['anal', 'anal_interval', 'anal_before_train', 'anal_after_train'])
 
-    def train(self, dict_, report_in_batch=None, report_interval=None):
-        epoch_start, epoch_num, epoch_end = self.get_epoch_info(dict_)
+        batch_num = dict_['batch_num']
+        batch_size = dict_['batch_size']
+        
         if report_in_batch is None:
             if not hasattr(self, 'report_in_batch'):
                 report_in_batch = True
@@ -136,58 +156,51 @@ class Agent(object):
         if report_in_batch:
             if report_interval is None:
                 if not hasattr(self, 'report_interval'):    
-                    report_interval = int(self.batch_num / 40)
+                    report_interval = int(batch_num / 40)
                 else:
                     report_interval = self.report_interval
-        if self.save_before_train:
-            agent.save(self.save_path, agent.dict['name'] + '_epoch=beforeTrain')
+        if save_before_train:
+            self.save(save_path, self.dict['name'] + '_beforeTrain')
 
-        if self.anal_before_train:
-            self.anal(title='beforeTrain')
+        if anal_before_train:
+            self.anal(dict_, title='beforeTrain', save_path=save_path + 'anal_beforeTrain/')
 
-        self.optimizer.update_before_train()
+        optimizer.update_before_train()
 
+        epoch_index = epoch_start
         #print('epoch_index:%d epoch_end:%d'%(epoch_index, epoch_end))
         while epoch_index <= epoch_end:
             print('epoch=%d/%d'%(epoch_index, epoch_end), end=' ')
             # train model
-            agent.reset_perform()
-            #batch_num = 0
-            for batch_index in range(self.batch_num):
-                #print(batch_index)
-                # prepare_data
-                '''
-                path = agent.walk_random(num=self.batch_size)
-                self.optimizer.train(path)
-                '''
-                agent.train(self.batch_size)
+            self.reset_perform()
+            for batch_index in range(batch_num):
+                #self.train_once(batch_size)
+                path = self.walk_random(num=batch_size)
+                data = self.prep_data(path)
+                optimizer.train(data)
                 if report_in_batch:
                     if batch_index % report_interval == 0:
-                        print('batch=%d/%d' % (batch_index, self.batch_num))
-                        agent.report_perform()
-                        agent.reset_perform()
-                        print('lr: %.3e'%self.optimizer.get_lr())
+                        print('batch=%d/%d' % (batch_index, batch_num))
+                        self.report_perform()
+                        self.reset_perform()
+                        print('lr: %.3e'%optimizer.get_lr())
                 #batch_num += 1
-            train_perform = agent.report_perform(prefix='train: ')
+            train_perform = self.report_perform(prefix='train: ')
 
             #print('save:%s save_interval:%d'%(self.save, self.save_interval))
-            if self.save_model and epoch_index % self.save_interval == 0:
+            if save and epoch_index % save_interval == 0:
                 print('saving_model at this epoch')
-                agent.save(self.save_path, agent.dict['name'] + '_epoch=%d' % epoch_index)
+                self.save(save_path, self.dict['name'] + '_epoch=%d' % epoch_index)
             
-            if self.anal_model and epoch_index % self.anal_interval == 1:
-                self.anal()
+            if anal and epoch_index % anal_interval == 1:
+                self.anal(dict_, title='epoch=%s'%epoch_index, save_path=save_path + 'anal_epoch=%s/'%epoch_index)
             
-            self.optimizer.update_epoch()
+            optimizer.update_after_epoch()
             epoch_index += 1
-        if self.save_after_train:
-            agent.save(self.save_path, agent.dict['name'] + '_epoch=afterTrain')
-
-
-    def train_once(self, batch_size):
-        path = self.walk_random(num=batch_size)
-        data = self.prep_data(path)
-        self.optimizer.train(data)
+        if save_after_train:
+            self.save(save_path, self.dict['name'] + '_epoch=afterTrain')
+        if anal_after_train:
+            self.anal(dict_, title='afterTrain', save_path=save_path + 'anal_afterTrain/')
     def cal_perform_coord(self, data):
         output_truth = get_items_from_dict(data, ['output'])
         # x: [batch_size, step_num, input_num]
@@ -629,7 +642,7 @@ class Agent(object):
             ensure_path(save_path)
             plt.savefig(save_path + save_name)
         return ax
-    def cal_act_map(self, model, trainer, arena, res=50, batch_size=200, batch_num=20, step_num=None):
+    def cal_act_map(self, model, arena, res=50, batch_size=200, batch_num=20, step_num=None):
         # Compute spatial firing fields
         N_num = model.dict['N_num']
         step_num = self.step_num if step_num is None else step_num
@@ -699,7 +712,7 @@ class Agent(object):
         act_map_norm[np.argwhere(act_map_norm<0.0)] = 0.0
         return act_map_norm
     
-    def anal_act(self, save_path='./', model=None, trainer=None, arena=None, separate_ei=None, act_map_res=50):
+    def anal_act(self, save_path='./', model=None, batch_size=None, batch_num=None, arena=None, separate_ei=None, act_map_res=50):
         model = self.model if model is None else model
         if model is None:
             raise Exception('Agent.anal_act: Error: model is None.')
@@ -708,19 +721,20 @@ class Agent(object):
         if arena is None:
             arena = self.arenas.get_current_arena()
         
-        batch_size = trainer.batch_size
-        batch_num = int(trainer.batch_num / 10)
-        act_map_info = self.cal_act_map(model=model, trainer=trainer, arena=arena, res=act_map_res, batch_size=batch_size, batch_num=batch_num) # [N_num, res_x, res_y]
+        if batch_num is None:
+            batch_num = int(batch_num / 10)
+        act_map_info = self.cal_act_map(model=model, arena=arena, res=act_map_res, batch_size=batch_size, batch_num=batch_num) # [N_num, res_x, res_y]
         
         act_map, point_count = act_map_info['act_map'], act_map_info['point_count']
 
         self.plot_sample_num(point_count, arena, save_path=save_path)
         if self.task in ['pc']:
             self.plot_place_cells_prediction(model=model, act_map_info=act_map_info, save_path=save_path)
-        self.plot_act_map(save=True, save_path=save_path, plot_num='all', model=model, trainer=trainer, arena=arena, separate_ei=separate_ei, act_map_info=act_map_info)
+        self.plot_act_map(save=True, save_path=save_path, plot_num='all', model=model, batch_size=batch_size, batch_num=batch_num,  
+            arena=arena, separate_ei=separate_ei, act_map_info=act_map_info)
 
-    def plot_act_map(self, save=True, save_path='./', save_name='act_map.png', plot_num=None, model=None, act_map_info=None,
-        trainer=None, arena=None, res=50, col_num=15, num_per_page=100, separate_ei=None, cmap='jet', sample_method='grid_score', map_method='individual'):
+    def plot_act_map(self, save=True, save_path='./', save_name='act_map.png', plot_num=None, model=None, act_map_info=None, batch_size=None, batch_num=None,
+            arena=None, res=50, col_num=15, num_per_page=100, separate_ei=None, cmap='jet', sample_method='grid_score', map_method='individual'):
 
         model = self.model if model is None else model
         if model is None:
@@ -732,8 +746,9 @@ class Agent(object):
             separate_ei = model.separate_ei
 
         if act_map_info is None:
-            batch_size = trainer.batch_size
-            batch_num = int(trainer.batch_num / 100)
+            #batch_size = trainer.batch_size
+            if batch_num is None:
+                batch_num = int(batch_num / 100)
             act_map_info = self.cal_act_map(model=model, trainer=trainer, arena=arena, res=res, batch_size=batch_size, batch_num=batch_num) 
                 
         act_map, point_count = act_map_info['act_map'], act_map_info['point_count'] # [N_num, res_x, res_y]
@@ -1035,8 +1050,10 @@ class Agent(object):
         self.arenas = arenas
         if hasattr(self, 'place_cells'):
             self.place_cells.bind_arenas(arenas)
+    '''
     def bind_optimizer(self, optimizer):
         self.optimizer = optimizer
+    '''
     def bind_model(self, model):
         self.model = model
         # to be modified
@@ -1046,16 +1063,14 @@ class Agent(object):
             self.cal_perform = self.cal_perform_coord
         else:
             raise Exception('Invalid task: %s'%self.task)
-    def anal(self, save_path, trainer=None, items=['']):
-        if trainer is None:
-            trainer = self.trainer
-        print('Analying...epoch=%d'%(trainer.epoch_index))
+    def anal(self, dict_, save_path='./', title='', items=['']):
+        print('Agent: Analying...%s'%(title))
         print('Agent: Plotting agent path.')
         self.plot_path(save_path=save_path, save_name='path_plot.png', model=self.model, plot_num=2)
         print('Agent: Plotting act map.')
         self.anal_act(save_path=save_path,
                             model=self.model,
-                            trainer=trainer,
+                            batch_size=dict_['batch_size'], batch_num=dict_['batch_num'],
                             arena=self.arenas.current_arena(),
                             separate_ei=self.model.separate_ei
                         )

@@ -90,7 +90,7 @@ else:
     dict_['act_func'] = act_func
 
 def interact(env_info):
-    agent_dict = env_info['agent_dict']
+    agent_dict = env_info['agent']
     task = agent_dict['task']
     dict_['device'] = env_info['device']
     dict_['loss'] = agent_dict['loss']

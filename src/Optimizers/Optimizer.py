@@ -9,7 +9,7 @@ import utils_model
 from LRSchedulers import LinearLR
 
 class Optimizer(abc.ABC): 
-    def __init__(self, dict_=None, load=False, options=None):
+    def __init__(self, dict_=None, load=False):
         #if options is not None:
         #    self.receive_options(options)
         self.dict = dict_

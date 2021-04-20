@@ -679,5 +679,5 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
         noise = torch.zeros((batch_size, self.dict['input_num']), device=self.device)
         torch.nn.init.normal_(noise, 0.0, self.noise_coeff)
         return noise
-
-
+    def get_param_to_train(self):
+        return self.parameters()

@@ -19,12 +19,13 @@ import argparse
 import warnings
 import importlib
 import shutil
+from inspect import getmembers, isfunction
 
 sys.path.append('./src/')
 import config_sys
 #print(sys.path)
 from utils import build_model, build_agent, build_arenas, build_optimizer, build_trainer, copy_folder, cal_path_rel_main, get_items_from_dict
-from utils import scan_files, copy_files, path_to_module, remove_suffix, select_file, ensure_path, get_device, import_file
+from utils import scan_files, copy_files, path_to_module, remove_suffix, select_file, ensure_path, get_device, import_file, join_path
 #from config import Options
 from utils_anal import compare_traj, get_input_output
 
@@ -88,7 +89,7 @@ def test_anal_act():
     model, trainer, optimizer = options.model, options.trainer, options.optimizer
     model.plot_weight(save_path=save_path+'model/', save_name='model_weight_plot.png')
     #trainer.bind_model(model)
-    trainer.bind_agent(agent)
+    #trainer.bind_agent(agent)
     #optimizer.bind_model(model)
     optimizer.bind_agent(agent)
     print('test_load_model: plotting heat map after load.')
@@ -206,32 +207,36 @@ def train(args=None, param_path=None, **kw):
         #sys.path.append(param_path)
 
     param_dict = get_param_dict(args)
-    model_dict = param_dict['model_dict']
-    arenas_dict = param_dict['arenas_dict']
-    agent_dict = param_dict['agent_dict']
-    optimizer_dict = param_dict['optimizer_dict']
-    trainer_dict = param_dict['trainer_dict']
+    model_dict = param_dict['model']
+    arenas_dict = param_dict['arenas']
+    agent_dict = param_dict['agent']
+    optimizer_dict = param_dict['optimizer']
+    task_dict = param_dict['task']
+    #trainer_dict = param_dict['trainer_dict']
 
-    # overwrite dict items from args
+    # overwrite dict items from args    
     if args.no_anal_before_train:
-        trainer_dict['anal_before_train'] = False
-    
-    trainer = build_trainer(trainer_dict)
+        if task_dict.get('train') is not None:
+            task_dict['train']['anal_before_train'] = False
+
+    #trainer = build_trainer(trainer_dict)
     agent = build_agent(agent_dict)
     arenas = build_arenas(arenas_dict)
     model = build_model(model_dict)
-    optimizer = build_optimizer(optimizer_dict)
-    optimizer.bind_model(model)
-    optimizer.bind_trainer(trainer)
+    #optimizer = build_optimizer(optimizer_dict)
+    #optimizer.bind_model(model)
+    #optimizer.bind_trainer(trainer)
 
     #trainer.bind_arenas(arenas)
-    trainer.bind_model(model)
-    trainer.bind_optimizer(optimizer)
-    trainer.bind_agent(agent)
-    agent.bind_optimizer(optimizer)
+    #trainer.bind_model(model)
+    #trainer.bind_optimizer(optimizer)
+    #trainer.bind_agent(agent)
+    #agent.bind_optimizer(optimizer)
     agent.bind_arenas(arenas)
     agent.bind_model(model)
-    trainer.train() # the model needs some data from agent to get response properties.
+    #trainer.train() # the model needs some data from agent to get response properties.
+    agent.train(task_dict['train'])
+
 def load():
     loaded_items = {}
 
@@ -352,38 +357,8 @@ def get_param_file(args, verbose=True):
         #print(config_file)
         Config_Param = import_file(param_path + config_file)
         #Config_Param = importlib.import_module(path_to_module(param_path) + remove_suffix(config_file))
-        try:
-            model_file = Config_Param.model_file
-            optimizer_file = Config_Param.optimizer_file
-            trainer_file = Config_Param.trainer_file
-            agent_file = Config_Param.agent_file
-            arenas_file = Config_Param.arenas_file
-        except Exception:
-            raise Exception('Cannot read file name from %s'%(param_path + config_file))
-        '''
-        files = [model_file, optimizer_file, trainer_file, agent_file, arenas_file]
-        for i, file in enumerate(files):
-            if files[i].startswith('./'):
-                files[i] = files[i].lstrip('./')
-            if not os.path.exists(param_path + file):
-                raise Exception('FileNotFoundError: %s'%(param_path + file))
-        '''
-        result = {
-            'model_file': model_file,
-            'optimizer_file': optimizer_file,
-            'trainer_file': trainer_file,
-            'arenas_file': arenas_file,
-            'agent_file': agent_file,
-            'config_file': config_file,
-        }
-        for key, value in result.items():
-            if result[key].startswith('./'):
-                result[key] = result[key].lstrip('./')
-            result[key] = param_path + result[key]
-            if not os.path.exists(result[key]):
-                raise Exception('FileNotFoundError: %s'%(result[key]))
         return {
-            'param_file': result,
+            'param_file': Config_Param.dict_,
             'param_path': param_path,
         }
     else: # get param files directly
@@ -466,15 +441,28 @@ def get_param_file(args, verbose=True):
             'param_file': result,
             'param_path': param_path,
         }
-def get_param_dict(args):
+def get_param_dict(args, verbose=True):
     param_file, param_path = get_items_from_dict(get_param_file(args), ['param_file', 'param_path'])
     #print(param_file.keys())
-    model_file = param_file['model_file'] # model_file are in form of relevant path to ./
-    agent_file = param_file['agent_file']
-    arenas_file = param_file['arenas_file']
-    optimizer_file = param_file['optimizer_file']
-    trainer_file = param_file['trainer_file']
+
+    '''
+    model_file = param_file['model'] # model_file are in form of relevant path to ./
+    agent_file = param_file['agent']
+    arenas_file = param_file['arenas']
+    optimizer_file = param_file['optimizer']
+    trainer_file = param_file['trainer']
+    '''
+
+    param_dict = {}
+
+    Params = []
+    for param_name, file_path in param_file.items():
+        print(join_path(param_path, file_path))
+        Param = import_file(join_path(param_path, file_path))
+        param_dict[param_name] = Param.dict_
+        Params.append(Param)
     
+    '''
     #print(path_to_module(param_path) + remove_suffix(model_file))
     Model_Param = import_file(model_file)
     #Model_Param = importlib.import_module(path_to_module(param_path) + remove_suffix(model_file))
@@ -495,32 +483,28 @@ def get_param_dict(args):
     Trainer_Param = import_file(trainer_file)
     #Trainer_Param = importlib.import_module(path_to_module(param_path) + remove_suffix(trainer_file))
     trainer_dict = Trainer_Param.dict_
+    '''
 
     device = get_device(args)
-    print('Using device: %s'%str(device))
+    if verbose:
+        print('Using device: %s'%str(device))
 
     env_info = {
-        'model_dict': model_dict,
-        'optimizer_dict': optimizer_dict,
-        'trainer_dict': trainer_dict,
-        'agent_dict': agent_dict,
-        'arenas_dict': arenas_dict,
         'device': device
     }
+    env_info.update(param_dict)
 
-    Model_Param.interact(env_info)
-    Optimizer_Param.interact(env_info)
-    Trainer_Param.interact(env_info)
-    Agent_Param.interact(env_info)
-    Arenas_Param.interact(env_info)
-
-    return {
-        'model_dict': model_dict,
-        'optimizer_dict': optimizer_dict,
-        'trainer_dict': trainer_dict,
-        'agent_dict': agent_dict,
-        'arenas_dict': arenas_dict
-    }
+    for Param in Params:
+        if 'interact' in list(map(lambda x:x[0], getmembers(Param, isfunction))): # check whether Param module has interact function.
+            Param.interact(env_info)
+            '''
+            Model_Param.interact(env_info)
+            Optimizer_Param.interact(env_info)
+            Trainer_Param.interact(env_info)
+            Agent_Param.interact(env_info)
+            Arenas_Param.interact(env_info)
+            '''
+    return param_dict
 def copy_project_files(args):
     path = args.path
     if path is None:

@@ -3,7 +3,7 @@ from typing import Any
 from utils import ensure_path, get_from_dict, set_instance_variable, search_dict
 
 class Trainer:
-    def __init__(self, dict_, load=False, options=None):
+    def __init__(self, dict_, load=False):
         if options is not None:
             self.receive_options(options)
 
@@ -37,16 +37,20 @@ class Trainer:
         if self.save:
             self.save_interval = search_dict(self.dict, ['save_interval', 'save_model_interval'], default=int(self.epoch_num / 10), write_default=True)
 
+        '''
         if options is not None:
             self.options = options
             self.set_options()
-
+        '''
         self.test_performs = self.dict['test_performs'] = {}
         self.train_performs = self.dict['train_performs'] = {}
 
         self.anal_model = self.dict.setdefault('anal_model', True)
 
     def train(self, report_in_batch=None, report_interval=None):
+        
+
+
         if report_in_batch is None:
             if not hasattr(self, 'report_in_batch'):
                 report_in_batch = True
