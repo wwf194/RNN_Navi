@@ -18,15 +18,15 @@ def build_arenas(dict_, load=False):
     import Arenas
     return Arenas.Arenas(dict_ = dict_, load=load)
 
-def build_optimizer(dict_, load=False):
+def build_Optimizer(dict_, load=False, params=None, model=None):
     import Optimizers
     type_ = dict_['type']
     if type_ in ['BP', 'bp']:
-        return Optimizers.Optimizer_BP(dict_, load=load)
+        return Optimizers.Optimizer_BP(dict_, load=load, params=params, model=model)
     elif type_ in ['CHL', 'chl']:
-        return Optimizers.Optimizer_CHL(dict_, load=load)
+        return Optimizers.Optimizer_CHL(dict_, load=load, params=params, model=model)
     elif type_ in ['TP', 'tp']:
-        return Optimizers.Optimizer_TP(dict_, load=load)
+        return Optimizers.Optimizer_TP(dict_, load=load, params=params, model=model)
     else:
         raise Exception('Invalid optimizer type: %s'%str(type_))
 

@@ -12,7 +12,7 @@ dict_ = {
                 'type': 'sgd',
                 'lr': lr,
             },
-            'sheduler': { # used to set scheduler
+            'scheduler': { # used to set scheduler
                 'type': 'linear',
                 'milestones': [[0.50, 1.0], [0.70, 1.0e-1], [0.85, 1.0e-2], [0.95, 1.0e-3]],
             },

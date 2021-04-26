@@ -18,11 +18,11 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
     def __init__(self, dict_=None, load=False):
         super(RSLP_LIF, self).__init__()
         self.dict = dict_
-        
         #set_instance_variable(self, self.dict)
         self.separate_ei = self.dict['separate_ei']
         self.load = load
-        self.device = self.dict.setdefault('device', 'cpu')
+        self.device_str = self.dict.setdefault('device', 'cpu')
+        self.device = torch.device(self.device_str)
         self.N_num = self.dict['N_num']
         self.input_num = self.dict['input_num']
         self.input_init_num = self.dict['input_init_num']
@@ -37,38 +37,44 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
             self.I_num = self.dict['I_num']
             self.weight_Dale = self.dict['weight_Dale']
             #set_instance_variable(self, self.dict, keys=['E_num', 'I_num', 'weight_Dale'])
-
+        print('aaa1')
         # set up weights and biases
         if load:
-            '''
-            self.i = self.dict['i'] # input weight
-            self.r = self.dict['r']
-            self.r_b = self.dict['r_b']
-            self.o = self.dict['o']
-            '''
-            pass
+            #self.register_parameter('i', self.i)
+            self.register_parameter('o', self.dict['o'])
+            self.register_parameter('r', self.dict['r'])
         else:
+            print('aaa11')
             self.dict.setdefault('r_bias', True)
             if self.dict['r_bias']:
-                self.r_b = self.dict['r_b'] = nn.Parameter(torch.zeros((self.N_num), device=self.device, requires_grad=True))
+                print(self.device)
+                print(type(self.device))
+                print('****')
+                #self.r_b = self.dict['r_b'] = nn.Parameter(torch.zeros((self.N_num), device=self.device, requires_grad=True))
+                self.r_b = self.dict['r_b'] = nn.Parameter(torch.zeros((self.N_num), requires_grad=True))
+                print('********')
+                self.r_b = self.dict['r_b'] = self.r_b.to(self.device)
+                print('****')
             else:
                 self.r_b = self.dict['r_b'] = 0.0
-            #self.i = self.dict['i'] = nn.Parameter(torch.zeros((self.input_num, self.N_num), device=self.device, requires_grad=True)) #input weights
+            print('aaa111')
             self.o = self.dict['o'] = nn.Parameter(torch.zeros((self.N_num, self.output_num), device=self.device, requires_grad=True))
+            print('aaa112')
             self.r = self.dict['r'] = nn.Parameter(torch.zeros((self.N_num, self.N_num), device=self.device, requires_grad=True))
+            print('aaa12')
             if self.dict.get('init_weight') is None:
                 self.dict['init_weight'] = {
-                    #'i': ['input', 1.0],
                     'r': ['input', 1.0],
                     'o': ['input', 1.0],
                 }
             else:
                 self.init_weight = self.dict['init_weight']
             #init_weight(self.dict['i'], self.dict['init_weight']['i'])
+            print('aaa13')
             init_weight(self.dict['r'], self.dict['init_weight']['r'])
             init_weight(self.dict['o'], self.dict['init_weight']['o'])
-        #self.register_parameter('i', self.i)
-        self.register_parameter('r', self.dict['r'])
+        print('aaa2')
+
         if isinstance(self.dict['r_b'], torch.Tensor):
             self.register_parameter('r_b', self.dict['r_b'])
         else:
@@ -76,11 +82,7 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
         self.register_parameter('o', self.dict['o'])
     
         # set up init method
-        # for compatibility with older versions
-        '''
-        if self.input_mode not in ['v_xy', 'v_hd']: 
-            self.input_mode = 'v_xy'
-        '''
+        print('bbb')
         if self.dict.get('init_method') is None:
             self.dict['init_method'] = self.dict['init_mode']
         self.init_method_name, self.init_method_dict = get_name_args(self.dict['init_method'])
@@ -174,7 +176,7 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
             self.cal_input = self.cal_input_mlp
         else:
             raise Exception('Invalid input method: %s'%self.input_method_name)
-
+        print('ccc')
         # set up recurrent weight
         if self.dict['no_self']:
             self.r_self_mask = torch.ones( (self.N_num, self.N_num), device=self.device, requires_grad=False )
