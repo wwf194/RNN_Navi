@@ -19,8 +19,10 @@ import cv2 as cv
 
 import config_sys
 config_sys.set_sys_path()
+
+import utils
 from utils import get_from_dict, get_items_from_dict, search_dict, get_name_args, ensure_path, contain, remove_suffix, get_ax
-from utils import build_optimizer
+from utils import build_Optimizer
 from utils_plot import get_res_xy, plot_polyline, get_int_coords_np, norm_and_map
 import utils_train
 from utils_train import set_train_info
@@ -132,8 +134,7 @@ class Agent(object):
             }
         return data
     def train(self, dict_, report_in_batch=None, report_interval=None, save_path=None, save_name=None, verbose=True):
-        optimizer = self.cache['optimizer'] = build_optimizer(dict_['optimizer'])
-        optimizer.bind_model(self.model)
+        optimizer = self.cache['optimizer'] = utils.build_Optimizer(dict_['optimizer'], params=self.model.get_param_to_train())
         epoch_start, epoch_num, epoch_end = utils_train.get_epoch_info(dict_)
         utils_train.set_train_info(dict_)
         if save_path is None:
