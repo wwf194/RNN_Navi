@@ -133,6 +133,7 @@ class Agent(object):
         return data
     def train(self, dict_, report_in_batch=None, report_interval=None, save_path=None, save_name=None, verbose=True):
         optimizer = self.cache['optimizer'] = build_optimizer(dict_['optimizer'])
+        optimizer.bind_model(self.model)
         epoch_start, epoch_num, epoch_end = utils_train.get_epoch_info(dict_)
         utils_train.set_train_info(dict_)
         if save_path is None:
