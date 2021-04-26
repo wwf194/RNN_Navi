@@ -10,44 +10,35 @@ class Optimizer_BP(Optimizer):
         super().__init__(dict_, load)
         self.get_lr = self.get_current_lr
         self.load = load
+        #self.optimizer = self.build_optimizer(load=load, model=model, params=params)
         if params is not None:
-            self.build_optimizer(load=load, model=model, params=params)
-    def bind_model(self, model, load=False):
-        self.build_optimizer(load=load, model=model)
-    def build_optimizer(self, load=False, model=None, params=None):
-        if params is not None:
-            pass
+            self.params = params
         elif model is not None:
-            if hasattr(model, 'get_param_to_train'):
-                params = model.get_param_to_train()
-        self.optimizer = utils_model.build_optimizer(self.dict['optimizer'], params=params, load=load)         
-        #self.build_scheduler() # scheduler should be built after optimizer
+            self.model = model
+        self.build_optimizer(model=model, params=params, load=load)
+        self.build_scheduler(load=load) # scheduler should be built after optimizer
+    def bind_model(self, model, load=False):
+        self.build_optimizer(model=model, load=load)
+        self.build_scheduler(load=load)
+    def build_optimizer(self, load=False, model=None, params=None):
+        self.optimizer = utils_model.build_optimizer(self.dict['optimizer'], params=params, model=model, load=load)
+    def build_scheduler(self, load=False, verbose=True):
+        #self.lr_decay = self.dict['lr_decay']
         print(self.dict.keys())
         self.scheduler = utils_model.build_scheduler(self.dict['scheduler'], optimizer=self.optimizer, load=load)
-    def build_scheduler(self, verbose=True):
-        #self.lr_decay = self.dict['lr_decay']
-        lr_decay = self.lr_decay = self.dict['lr_decay']
-        lr_decay_method = lr_decay.get('method')
+        scheduler_type = search_dict(self.dict['scheduler'], ['type', 'method'], default='None', write_default=True)
         if verbose:
-            print('Optimizer_BP.lr_decay_method: %s'%lr_decay_method)
-        if lr_decay_method is None or lr_decay_method in ['None', 'none']:
-            self.scheduler = None
+            print('Optimizer_BP.lr_decay_method: %s'%scheduler_type)
+        if scheduler_type is None or scheduler_type in ['None', 'none']:
             self.update_lr = self.update_lr_none
-        elif lr_decay_method in ['exp']:
-            decay = search_dict(lr_decay, ['decay', 'coeff'], default=0.98, write_default=True, write_default_dict='decay')
-            self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=decay)
+        elif scheduler_type in ['exp']:
             self.update_lr = self.update_lr_
-        elif lr_decay_method in ['stepLR', 'exp_interval']:
-            decay = search_dict(lr_decay, ['decay', 'coeff'], default=0.98, write_default=True, write_default_key='decay')
-            step_size = search_dict(lr_decay, ['interval', 'step_size'], default=0.98, write_default=True, write_default_key='decay')
-            self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, step_size=step_size, gamma=decay)
+        elif scheduler_type in ['stepLR', 'exp_interval']:
             self.update_lr = self.update_lr_
-        elif lr_decay_method in ['Linear', 'linear']:
-            milestones = search_dict(lr_decay, ['milestones'], throw_none_error=True)
-            self.scheduler = LinearLR(self.optimizer, milestones=milestones, epoch_num=self.dict['epoch_num'])
+        elif scheduler_type in ['Linear', 'linear']:
             self.update_lr = self.update_lr_
         else:
-            raise Exception('build_scheduler: Invalid lr decay method: '+str(lr_decay_method))
+            raise Exception('build_scheduler: Invalid lr decay method: '+str(scheduler_type))
     def update_before_train(self):
         #print(self.dict['update_before_train'])
         self.update_before_train_items = search_dict(self.dict, ['update_before_train'], default=[], write_default=True)

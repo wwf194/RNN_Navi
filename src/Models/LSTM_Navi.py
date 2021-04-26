@@ -100,9 +100,7 @@ class LSTM_Navi(nn.Module):
             self.get_loss = self.get_loss_pc_coords
             self.loss_list = {"pc":0.0, "coords":0.0, "act":0.0, "weight":0.0}
         else:
-            print("invalid task:"+str(self.task))
-            input()
-        
+            raise Exception("Invalid task:"+str(self.task))
         if init_method=="zero":
             self.prepare_x = self.prepare_x_zero
         elif init_method in ["input", "linear"]:
