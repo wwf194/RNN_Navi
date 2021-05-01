@@ -35,7 +35,7 @@ if separate_ei:
 if separate_ei:
     coeff = 1.0e-1
 else:
-    coeff = 1.0
+    coeff = 1.0e-1
 init_weight = {
     'i': ['glorot', coeff],
     'o': ['glorot', coeff],

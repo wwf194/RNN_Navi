@@ -1,9 +1,9 @@
 width = 2.20
 height = 2.20
 
-arena_files = {
+arena_files = [
     './dict_arena/dict_arena_rec_max.py'
-}
+]
 
 import os
 import sys

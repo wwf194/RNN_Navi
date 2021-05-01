@@ -1,4 +1,7 @@
+import random
+
 import numpy as np
+from numpy import unravel_index
 
 import torch
 import torch.nn as nn
@@ -7,9 +10,10 @@ import torch.nn.functional as F
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 
-from utils import set_instance_variable, contain, get_name, get_items_from_dict, get_name_args, ensure_path
+import utils
+from utils import set_instance_variable, contain, get_name, get_items_from_dict, get_name_args, ensure_path, linspace, get_np_stat
 #from utils_anal import *
-from utils_model import get_act_func, get_mask, get_ei_mask, init_weight, build_mlp, print_model_param
+from utils_model import get_act_func, get_mask, get_ei_mask, init_weight, build_mlp, print_model_param, get_tensor_info, get_tensor_stat
 from utils_plot import norm_and_map
 #from Place_Cells import Place_Cells
 #from Neurons_LIF import Neurons_LIF
@@ -37,31 +41,19 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
             self.I_num = self.dict['I_num']
             self.weight_Dale = self.dict['weight_Dale']
             #set_instance_variable(self, self.dict, keys=['E_num', 'I_num', 'weight_Dale'])
-        print('aaa1')
         # set up weights and biases
         if load:
             #self.register_parameter('i', self.i)
             self.register_parameter('o', self.dict['o'])
             self.register_parameter('r', self.dict['r'])
         else:
-            print('aaa11')
             self.dict.setdefault('r_bias', True)
             if self.dict['r_bias']:
-                print(self.device)
-                print(type(self.device))
-                print('****')
-                #self.r_b = self.dict['r_b'] = nn.Parameter(torch.zeros((self.N_num), device=self.device, requires_grad=True))
-                self.r_b = self.dict['r_b'] = nn.Parameter(torch.zeros((self.N_num), requires_grad=True))
-                print('********')
-                self.r_b = self.dict['r_b'] = self.r_b.to(self.device)
-                print('****')
+                self.r_b = self.dict['r_b'] = nn.Parameter(torch.zeros((self.N_num), device=self.device, requires_grad=True))
             else:
                 self.r_b = self.dict['r_b'] = 0.0
-            print('aaa111')
             self.o = self.dict['o'] = nn.Parameter(torch.zeros((self.N_num, self.output_num), device=self.device, requires_grad=True))
-            print('aaa112')
             self.r = self.dict['r'] = nn.Parameter(torch.zeros((self.N_num, self.N_num), device=self.device, requires_grad=True))
-            print('aaa12')
             if self.dict.get('init_weight') is None:
                 self.dict['init_weight'] = {
                     'r': ['input', 1.0],
@@ -70,10 +62,8 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
             else:
                 self.init_weight = self.dict['init_weight']
             #init_weight(self.dict['i'], self.dict['init_weight']['i'])
-            print('aaa13')
             init_weight(self.dict['r'], self.dict['init_weight']['r'])
             init_weight(self.dict['o'], self.dict['init_weight']['o'])
-        print('aaa2')
 
         if isinstance(self.dict['r_b'], torch.Tensor):
             self.register_parameter('r_b', self.dict['r_b'])
@@ -82,7 +72,6 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
         self.register_parameter('o', self.dict['o'])
     
         # set up init method
-        print('bbb')
         if self.dict.get('init_method') is None:
             self.dict['init_method'] = self.dict['init_mode']
         self.init_method_name, self.init_method_dict = get_name_args(self.dict['init_method'])
@@ -176,7 +165,6 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
             self.cal_input = self.cal_input_mlp
         else:
             raise Exception('Invalid input method: %s'%self.input_method_name)
-        print('ccc')
         # set up recurrent weight
         if self.dict['no_self']:
             self.r_self_mask = torch.ones( (self.N_num, self.N_num), device=self.device, requires_grad=False )
@@ -403,6 +391,72 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
             'h': h,
             'o': o,
         }
+    def plot_act(self, data=None, ax=None, data_type='u', save=True, save_path='./', save_name='act_map.png', cmap='jet', plot_N_num=200, verbose=False):
+        if isinstance(data, torch.Tensor):
+            data = data.detach().cpu().numpy() # [step_num, N_num]
+
+        step_num = data.shape[0]
+        N_num = data.shape[1]
+        #data = np.transpose(data, (1, 0)) # [N_num, step_num]
+        
+        if N_num > plot_N_num:
+            plot_index = random.sample(range(N_num), plot_N_num)
+            data = data[:, plot_index]
+        else:
+            plot_N_num = N_num
+
+        if ax is None:
+            #fig, ax = plt.subplots(figsize = (step_num / 20 * 5, N_num / 20 * 5)) # figsize: (width, height), in inches
+            fig, ax = plt.subplots()
+        data_min, data_max, data_mean, data_std = get_items_from_dict(get_np_stat(data, verbose=verbose), ['min','max','mean','std'])
+        #print(np.argmax(data))
+        #print(unravel_index(data.argmax(), data.shape))
+
+        if data_min < data_mean - 3 * data_std:
+            data_down = data_mean - 3 * data_std
+        else:
+            data_down = data_min
+        if data_max > data_mean + 3 * data_std:
+            data_up = data_mean + 3 * data_std
+        else:
+            data_up = data_max
+        
+        if verbose:
+            print('data_down:%.3e data_up:%.3e'%(data_down, data_up))
+        
+        norm = mpl.colors.Normalize(vmin=data_down, vmax=data_up)
+        
+        data_norm = (data - data_min) / (data_max - data_min)
+        
+        cmap_func = plt.cm.get_cmap(cmap)
+        data_mapped = cmap_func(data_norm)
+
+        im = ax.imshow(data_mapped)
+        ax.set_yticks(utils.linspace(0, step_num - 1, 10))
+        ax.set_xticks(utils.linspace(0, plot_N_num - 1, 200))
+        ax.set_ylabel('Time Step Index')
+        ax.set_xlabel('Neuron Index')
+
+        # plot colorbar
+        cbar_ticks = utils.linspace(data_down, data_up, step='auto')
+        cbar_ticks_str = list(map(lambda x:'%.2e'%x, cbar_ticks.tolist()))
+        cbar = ax.figure.colorbar(
+            mpl.cm.ScalarMappable(norm=norm, cmap=cmap),
+            ticks=cbar_ticks,
+            ax=ax)
+        cbar.ax.set_yticklabels(cbar_ticks_str)  # vertical colorbar. use set_xticklabels for horizontal colorbar
+
+        if data_type in ['u']:
+            ax.set_title('Firing rate across time')
+            cbar.set_label('Firing rate')
+        else:
+            ax.set_title('Membrane potential rate across time')
+            cbar.set_label('Membrane potential')
+        
+        if save:
+            ensure_path(save_path)
+            plt.savefig(save_path + save_name)
+        return ax
     '''
     def cal_perform_coord(self, data):
         output_truth = get_items_from_dict(data, ['output'])
@@ -509,19 +563,18 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
             'loss': loss_main + loss_coords + loss_act + loss_weight
         }
     '''
-    def cal_loss_weight_(self):
+    def cal_loss_weight_(self, coeff):
         #if weight_cons is None:
         #    weight_cons = self.weight_cons
         weight_cons = self.weight_cons
-        if self.weight_coeff == 0.0:
-            return torch.tensor([0.0], device=self.device)
-        else:
-            loss = 0.0
-            for get_weight in weight_cons:
-                weight = get_weight()
-                if isinstance(weight, torch.Tensor):
-                    loss += torch.mean(weight ** 2)
-            loss = self.weight_coeff * loss
+        #if coeff == 0.0:
+        #    return torch.tensor([0.0], device=self.device)
+        loss = 0.0
+        for get_weight in weight_cons:
+            weight = get_weight()
+            if isinstance(weight, torch.Tensor):
+                loss += torch.mean(weight ** 2)
+        loss = coeff * loss
         return loss
     def alt_pc_act_strength(self, path, verbose=True):
         pc_mean, pc_pred_mean = self.get_output_ratio_pc(path, verbose)
@@ -565,7 +618,7 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
         if detach:
             w = w.detach()
         return w
-    def report_weight_update(self):
+    def anal_weight_change_(self):
         for name, value in self.named_parameters():
             #if name in ['encoder.0.weight','encoder.2.weight']:
             if True:
@@ -578,8 +631,60 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
                     #print(value_np - self.cache[name])
                     print('  ratio change in %s: '%name, end='')
                     print( np.sum(np.abs(value_np-self.cache[name])) / np.sum(np.abs(self.cache[name])) )
-
                 self.cache[name] = value_np
+    def anal_weight_change(self, verbose=True):
+        result = ''
+        r_1 = self.get_r().detach().cpu().numpy()
+        if self.cache.get('r') is not None:
+            r_0 = self.cache['r']
+            r_change_rate = np.sum(abs(r_1 - r_0)) / np.sum(np.abs(r_0))
+            result += 'r_change_rate: %.3e '%r_change_rate
+        self.cache['r'] = r_1
+
+        o_1 = self.get_o().detach().cpu().numpy()
+        if self.cache.get('o') is not None:
+            o_0 = self.cache['o']
+            f_change_rate = np.sum(abs(o_1 - o_0)) / np.sum(np.abs(o_0))
+            result += 'f_change_rate: %.3e '%f_change_rate
+        self.cache['o'] = o_1
+
+        if hasattr(self, 'get_i'):
+            i_1 = self.get_i().detach().cpu().numpy()
+            if self.cache.get('i') is not None:
+                i_0 = self.cache['i']
+                i_change_rate = np.sum(abs(i_1 - i_0)) / np.sum(np.abs(i_0))
+                result += 'i_change_rate: %.3e '%i_change_rate
+            self.cache['i'] = i_1
+        if verbose:
+            print(result)
+        return result
+    def get_weight_stat(self, verbose=True, complete=False):
+        result = ''
+        for name in ['i', 'r', 'o']:
+            if hasattr(self, name):
+                result += get_tensor_stat(getattr(self, name), name=name, verbose=False, complete=complete)
+        if verbose:
+            print(result)
+        return result
+    def get_weight_info(self, verbose=True, complete=False):
+        result = ''
+        for name in ['i', 'r', 'o']:
+            if hasattr(self, name):
+                result += get_tensor_info(getattr(self, name), name=name, verbose=False, complete=complete)
+        if verbose:
+            print(result)
+        return result
+    def anal_gradient(self, verbose=True):
+        result = ''
+        for name in ['i', 'r', 'o']:
+            if hasattr(self, name):
+                weight = getattr(self, name)
+                if weight.grad is not None:
+                    ratio = torch.sum(torch.abs(weight.grad)) / torch.sum(torch.abs(weight))
+                    result += '%s: ratio_grad_weight: %.3e ' % (name, ratio)
+        if verbose:
+            print(result)
+        return result
     '''
     def prep_path(self, path):
         if self.input_mode in ['v_xy']:
@@ -681,5 +786,5 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
         noise = torch.zeros((batch_size, self.dict['input_num']), device=self.device)
         torch.nn.init.normal_(noise, 0.0, self.noise_coeff)
         return noise
-    def get_param_to_train(self):
+    def get_train_param(self):
         return self.parameters()

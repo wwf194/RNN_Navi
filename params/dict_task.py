@@ -40,9 +40,14 @@ dict_ = {
 
 def interact(env_info):
     args = env_info.get('args', None)
-    if args is not None:
-        if hasattr(args, 'no_anal_before_train'):
-            if args.no_anal_before_train:
-                if dict_.get('train') is not None:
-                    dict_['train']['anal_before_train'] = False
-                    dict_['train']['optimizer']['epoch_num'] = dict_['train']['epoch_num'] # some optimizers require epoch_num to set scheduler
+    if dict_.get('train') is not None:
+        dict_train = dict_['train']
+        if args is not None:
+            #if hasattr(args, 'no_anal_before_train'):
+            if args.no_anal_before_train:    
+                dict_['train']['anal_before_train'] = False
+        dict_train['optimizer']['epoch_num'] = dict_['train']['epoch_num'] # some optimizers require epoch_num to set scheduler
+        if dict_train['optimizer'].get('scheduler') is not None:
+            if dict_train['optimizer']['scheduler']['type'] in ['Linear', 'linear']:
+                dict_train['optimizer']['scheduler']['epoch_num'] = dict_['train']['epoch_num'] # some optimizers require epoch_num to set scheduler
+        

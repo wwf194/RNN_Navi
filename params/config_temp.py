@@ -7,5 +7,5 @@ dict_ = {
 }
 
 file_required = []
-for file_path in dict_.items():
+for file_path in dict_.values():
     file_required.append(file_path)

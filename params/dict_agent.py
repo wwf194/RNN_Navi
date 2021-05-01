@@ -4,19 +4,18 @@ step_num = 50
 
 # loss settings
 main_loss = 'cel'
-act_coeff = 0.0
-weight_coeff = 1.0e-2
 
 loss_dict = {
     'main':{
         'type': main_loss,
         'coeff': 1.0
     },
-    'act': act_coeff,
-    'weight': weight_coeff,
+    'act': 0.0,
+    #'weight': 1.0e-2,
+    'weight': 0.0,
     'weight_cons_name': ['r'],
     'dynamic_weight_coeff': {
-        'enable': True,
+        'enable': False,
         'ratio_to_main_loss': 0.10,
         'ratio_to_main_loss_min': 0.05,
         'ratio_to_main_loss_max': 0.20,

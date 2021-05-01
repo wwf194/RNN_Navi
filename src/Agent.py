@@ -9,6 +9,7 @@ import warnings
 
 import torch
 import torch.nn.functional as F
+import torchvision.transforms as transforms
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -26,7 +27,9 @@ from utils import build_Optimizer
 from utils_plot import get_res_xy, plot_polyline, get_int_coords_np, norm_and_map
 import utils_train
 from utils_train import set_train_info
-import utils_train
+import utils_model
+from utils_model import get_tensor_info, get_tensor_stat
+
 
 from anal_grid import get_score
 
@@ -34,27 +37,9 @@ from Models.Place_Cells import Place_Cells
 
 class Agent(object):
     def __init__(self, dict_, load=False):
-        '''
-        if options is not None:
-            self.receive_options(options)
-        '''
         self.dict = dict_
         self.task = self.dict['task']
         self.input_mode = self.dict['input_mode']
-        '''
-        if self.dict.get('arena_types_test') is not None:
-            self.dict['arenas_test'] = []
-            self.dict['arena_dicts_test'] = []
-            self.arena_dicts_test = self.dict['arena_dicts_test']
-            self.arena_num_test = len(self.dict['arena_types_test'])            
-            self.set_arenas(self.dict['arena_types_test'], self.dict['arenas_test'], self.dict['arena_dicts_test']) #default arena setting
-            if self.dict.get('box_width_test') is None:
-                self.dict['box_width_test'] = self.box_width
-                self.dict['box_height_test'] = self.box_height
-            self.box_width_test = self.dict['box_width_test']
-            self.box_height_test = self.dict['box_height_test']
-            print(self.box_width_test)   
-        '''
         self.stop_prob = self.dict.setdefault('stop_prob', 0.0)
         self.step_num = self.dict.setdefault('step_num', 100)
         self.plot_heat_map = self.plot_act_map
@@ -134,7 +119,7 @@ class Agent(object):
             }
         return data
     def train(self, dict_, report_in_batch=None, report_interval=None, save_path=None, save_name=None, verbose=True):
-        optimizer = self.cache['optimizer'] = utils.build_Optimizer(dict_['optimizer'], params=self.model.get_param_to_train())
+        optimizer = self.cache['optimizer'] = utils.build_Optimizer(dict_['optimizer'], params=self.model.get_train_param())
         epoch_start, epoch_num, epoch_end = utils_train.get_epoch_info(dict_)
         utils_train.set_train_info(dict_)
         if save_path is None:
@@ -171,6 +156,8 @@ class Agent(object):
 
         epoch_index = epoch_start
         #print('epoch_index:%d epoch_end:%d'%(epoch_index, epoch_end))
+        
+        # main loop
         while epoch_index <= epoch_end:
             print('epoch=%d/%d'%(epoch_index, epoch_end), end=' ')
             # train model
@@ -179,13 +166,41 @@ class Agent(object):
                 #self.train_once(batch_size)
                 path = self.walk_random(num=batch_size)
                 data = self.prep_data(path)
-                optimizer.train(data)
+                #print(data.keys())
+                data = self.cal_perform(data)
+                #get_tensor_stat(data['output_pred'], name='output_pred', complete=False)
+                #get_tensor_stat(data['act'], name='firing rate', complete=False)
+                #print(data.keys())
+                #optimizer.train(data)
+                # expansion of optimizer.train(data)
+                optimizer.optimizer.zero_grad()
+                loss = get_items_from_dict(data, ['loss'])
+                #loss = results['loss']
+                #self.model.get_weight_info()
+                loss.backward()
+                optimizer.optimizer.step()
+                #print('*********************************************')
+                #self.model.get_weight_info()
+                #optimizer.optimizer.zero_grad()
+                #self.model.anal_gradient()
+                #self.model.plot_act(data['act'][0], save_path='../anal/act_plot/', save_name='act_plot_%d:%d.png'%(epoch_index, batch_index))
+                #self.plot_path(path=path, save_path='../anal/path_plot/', save_name='path_plot._%d:%d.png'%(epoch_index, batch_index), model=self.model, plot_num=2)
                 if report_in_batch:
                     if batch_index % report_interval == 0:
                         print('batch=%d/%d' % (batch_index, batch_num))
                         self.report_perform()
                         self.reset_perform()
-                        print('lr: %.3e'%optimizer.get_lr())
+                        # analysis
+                        #print('lr: %.3e'%optimizer.get_lr())
+                        #self.model.get_weight_info()
+                        self.model.plot_act(data['act'][0], save_path='../anal/act_plot/', save_name='act_plot_%d:%d.png'%(epoch_index, batch_index))
+                        self.plot_path(path=path, save_path='../anal/path_plot/', save_name='path_plot._%d:%d.png'%(epoch_index, batch_index), \
+                            model=self.model, plot_num=2)
+                        get_tensor_stat(data['output_pred'], name='output_pred', complete=False)
+                        get_tensor_stat(data['act'], name='firing rate', complete=False)
+                        self.model.anal_weight_change()
+                        self.model.get_weight_stat(complete=False)
+                        self.model.anal_gradient()
                 #batch_num += 1
             train_perform = self.report_perform(prefix='train: ')
 
@@ -203,50 +218,96 @@ class Agent(object):
             self.save(save_path, self.dict['name'] + '_epoch=afterTrain')
         if anal_after_train:
             self.anal(dict_, title='afterTrain', save_path=save_path + 'anal_afterTrain/')
-    def cal_perform_coord(self, data):
+    def forward(self, data):
+        data.update(self.model.forward(data))
+        return data
+    def cal_perform(self, data):
         output_truth = get_items_from_dict(data, ['output'])
-        # x: [batch_size, step_num, input_num]
-        # y: [batch_size, step_num, output_num]
         output, act = get_items_from_dict(self.forward(data), ['output', 'act'])
-        self.dict['act_avg'] = torch.mean(torch.abs(act))
-        loss_coord = self.main_coeff * F.mse_loss(output, y, reduction='mean')
-        loss_act = self.act_coeff * torch.mean(act ** 2)
-        loss_weight = self.weight_coeff * ( torch.mean(self.get_o() ** 2) + torch.mean(self.get_i() ** 2) )
-        self.perform_list['weight'] += loss_weight.item()
-        self.perform_list['act'] += loss_act.item()
-        self.perform_list['coord'] += + loss_coord.item()
-        self.batch_count += 1
-        #self.sample_count += self
-        return loss_coord + loss_act + loss_weight
-    def cal_perform_pc(self, data):
-        x, x_init, output_truth = get_items_from_dict(data, ['input', 'input_init', 'output'])
-        batch_size = x.size(0)
-        output, act = get_items_from_dict(self.forward(data), ['output', 'act'])
+        data.update({
+            'output': output_truth,
+            'output_pred': output,
+            'act': act,
+        })
+        data.update(self.cal_perform_(data))
+        return data
+
+    def cal_loss_main_mse(self, data):
+        return
+    def cal_loss_main_cel(self, data):
+        output_pred, output_truth = get_items_from_dict(data, ['output_pred', 'output_truth'])
+        loss_main = - self.main_coeff * torch.mean( F.log_softmax(output_pred, dim=2) * output_truth)
+        return loss_main
+    def cal_perform_(self, data):
+        input_, output_truth = get_items_from_dict(data, ['input', 'output'])
+        #output_truth = transforms.Normalize(0, 1)(output_truth)
+        batch_size = input_.size(0)
+        #output, act = get_items_from_dict(self.forward(data), ['output', 'act'])
+        output_pred, act = get_items_from_dict(data, ['output_pred', 'act'])
+        #print('output_pred_max: %s'%torch.max(torch.abs(output_pred)))
+        #print('output_pred_mean: %s'%torch.mean(torch.abs(output_pred)))
+        #self.model.get_weight_stat(complete=False)
+        # normalization
+        output_pred_mean = torch.mean(output_pred, dim=(0,1,2), keepdim=True).detach()
+        output_pred_std = torch.std(output_pred, dim=(0,1,2), keepdim=True).detach()
+        #print('output_pred_std:%s'%output_pred_std)
         
-        self.dict['act_avg'] = torch.mean(torch.abs(act))
+        output_pred = (output_pred - output_pred_mean) / output_pred_std
+        self.cache['output_mean'] = output_pred_mean
+        self.cache['output_std'] = output_pred_std
+        self.cache['act_mean'] = torch.mean(torch.abs(act))
+        #print('output_pred_example: %s'%output_pred[0, -5])
+        #print('output_pred_abs_mean: %s'%self.cache['output_mean'])
+        #print('output_pred_std: %s'%self.cache['output_std'])
         
+        # calculate main loss
         if self.main_loss in ['mse', 'MSE']:
-            loss_main = self.main_coeff * F.mse_loss(output, output_truth, reduction='mean')
-            self.perform_list['output_error_ratio'] += ( torch.sum(torch.abs(output - output_truth)) / torch.sum(torch.abs(output_truth)) ).item() # relative place cells prediction error
+            loss_main = self.main_coeff * F.mse_loss(output_pred, output_truth, reduction='mean')
+            self.perform_list['output_error_ratio'] += ( torch.sum(torch.abs(output_pred - output_truth)) / torch.sum(torch.abs(output_truth)) ).item() # relative place cells prediction error
         elif self.main_loss in ['cel', 'CEL']:
-            loss_main = - self.main_coeff * torch.mean( output_truth * F.log_softmax(output, dim=2) )
+            output_pred_log_softmax = F.log_softmax(output_pred, dim=2)
+            output_pred_softmax = F.softmax(output_pred, dim=2)
+            #print(output_pred_softmax.size())
+            #print('output_pred_softmax: %s' % output_pred_softmax[0,-5, 0:50])
+            #print('output_truth_sum_dim2:%s'%torch.sum(output_truth, dim=2)) # should all be 1.000
+            
+            #print(torch.sum(output_pred_softmax, dim=2))
+            #input()
+            # [batch_size, step_num, output_num]
+            loss_main = - self.main_coeff * torch.sum(torch.mean(output_pred_log_softmax * output_truth, dim=(0)))
         else:
             raise Exception('Invalid main loss: %s'%str(self.main_loss))
         
-        self.dict['pc_avg'] = torch.mean(torch.abs(output_truth))
+        # calculate act loss
         loss_act = self.act_coeff * torch.mean(act ** 2)
         
-        loss_weight_0 = self.cal_loss_weight()
-        #loss_weight_0 = self.weight_coeff * torch.mean(self.get_r() ** 2)
-        #print(loss_weight_0)
-        # dynamically alternate weight coefficient
-        #print(loss_weight_0.size())
-        if self.weight_coeff > 0.0:
-            if self.dynamic_weight_coeff:
-                loss_ratio = loss_weight_0.item() / loss_main.item() # ratio of weight loss to pc loss.
+        # calculate weight loss
+        loss_weight = self.model.cal_loss_weight(coeff=self.weight_coeff)
+        loss_weight = self.cal_loss_weight(loss_weight, loss_main)
+        self.perform_list['weight'] += loss_weight.item()
+
+        self.perform_list['act'] += loss_act.item()
+        self.perform_list['main'] += loss_main.item()
+        
+        self.batch_count += 1
+        self.sample_count += batch_size
+        result = {
+            'loss_main': loss_main,
+            'loss_act': loss_act,
+            'loss_weight': loss_weight,
+            'loss': loss_main + loss_act + loss_weight
+        }
+        #print('loss_main:%.3e loss_act:%.3e loss_weight:%.3e'%(loss_main.item(), loss_act.item(), loss_weight.item()))
+        #self.model.anal_weight_change()
+        #self.model.anal_gradient()
+        #input()
+        return result
+    def cal_loss_weight(self, loss_weight, loss_main):
+        if self.weight_coeff > 0.0 and self.dynamic_weight_coeff:
+                loss_ratio = loss_weight.item() / loss_main.item() # ratio of weight loss to pc loss.
                 #print('loss_ratio:%.3f'%loss_ratio)
                 if self.weight_ratio_min < loss_ratio < self.weight_ratio_max:
-                    loss_weight = loss_weight_0
+                    loss_weight = loss_weight
                 else:
                     weight_coeff_0 = self.weight_coeff
                     self.weight_coeff = self.weight_coeff * self.weight_ratio / loss_ratio # alternating weight cons index so that loss_weight == loss_main * dynamic_weight_ratio
@@ -254,22 +315,10 @@ class Agent(object):
                     if self.alt_weight_coeff_count > 50:
                         print('alternating weight_coeff from %.3e to %.3e'%(weight_coeff_0, self.weight_coeff))  
                         self.alt_weight_coeff_count = 0
-                    loss_weight = self.weight_coeff / weight_coeff_0 * loss_weight_0
-            else:
-                loss_weight = loss_weight_0
-        
-        self.perform_list['weight'] += loss_weight.item()
-        self.perform_list['act'] += loss_act.item()
-        self.perform_list['main'] += loss_main.item()
-        
-        self.batch_count += 1
-        self.sample_count += batch_size
-        return {
-            'loss_main': loss_main,
-            'loss_act': loss_act,
-            'loss_weight': loss_weight,
-            'loss': loss_main + loss_act + loss_weight
-        }
+                    loss_weight = self.weight_coeff / weight_coeff_0 * loss_weight # alter loss_weight scale
+        else:
+            loss_weight = self.weight_coeff * loss_weight
+        return loss_weight
     def cal_perform_pc_coord(self, data):
         #x, y = self.prep_path(path)
         y = get_items_from_dict(data, ['output'])
@@ -311,31 +360,6 @@ class Agent(object):
         
         if init_method in ['uniform', 'random']:
             return arena.get_random_xy(batch_size)
-
-        '''
-        if random_init:
-            if arena_type=='square':
-                xy[:,0,0] = np.random.uniform(-box_width_/2, box_width_/2, batch_size) #x_0
-                xy[:,0,1] = np.random.uniform(-box_height_/2, box_height_/2, batch_size) #y_0
-            elif arena_type=='free':
-                xy[:,0,0] = np.random.uniform(-box_width_/2, box_width_/2, batch_size) #x_0
-                xy[:,0,1] = np.random.uniform(-box_height_/2, box_height_/2, batch_size) #y_0                
-            elif arena_type=='polygon': #init randomly in inscribed circle of the polygon.
-                radius = math.cos(math.pi/arena_dict['points'].shape[0]) * box_width_ / 2
-                r_0 = np.random.uniform(0.0, 1.0, batch_size)
-                r_0 = (r_0 ** 0.5) * radius * 0.99
-                theta_0 = np.random.uniform(-np.pi, np.pi, batch_size)
-                xy[:,0,0] = r_0 * np.cos(theta_0)
-                xy[:,0,1] = r_0 * np.sin(theta_0)                         
-        elif random_init=='limit':
-            xy[:,0,0] = np.random.uniform(-box_width_/10, box_width_/10, batch_size) #x_0
-            xy[:,0,1] = np.random.uniform(-box_height_/10, box_height_/10, batch_size) #y_0            
-        elif random_init==False:
-            xy[:,0,0] = np.zeros([batch_size]) #x_0
-            xy[:,0,1] = np.zeros([batch_size]) #y_0
-        else:
-            print('invalid random_init value:'+str(random_init))
-        '''
 
     def prep_path(self, path): # prep data from path to feed to rnn model.
         if self.input_mode in ['v_xy']:
@@ -426,21 +450,17 @@ class Agent(object):
 
         path = {}
         sig = False
+
+        path['dl'] = dl
+        path['xy'] = xy[:,1:,:] # [batch_size, step_num, 2]
         if mode in ['train', 'full']:
             path['theta_xy'] = np.stack( [np.cos(theta), np.sin(theta)], axis=1 )[:,:-1,:] # head direction.
             path['theta_init'] = theta[:,0]
             path['xy_init'] = xy[:,0,:]
-            #path['x_init'] = xy[:,1,0,None]
-            #path['y_init'] = xy[:,1,1,None]
-            #path['theta_target'] = theta[:,1:-1] # [batch_size, step_num, (hd)]
-            path['xy'] = xy[:,1:,:] # [batch_size, step_num, 2]
             path['dx_dy'] = np.diff(xy, axis=1) # [batch_size, step_num, 2]. position difference between current position and previous position.
-            #path['target_x'] = xy[:,1:-1,0] # [batch_size, step_num, (x)]
-            #path['target_y'] = xy[:,1:-1,1] # [batch_size, step_num, (y)]
             sig = True
         if mode in ['plot', 'full']:
-            path['xy'] = xy # [batch_size, step_num + 1, 2]
-            path['dl'] = dl
+            pass
             sig = True
         if mode in ['self-defined']:
             if contain(items, ['hd_delta_xy', 'theta_delta_xy']):
@@ -531,27 +551,39 @@ class Agent(object):
             plt.savefig(save_path + save_name)
 
         return ax
-    def plot_path(self, model=None, plot_num=5, arena=None, save=True, save_path='./', save_name='path_plot', cmap='jet', **kw):
+    def plot_path(self, path=None, model=None, plot_num=2, arena=None, save=True, save_path='./', save_name='path_plot', cmap='jet', **kw):
         if arena is None:
             arena = self.arenas.get_current_arena()
         # generate path
-        path = self.walk_random(num=plot_num, arena=arena, mode='full', **kw)
-        
+        if path is None:
+            path = self.walk_random(num=plot_num, arena=arena, mode='full', **kw)
+        else:
+            #print(path.keys())
+            batch_size = path['xy'].shape[0]
+            if batch_size > plot_num:
+                plot_index = random.sample(range(batch_size), plot_num)
+                for key in path.keys():
+                    path[key] = path[key][plot_index]
+            else:
+                plot_num = path.size(0)
         # get model prediction
         model = self.model if model is None else model
         if model is None:
-            raise Exception('Agent.plot_heat_map: Error: model is None.')  
-        print(model.forward(self.prep_data(path)).keys())      
-        output = get_items_from_dict(model.forward(self.prep_data(path)), ['output']) # act: [plot_num, step_num, N_num]
-        output = output.detach().cpu().numpy()
+            raise Exception('Agent.plot_heat_map: Error: model is None.')
+
+        data = self.prep_data(path)
+        #print(data.keys())
+        data = self.cal_perform(data)
+        output_pred = get_items_from_dict(data, ['output_pred']) # act: [plot_num, step_num, N_num]
+        output_pred = output_pred.detach().cpu().numpy()
         if self.task in ['coord']:
-            xy_pred = output # [plot_num, step_num, (x, y)]
+            xy_pred = output_pred # [plot_num, step_num, (x, y)]
         elif self.task in ['pc']:
-            xy_pred = self.place_cells.get_coords_from_act(output) # [plot_num, step_num, sample_num, (x, y)]
-            print(xy_pred.shape)
-            xy_pred = xy_pred.mean(axis=2) # [plot_num, step_num, (x, y)]
-            print(xy_pred.shape)
-        print(path['xy'].shape)
+            xy_pred = self.place_cells.get_coords_from_act(output_pred) # [plot_num, step_num, sample_num, (x, y)]
+            #print(xy_pred.shape)
+            
+            #print(xy_pred.shape)
+        #print(path['xy'].shape)
 
         plt.close('all')
         figure, ax = plt.subplots(1, 1, figsize=(5*1.5, 5*1.0)) # figsize (width, length) in inches.
@@ -616,7 +648,6 @@ class Agent(object):
         
         ax.scatter(xy_pred[:,0,0], xy_pred[:,0,1], marker='^', color=color_pred, edgecolors=color_edge, label='Start positions(Predicted)')
         ax.scatter(xy_pred[:,-1,0], xy_pred[:,-1,1], marker='o', color=color_pred, edgecolors=color_edge, label='End positions(Predicted)')
-            
         #ax.legend(loc='upper left', bbox_to_anchor=(1.05, 1.0)) # coordinate of upper left point(ratio)
         ax.legend(bbox_to_anchor=(1.05, 0.7, 0.4, 0.3)) # (x, y, width, height). (x, y) is coordinate of lower left point.
 
@@ -791,12 +822,10 @@ class Agent(object):
             'act_thres_down': act_thres_down,
         }
 
-        if map_method in ['universal', 'whole']:
-            #print(act_map[:,10,10])
-            #print(act_map[:,10,10].shape)
+        if map_method in ['universal', 'whole']: # normalize firing rate of all neurons to [0, 1]
             print('act_min:%.2e act_max:%.2e act_mean:%.2e act_std:%.2e'%(act_min, act_max, act_mean, act_std))
             act_map_norm = (act_map - act_thres_down) / (act_thres_up - act_thres_down) # normalize to [0, 1]
-        elif map_method in ['individual']:
+        elif map_method in ['individual']: # normalize firing rate of each neuron to [0, 1]
             act_map_norm = np.zeros(act_map.shape)
             nonzero_std = np.argwhere(act_std_N>0.0)
             zero_std = np.argwhere(act_std_N==0.0)
@@ -845,7 +874,7 @@ class Agent(object):
                 'save_path': save_path,
                 'save_name': '(E)' + save_name,
             }
-            self.cat_rate_map(arena, act_map_mapped, cmap, plot_num_E, plot_index, act_info, col_num, num_per_page, 'E-Neuron', grid_score, map_method, save_info)
+            self.cat_rate_map_(arena, act_map_mapped, cmap, plot_num_E, plot_index, act_info, col_num, num_per_page, 'E-Neuron', grid_score, map_method, save_info)
 
             # plot I-Neurons heat map
             if plot_num is None or plot_num in ['all']:
@@ -869,7 +898,7 @@ class Agent(object):
                 'save_path': save_path,
                 'save_name': '(I)' + save_name,
             }            
-            self.cat_rate_map(arena, act_map_mapped, cmap, plot_num_I, plot_index, act_info, col_num, num_per_page, 'I-Neuron', grid_score, map_method, save_info)
+            self.cat_rate_map_(arena, act_map_mapped, cmap, plot_num_I, plot_index, act_info, col_num, num_per_page, 'I-Neuron', grid_score, map_method, save_info)
         else:
             N_num = model.N_num
             if plot_num is None or plot_num in ['all']:
@@ -885,9 +914,10 @@ class Agent(object):
                 'save_path': save_path,
                 'save_name': save_name,
             }
-            self.cat_rate_map(arena, act_map_mapped, cmap, plot_num, plot_index, act_info, col_num, num_per_page, 'Neuron', grid_score, map_method, save_info)
+            self.cat_rate_map_(arena, act_map_mapped, cmap, plot_num, plot_index, act_info, col_num, num_per_page, 'Neuron', grid_score, map_method, save_info)
     
-    def cat_rate_map(self, arena, act_map_mapped, cmap, plot_num, plot_index, act_info, col_num, num_per_page, N_name='Neuron', grid_score=None, map_method=None, save_info=None):
+    def cat_rate_map_(self, arena, act_map_mapped, cmap, plot_num, plot_index, act_info, col_num, num_per_page, \
+        N_name='Neuron', grid_score=None, map_method=None, save_info=None):
         act_max, act_min, act_std = act_info['act_min'], act_info['act_max'], act_info['act_std']
         act_max_N, act_min_N, act_mean_N, act_std_N = act_info['act_max_N'], act_info['act_min_N'], act_info['act_mean_N'], act_info['act_std_N']
         act_min_N_ratio = (act_min_N - act_min) / (act_max - act_min)
@@ -909,7 +939,7 @@ class Agent(object):
         print('plot_num:%d page_num:%d'%(plot_num, page_num))
         index_base = 0
 
-        for page_index in range(page_num):
+        for page_index in range(page_num): # plot every page
             page_plot_num = min(num_per_page, plot_num - index_base)
             page_img_num = page_plot_num + position_base
             row_num = page_img_num // col_num
@@ -995,16 +1025,7 @@ class Agent(object):
         ax.set_yticks(np.linspace(arena.y0, arena.y1, 5))
         cbar_ticks = np.linspace(min_count, max_count, num=5).astype(np.int)
         cbar_tick_labels = [str(tick) for tick in cbar_ticks.tolist()]
-        cbar = ax.figure.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), 
-            #cax=ax_, 
-            ax=ax,
-            #pad=.05, # ?Fraction of original axes between colorbar and new image axes
-            #fraction=1.0, 
-            #ticks=cbar_ticks,
-            #aspect = 5, # ratio of colorbar height to width
-            #anchor=(0.5, 0.5), # coord of anchor point of colorbar
-            #panchor=(0.5, 0.5), # coord of colorbar's anchor point in parent ax.
-            )
+        cbar = ax.figure.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax)
         #tick_locator = mpl.ticker.MaxNLocator(nbins=5)  # colorbar上的刻度值个数
         #cbar.locator = tick_locator
         print(cbar_ticks)
@@ -1042,16 +1063,15 @@ class Agent(object):
         pc_map = pc_map.transpose((1, 0)) # [place_cells_num, res_x * res_y]
         pc_map = pc_map.reshape([self.place_cells.N_num, res_x, res_y])
         self.place_cells.plot_place_cells(act_map=pc_map, arena=arena, save_path=save_path, save_name='place_cells_predicted.png')
-
         '''
         if save:
             ensure_path(save_path)
             plt.savefig(save_path + save_name)
         '''
-    def bind_arenas(self, arenas):
+    def bind_arenas(self, arenas, index=None):
         self.arenas = arenas
         if hasattr(self, 'place_cells'):
-            self.place_cells.bind_arenas(arenas)
+            self.place_cells.bind_arenas(arenas, index=index)
     '''
     def bind_optimizer(self, optimizer):
         self.optimizer = optimizer
@@ -1060,9 +1080,11 @@ class Agent(object):
         self.model = model
         # to be modified
         if self.task in ['pc']:
-            self.cal_perform = self.cal_perform_pc
+            #self.cal_perform_ = self.cal_perform_pc
+            pass
         elif self.task in ['coord']:
-            self.cal_perform = self.cal_perform_coord
+            #self.cal_perform_ = self.cal_perform_coord
+            pass
         else:
             raise Exception('Invalid task: %s'%self.task)
     def anal(self, dict_, save_path='./', title='', items=['']):

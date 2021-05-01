@@ -19,57 +19,65 @@ from utils_model import *
 from utils_plot import get_float_coords, get_float_coords_np, get_res_xy
 
 class Place_Cells(object):
-    def __init__(self, dict_, load=False):
+    def __init__(self, dict_, load=False, verbose=True):
         self.dict = dict_
         #print(self.dict.keys())
         try:
-            self.N_num = self.dict["N_num"]        
+            self.N_num = self.dict['N_num']        
         except Exception: # to support older version
-            self.N_num = self.dict["cell_num"]
+            self.N_num = self.dict['cell_num']
         self.load = load
 
         self.device = self.dict['device']
-    def bind_arenas(self, arenas):
+
+        self.verbose = verbose
+
+    def bind_arenas(self, arenas, index=None):
         self.arenas = arenas
-        self.arena = self.arenas.get_arena(self.dict["arena_index"])
+        if index is None:
+            index = self.dict.setdefault('arena_index', 0)    
+        self.arena = self.arenas.get_arena(index)
+            
         if self.load:
-            self.coords = self.dict["coords"].to(self.device)
+            self.coords = self.dict['coords'].to(self.device)
             self.coords_np = self.coords.detach().cpu().numpy()
         else:
             self.coords_np = self.arena.get_random_xy(self.N_num) # [N_num, (x,y)]
-            self.coords = self.dict["coords"] = torch.from_numpy(self.coords_np).to(self.device)
+            self.coords = self.dict['coords'] = torch.from_numpy(self.coords_np).to(self.device)
             '''
             x = torch.zeros((self.N_num)).to(device)
             torch.nn.init.uniform_(x, a=-self.box_width/2, b=self.box_width/2)
             y = torch.zeros((self.N_num)).to(device)
             torch.nn.init.uniform_(y, a=-self.box_height/2, b=self.box_height/2)
             self.coords = torch.stack([x, y], dim=1) #[pc_num, 2]
-            self.dict["coords"] = self.coords
+            self.dict['coords'] = self.coords
             '''
         self.xy = self.coords
         self.xy_np = self.coords_np
-        self.type = self.dict["type"]
-        self.act_decay = search_dict(self.dict, ["act_decay", "sigma"])
+        self.type = self.dict['type']
+        self.act_decay = search_dict(self.dict, ['act_decay', 'sigma'])
         self.act_decay_2 = self.act_decay ** 2
-        self.act_center = search_dict(self.dict, ["act_center", "peak"])
-        self.norm_local = search_dict(self.dict, ["norm_local"], default=True, write_default=True)
+        self.act_center = search_dict(self.dict, ['act_center', 'peak'])
+        self.norm_local = search_dict(self.dict, ['norm_local'], default=True, write_default=True)
 
-        
-        print("PlaceCells: type:%s"%self.type)
-        if self.type in ["diff_gaussian"]:
+        #print('PlaceCells: type:%s'%self.type)
+        if self.type in ['diff_gaussian', 'diff_gauss']:
             self.get_act = self.get_act_dual
-            self.act_ratio = self.dict["act_ratio"]
-            self.act_positive = self.dict["act_positive"]
+            self.act_ratio = self.dict['act_ratio']
+            self.act_positive = self.dict['act_positive']
             self.act_ratio_2 = self.act_ratio ** 2
             self.act_ratio_4 = self.act_ratio ** 4
             # minimum of difference gaussian curve is (ratio^4 ** (ratio^2/(1-ratio^4)) - 1/ratio^2 * ratio^4 ** (1/(1-ratio^4)))
             self.minimum = self.act_ratio_4 ** ( self.act_ratio_2 / (1 - self.act_ratio_2) ) - ( 1 / self.act_ratio_2 ) * ( self.act_ratio_4 ** ( 1 / (1 - self.act_ratio_2)) )
-            self.separate_softmax = search_dict(self.dict, ["separate_softmax"], default=True, write_default=True)
+            self.separate_softmax = search_dict(self.dict, ['separate_softmax'], default=False, write_default=True)
 
-            print("act_positive:%s"%(str(self.act_positive)))
+            #print('act_positive:%s'%(str(self.act_positive)))
         else:
             self.get_act = self.get_activation = self.get_act_single
-        print("act_decay:%f act_center:%f norm_local:%s"%(self.act_decay, self.act_center, str(self.norm_local)))
+        if self.verbose:
+            print('Place_Cells: type:%s act_decay:%f act_center:%f norm_local:%s separate_softmax:%s'% \
+                (self.type, self.act_decay, self.act_center, self.norm_local, self.separate_softmax))
+            input()
     def get_act_batch(self, points): # points: [batch_size, (x,y)]
         points = torch.unsqueeze(points, dim=1) # [batch_size, 1, (x, y)]
         pc_act = self.get_act(points) # [batch_size, 1, pc_num]
@@ -94,10 +102,9 @@ class Place_Cells(object):
         #print(list(expand_coords.size()))
         vec = points_expand - coords_expand # [batch_size, step_num, pc_num, (x,y)]
         dist = torch.sum(vec ** 2, dim=3, keepdim=True) # [batch_size, step_num, pc_num, 1]
-        #print("dist:")
+        #print('dist:')
         #print(dist.size())
         #print(dist[:,:,0,:])
-       
         #act = torch.exp(- dist / (2 * self.sigma * self.sigma)) - torch.exp(- dist / (2 * self.sigma * self.sigma * self.act_ratio_2)) / self.act_ratio_2 #(batch_size, step_num, place_cells_num)
         if not self.norm_local:
             act_0 = torch.exp(- dist / (2 * self.act_decay_2))
@@ -112,11 +119,12 @@ class Place_Cells(object):
             if self.separate_softmax:
                 act = F.softmax(- dist / (2 * self.act_decay_2 ), dim=2) - F.softmax(- dist / (2 * self.act_decay_2 * self.act_ratio_2), dim=2)
             else:
-                act = torch.exp(- dist / (2 * self.act_decay_2) ) - torch.exp(- dist / (2 * self.act_decay_2 * self.act_ratio_2)) / self.act_ratio_2 #(batch_size, step_num, place_cells_num)
+                act = torch.exp(- dist / (2 * self.act_decay_2) ) - torch.exp(- dist / (2 * self.act_decay_2 * self.act_ratio_2)) / self.act_ratio_2 # [batch_size, step_num, pc_num]
+                act -= self.minimum # only suitable for separate_softmax=False
             #act += torch.abs(torch.min(act, dim=2, keepdim=True)[0])
-            act -= self.minimum
-            act /= torch.sum(act, dim=2, keepdim=True)
             #act += 1.00e-50 #avoid log(0)
+            #print('place_cells_act_min:%s'%torch.min(act))
+            #act /= torch.sum(act, dim=2, keepdim=True)
         '''
         if not self.normalize:
             act = torch.exp(- dist / (2 * self.sigma * self.sigma)) - torch.exp(- dist / (2 * self.sigma * self.sigma * self.ratio * self.ratio)) / self.ratio #(batch_size, step_num, place_cells_num)
@@ -128,12 +136,9 @@ class Place_Cells(object):
             act /= torch.sum(act, dim=2, keepdim=True)
         act = torch.squeeze(act)
         '''
-        #print(self.minimum)
-        #print(torch.min(act))
-        #input()
-        #print(act.size())
-        act = torch.squeeze(act)
-        return self.act_center * act.float() # [batch_size, step_num, N_num]
+        act = torch.squeeze(act, dim=3)
+        act_scale = self.act_center * act.float() # [batch_size, step_num, pc_num]
+        return F.softmax(act_scale, dim=2)
     def get_nearest_cell_pos(self, activation, k=3):
         '''
         Decode position using centers of k maximally active place cells.
@@ -238,7 +243,7 @@ class Place_Cells(object):
             plt.savefig(save_path + save_name)
             plt.close()
     
-    def plot_place_cells(self, act_map=None, arena=None, res=50, plot_num=100, col_num=15, save=True, save_path="./", save_name="place_cells_plot.png", cmap='jet'):
+    def plot_place_cells(self, act_map=None, arena=None, res=50, plot_num=100, col_num=15, save=True, save_path='./', save_name='place_cells_plot.png', cmap='jet'):
         arena = self.arena if arena is None else arena
         
         if act_map is None:
@@ -250,7 +255,7 @@ class Place_Cells(object):
         act_map = act_map[:, ::-1, :] # when plotting image, default origin is on top-left corner.
         act_max = np.max(act_map)
         act_min = np.min(act_map)
-        #print("PlaceCells.plot_place_cells: act_min:%.2e act_max:%.2e"%(act_min, act_max))
+        #print('PlaceCells.plot_place_cells: act_min:%.2e act_max:%.2e'%(act_min, act_max))
 
         if plot_num < self.N_num:
             plot_index = np.sort(random.sample(range(self.N_num), plot_num)) # default order: ascending.
@@ -263,7 +268,7 @@ class Place_Cells(object):
         if img_num % col_num > 0:
             row_num += 1
 
-        #print("row_num:%d col_num:%d"%(row_num, col_num))
+        #print('row_num:%d col_num:%d'%(row_num, col_num))
         fig, axes = plt.subplots(nrows=row_num, ncols=col_num, figsize=(5*col_num, 5*row_num))
         
         act_map_norm = ( act_map - act_min ) / (act_max - act_min) # normalize to [0, 1]
@@ -291,7 +296,7 @@ class Place_Cells(object):
             ax.set_xticks(np.linspace(arena.x0, arena.x1, 5))
             ax.set_yticks(np.linspace(arena.y0, arena.y1, 5))
             ax.set_aspect(1)
-            ax.set_title("Place Cells No.%d @ (%.2f, %.2f)"%(N_index, self.xy[N_index][0], self.xy[N_index][1]))
+            ax.set_title('Place Cells No.%d @ (%.2f, %.2f)'%(N_index, self.xy[N_index][0], self.xy[N_index][1]))
             #self.arena.plot_arena(ax, save=False)
             
         for i in range(plot_num + 1, row_num * col_num):
@@ -324,21 +329,21 @@ class Place_Cells(object):
             plt.close()
         
 
-    def get_coords_from_act(self, output): # output: [batch_size, step_num, pc_num], np.ndarray
+    def get_coords_from_act(self, output, sample_num=3): # output: [batch_size, step_num, pc_num], np.ndarray
+        sample_num = 3
+        '''
         sample_num = int(self.N_num / 100)
         if sample_num < 3:
             sample_num = 3
-
-        print(output.shape)
+        '''
         index_max = np.argpartition(output, -sample_num, axis=2)[:, :, -sample_num:] # [batch_size, step_num, sample_num], remaining elements are k largest, but unsorted.
-
         coords_max = np.zeros((output.shape[0], output.shape[1], sample_num, 2), dtype=np.float)
        
-        print(index_max.shape)
-
-        for i in range(output.shape[0]):
-            for j in range(output.shape[1]):
+        for i in range(output.shape[0]): # batch_size
+            for j in range(output.shape[1]): # step_num
                 coords_max[i, j, :, :] = self.xy_np[index_max[i, j, :], :]
+        
+        #xy_pred = xy_pred.mean(axis=2) # [plot_num, step_num, (x, y)]
 
-        return coords_max
+        return coords_max.mean(axis=2)
         

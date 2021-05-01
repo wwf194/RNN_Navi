@@ -22,7 +22,7 @@ class Optimizer_BP(Optimizer):
         self.build_scheduler(load=load)
     def build_optimizer(self, load=False, model=None, params=None):
         self.optimizer = utils_model.build_optimizer(self.dict['optimizer'], params=params, model=model, load=load)
-    def build_scheduler(self, load=False, verbose=True):
+    def build_scheduler(self, load=False, verbose=False):
         #self.lr_decay = self.dict['lr_decay']
         print(self.dict.keys())
         self.scheduler = utils_model.build_scheduler(self.dict['scheduler'], optimizer=self.optimizer, load=load)
@@ -52,11 +52,11 @@ class Optimizer_BP(Optimizer):
         '''
     def train(self, data):
         self.optimizer.zero_grad()
-        loss = get_items_from_dict(self.agent.cal_perform(data), ['loss'])
+        loss = get_items_from_dict(data, ['loss'])
         #loss = results['loss']
         loss.backward()
         self.optimizer.step()
-        self.optimizer.zero_grad()
+        #self.optimizer.zero_grad() # grad should be maintained, in order to do analysis based on gradient
     def update_after_epoch_init(self): # decide what need to be done after every epoch 
         self.update_func_list = []
         self.update_func_list.append(self.update_lr())
