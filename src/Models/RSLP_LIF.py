@@ -1,7 +1,7 @@
 import random
 
 import numpy as np
-from numpy import unravel_index
+from numpy import select, unravel_index
 
 import torch
 import torch.nn as nn
@@ -283,7 +283,8 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
         }
         return s_h_init
     def cal_init_state_mlp(self, **kw):
-        x_init = kw['x_init'].to(self.device)
+        x_init = kw['x_init'].to(self.device) # [batch_size, input_num]
+        #print('x_init.shape: %s'%str(x_init.size()))
         mlp_output = self.mlp_init(x_init) #[batch_size, 2 * N_num]
         s_h_init = {
              's_init': mlp_output[:, 0:self.N_num],
@@ -376,7 +377,7 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
             raise Exception('s and h must simultaneously be None or not None')
         '''
         noise = self.get_noise(batch_size=batch_size)
-        s = (1.0 - self.time_const) * (s + noise) + self.time_const * (h + i) #x:[batch_size, sequence_length, output_num]
+        s = (1.0 - self.time_const) * (s + noise) + self.time_const * (h + i)# s:[batch_size, sequence_length, output_num]
         s = s + noise
         u = self.act_func(s)
         '''
@@ -386,12 +387,12 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
         o = torch.mm(u, self.get_o()) # [batch_size, neuron_num] x [neuron_num, output_num]
         h = torch.mm(u, self.get_r()) + self.r_b
         return {
-            's': s,
-            'u': u,
-            'h': h,
-            'o': o,
+            's': s, # cell state
+            'u': u, # firing rate
+            'h': h, # recurrent output
+            'o': o, # output
         }
-    def plot_act(self, data=None, ax=None, data_type='u', save=True, save_path='./', save_name='act_map.png', cmap='jet', plot_N_num=200, verbose=False):
+    def plot_act(self, data=None, ax=None, data_type='u', save=True, save_path='./', save_name='act_map.png', cmap='jet', plot_N_num=200, select_strategy='first', verbose=False):
         if isinstance(data, torch.Tensor):
             data = data.detach().cpu().numpy() # [step_num, N_num]
 
@@ -400,14 +401,21 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
         #data = np.transpose(data, (1, 0)) # [N_num, step_num]
         
         if N_num > plot_N_num:
-            plot_index = random.sample(range(N_num), plot_N_num)
+            is_select = True
+            if select_strategy in ['first']:
+                plot_index = range(plot_N_num)
+            elif select_strategy in ['random']:
+                plot_index = random.sample(range(N_num), plot_N_num)
+            else:
+                raise Exception('Invalid select strategy: %s'%select_strategy)
             data = data[:, plot_index]
         else:
+            is_select = False
             plot_N_num = N_num
 
         if ax is None:
-            #fig, ax = plt.subplots(figsize = (step_num / 20 * 5, N_num / 20 * 5)) # figsize: (width, height), in inches
-            fig, ax = plt.subplots()
+            #fig, ax = plt.subplots(figsize = (step_num / 20 * 5, plot_N_num / 20 * 5)) # figsize: (width, height), in inches
+            fig, ax = plt.subplots(nrows=1, ncols=1, figsize = (plot_N_num / 20 * 2, step_num / 20 * 2))
         data_min, data_max, data_mean, data_std = get_items_from_dict(get_np_stat(data, verbose=verbose), ['min','max','mean','std'])
         #print(np.argmax(data))
         #print(unravel_index(data.argmax(), data.shape))
@@ -434,8 +442,18 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
         im = ax.imshow(data_mapped)
         ax.set_yticks(utils.linspace(0, step_num - 1, 10))
         ax.set_xticks(utils.linspace(0, plot_N_num - 1, 200))
-        ax.set_ylabel('Time Step Index')
-        ax.set_xlabel('Neuron Index')
+        ax.set_ylabel('Time Step')
+        if is_select:
+            if select_strategy in ['first']:
+                x_label = 'Neuron index'
+            elif select_strategy in ['random']:
+                x_label = '%d randomly selected neurons'
+            else:
+                raise Exception('Invalid select strategy: %s'%select_strategy)
+        else:
+            x_label = 'Neuron index'
+        
+        ax.set_xlabel(x_label)
 
         # plot colorbar
         cbar_ticks = utils.linspace(data_down, data_up, step='auto')

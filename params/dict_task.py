@@ -1,4 +1,4 @@
-lr = 1.0e-2
+lr = 1.0e-1
 
 epoch_num = 120
 batch_num = 1000 * 2

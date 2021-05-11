@@ -50,6 +50,7 @@ class Optimizer_BP(Optimizer):
             else:
                 raise Exception('Invalid update_before_train item: %s'%str(item))
         '''
+        self.update_after_epoch_init()
     def train(self, data):
         self.optimizer.zero_grad()
         loss = get_items_from_dict(data, ['loss'])

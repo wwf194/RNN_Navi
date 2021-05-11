@@ -62,7 +62,7 @@ class Place_Cells(object):
 
         #print('PlaceCells: type:%s'%self.type)
         if self.type in ['diff_gaussian', 'diff_gauss']:
-            self.get_act = self.get_act_dual
+            self.get_act = self.get_act_dual_
             self.act_ratio = self.dict['act_ratio']
             self.act_positive = self.dict['act_positive']
             self.act_ratio_2 = self.act_ratio ** 2
@@ -77,11 +77,13 @@ class Place_Cells(object):
         if self.verbose:
             print('Place_Cells: type:%s act_decay:%f act_center:%f norm_local:%s separate_softmax:%s'% \
                 (self.type, self.act_decay, self.act_center, self.norm_local, self.separate_softmax))
-            input()
+            #input()
     def get_act_batch(self, points): # points: [batch_size, (x,y)]
         points = torch.unsqueeze(points, dim=1) # [batch_size, 1, (x, y)]
         pc_act = self.get_act(points) # [batch_size, 1, pc_num]
-        return torch.squeeze(pc_act, dim=1) # [batch_size, pc_num]
+        pc_act = torch.squeeze(pc_act, dim=1) # [batch_size, pc_num]
+        #print('get_act_batch: pc_act.size: %s'%str(pc_act.size())) # str(·) is necessary
+        return pc_act
     def get_act_single(self, points): # points: [batch_size, step_num, (x,y)]
         points = points.to(self.device)
         points_expand = torch.unsqueeze(points, dim=2) #points_expand:[batch_size, step_num, (x,y), 1]
@@ -93,19 +95,26 @@ class Place_Cells(object):
         if self.norm_local:
             act /= torch.sum(act, dim=2, keepdim=True)         
         return self.act_center * act # pos:[batch_size, step_num, act]
+    def get_act_dual_(self, points):
+        points = points.to(self.device)
+        points_expand = torch.unsqueeze(points, dim=2)
+        coords_expand = torch.unsqueeze(torch.unsqueeze(self.coords, dim=0), dim=0)
+        vec = points_expand - coords_expand # [batch_size, step_num, pc_num, (x,y)]
+        dist = torch.sum(vec ** 2, dim=3, keepdim=True) # [batch_size, step_num, pc_num, 1]
+        act_0 = torch.exp(- dist / (2 * self.act_decay_2))
+        act_1 = torch.exp(- dist / (2 * self.act_decay_2 * self.act_ratio_2)) / self.act_ratio_2
+        pc_act = self.act_center * (act_0 - act_1)
+        pc_act = torch.squeeze(pc_act, dim=3) # [batch_size, step_num, pc_num]
+        #print('get_act_dual_: pc_act.size: %s'%str(pc_act.size()))
+        return pc_act.float()
 
     def get_act_dual(self, points): # pos:[batch_size, step_num, (x,y)]
         points = points.to(self.device)
         points_expand = torch.unsqueeze(points, dim=2)
-        #print(list(expand_pos.size()))
         coords_expand = torch.unsqueeze(torch.unsqueeze(self.coords, dim=0), dim=0)
-        #print(list(expand_coords.size()))
         vec = points_expand - coords_expand # [batch_size, step_num, pc_num, (x,y)]
         dist = torch.sum(vec ** 2, dim=3, keepdim=True) # [batch_size, step_num, pc_num, 1]
-        #print('dist:')
-        #print(dist.size())
-        #print(dist[:,:,0,:])
-        #act = torch.exp(- dist / (2 * self.sigma * self.sigma)) - torch.exp(- dist / (2 * self.sigma * self.sigma * self.act_ratio_2)) / self.act_ratio_2 #(batch_size, step_num, place_cells_num)
+        
         if not self.norm_local:
             act_0 = torch.exp(- dist / (2 * self.act_decay_2))
             act_1 = torch.exp(- dist / (2 * self.act_decay_2 * self.act_ratio_2)) / self.act_ratio_2
@@ -139,6 +148,7 @@ class Place_Cells(object):
         act = torch.squeeze(act, dim=3)
         act_scale = self.act_center * act.float() # [batch_size, step_num, pc_num]
         return F.softmax(act_scale, dim=2)
+
     def get_nearest_cell_pos(self, activation, k=3):
         '''
         Decode position using centers of k maximally active place cells.

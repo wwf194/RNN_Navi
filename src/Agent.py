@@ -105,6 +105,7 @@ class Agent(object):
 
     def prep_data(self, path):
         dxy, xy_init, xy = get_items_from_dict(self.prep_path(path), ['input', 'input_init', 'output'])
+        #print('Agent.prep_data: xy_init.shape: %s'%str(xy_init.size()))
         if self.task in ['pc']:
             data = {
                 'input': dxy,
@@ -240,6 +241,7 @@ class Agent(object):
         return loss_main
     def cal_perform_(self, data):
         input_, output_truth = get_items_from_dict(data, ['input', 'output'])
+        
         #output_truth = transforms.Normalize(0, 1)(output_truth)
         batch_size = input_.size(0)
         #output, act = get_items_from_dict(self.forward(data), ['output', 'act'])
@@ -252,7 +254,9 @@ class Agent(object):
         output_pred_std = torch.std(output_pred, dim=(0,1,2), keepdim=True).detach()
         #print('output_pred_std:%s'%output_pred_std)
         
-        output_pred = (output_pred - output_pred_mean) / output_pred_std
+        # normalization
+        #output_pred = (output_pred - output_pred_mean) / output_pred_std
+        
         self.cache['output_mean'] = output_pred_mean
         self.cache['output_std'] = output_pred_std
         self.cache['act_mean'] = torch.mean(torch.abs(act))
@@ -265,8 +269,16 @@ class Agent(object):
             loss_main = self.main_coeff * F.mse_loss(output_pred, output_truth, reduction='mean')
             self.perform_list['output_error_ratio'] += ( torch.sum(torch.abs(output_pred - output_truth)) / torch.sum(torch.abs(output_truth)) ).item() # relative place cells prediction error
         elif self.main_loss in ['cel', 'CEL']:
+            # output_pred: [batch_size, step_num, output_num]
             output_pred_log_softmax = F.log_softmax(output_pred, dim=2)
-            output_pred_softmax = F.softmax(output_pred, dim=2)
+            output_truth_softmax = F.softmax(8.0 * output_truth, dim=2)
+            #print(output_truth_softmax[-1, -1])
+            #get_tensor_stat(output_truth_softmax, name='output_truth_softmax')
+            
+            output_pred_softmax = F.softmax(8.0 * output_pred, dim=2)
+            #print(output_pred_softmax[-1, -1])
+            #get_tensor_stat(output_pred_softmax, name='output_pred_softmax')
+
             #print(output_pred_softmax.size())
             #print('output_pred_softmax: %s' % output_pred_softmax[0,-5, 0:50])
             #print('output_truth_sum_dim2:%s'%torch.sum(output_truth, dim=2)) # should all be 1.000
@@ -274,7 +286,7 @@ class Agent(object):
             #print(torch.sum(output_pred_softmax, dim=2))
             #input()
             # [batch_size, step_num, output_num]
-            loss_main = - self.main_coeff * torch.sum(torch.mean(output_pred_log_softmax * output_truth, dim=(0)))
+            loss_main = - self.main_coeff * torch.sum(torch.mean(output_pred_log_softmax * output_truth_softmax, dim=(0, 1)))
         else:
             raise Exception('Invalid main loss: %s'%str(self.main_loss))
         

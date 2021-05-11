@@ -3,14 +3,14 @@ N_num = 1024 * 2
 
 noise_coeff = 0.0
 r_bias = True # whether to add bias when cal h from u through recurrent weight.
-time_const = 0.1
+time_const = 1.0
 act_func = 'relu'
 init_method = 'linear'
 if init_method in ['linear']:
     init_method_dict = {
         'type': 'linear',
         #'act_func': decoder_act_func,
-        'bias': True,
+        'bias': False,
         #'batch_norm': decoder_batch_norm, # batch norm automatically alterate scale of weights and biases are to appropriate scale.
         'act_func_on_last_layer': False,
         'bias_on_last_layer': False,
