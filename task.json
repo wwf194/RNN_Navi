@@ -1,0 +1,19 @@
+[
+    {
+        "name":"build_system_environment",
+        "args":{
+            
+        }
+    },
+    {
+        "name":"build_model",
+        "args":{
+            "type":"rnn_lif",
+            "path":".args/rnn_lif_simple.jsonc"
+        }
+    }
+
+]
+
+
+

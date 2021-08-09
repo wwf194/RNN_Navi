@@ -1,21 +1,7 @@
 import sys
 import re
 
-tasks = [
-    {
-        'name': 'add_sys_path',
-        'path': '/home/limoufan/wangweifan/Libs/' # img-15
-        #'path': '/data4/wangweifan/Libs/' # img-16
-    },
-    {
-        'name': 'add_sys_path',
-        'path': [
-            './src/Models/', 
-            './src/Optimizers/', 
-            './src/'
-        ],
-    },
-]
+
 
 def main():
     for task in tasks:
