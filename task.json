@@ -1,0 +1,27 @@
+[
+    {
+        "name":"build_system_environment",
+        "args":[
+            {
+                "name":"add_sys_path",
+                "args":{
+                    "name":"utils_pytorch",
+                    "path":"!ask_config_file"
+                }
+            }
+        ]
+    },
+    {
+        "name":"build_model",
+        "args":{
+            "type":"rnn_lif",
+            "path":".args/rnn_lif_simple.jsonc"
+        }
+    },
+    {
+
+    }
+]
+
+
+

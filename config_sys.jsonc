@@ -1,0 +1,12 @@
+{
+    "os.type":"Linux",
+    "machine.name":"img17",
+    "libs":{
+        "utils_pytorch":{
+            "path":"/home/wangweifan/data3/libs_python/utils_pytorch/",
+            "path_machiine":{
+                "img17":"/home/wangweifan/data3/libs_python/utils_pytorch/"
+            }
+        }
+    }
+}

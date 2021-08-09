@@ -1,0 +1,42 @@
+{
+    "neurons":{
+        "separate_ei": true,
+        "separate_ei_weight": [
+            "recurrent_weight",
+            "output_weight"
+        ],
+        "neuron_num": 2048,
+        "excitatory_ratio": 0.8
+    },
+    "weights":{
+        "input_num": "unknown",
+        "recurrent_weight":{
+            "initialize":{
+                "method": "glorot",
+                "coeff": 1.0e-1
+            },
+            "bias": true
+        },
+        "output_weight":{
+            "initialize":{
+                "method": "glorot",
+                "coeff": 1.0e-1
+            },
+            "bias":true
+        },
+        "input_weight":{
+            "initialize":{
+                "method": "glorot"
+            },
+            "bias": true
+        }
+    },
+    "dynamics":{
+        "noise_coeff": 0.0,
+        "time_const": 1.0,
+        "activation_function": "relu",
+        "initial_state":{
+            "method":"input_mlp"
+        }
+    }
+}

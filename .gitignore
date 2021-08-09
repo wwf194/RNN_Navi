@@ -1,0 +1,6 @@
+# compiled Python files
+*.pyc
+# saved models
+*.pth
+*.vscode
+*.code-workspace
