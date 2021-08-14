@@ -4,7 +4,7 @@
     "libs":{
         "utils_pytorch":{
             "path":"/home/wangweifan/data3/libs_python/utils_pytorch/",
-            "path_machiine":{
+            "path_machine":{
                 "img17":"/home/wangweifan/data3/libs_python/utils_pytorch/"
             }
         }

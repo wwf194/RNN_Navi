@@ -15,6 +15,7 @@ class rnn_lif(nn.Module):
     def __init__(rnn_lif, dict_=None, load=False):
         super(RSLP_LIF, self).__init__()
         self.dict = dict_
+        
         #set_instance_variable(self, self.dict)
         self.separate_ei = self.dict['separate_ei']
         self.load = load
