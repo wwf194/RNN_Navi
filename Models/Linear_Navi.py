@@ -6,7 +6,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+<<<<<<< HEAD
 from Models.place_cells import PlaceCells
+=======
+from Place_Cells import Place_Cells
+>>>>>>> 2ced3c8656146ce297dcc8ba68cfd5f4dffd9f6f
 #from Neurons_LIF import Neurons_LIF
 
 class Linear_Navi(nn.Module):

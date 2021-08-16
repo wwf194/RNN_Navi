@@ -10,6 +10,7 @@ import torch.nn.functional as F
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 
+<<<<<<< HEAD
 from utils import dict_to_object, ensure_attrs, has_attrs, set_attrs, get_attrs, parse_json_dict, new_json_file
 from utils import object_to_json_str
 
@@ -47,6 +48,16 @@ class RNN_LIF(nn.Module):
         '''
         #set_instance_variable(self, self.dict)
         self.separate_ei = self.dict['separate_ei']
+=======
+class rnn_lif(nn.Module):
+    # recurrent single layer perceptron with leak-integrate-and-fire dynamics
+    def __init__(rnn_lif, dict_=None, load=False):
+        super(RSLP_LIF, self).__init__()
+        self.dict = dict_
+        #set_instance_variable(self, self.dict)
+        self.separate_ei = self.dict['separate_ei']
+        self.load = load
+>>>>>>> 2ced3c8656146ce297dcc8ba68cfd5f4dffd9f6f
         self.device_str = self.dict.setdefault('device', 'cpu')
         self.device = torch.device(self.device_str)
         self.N_num = self.dict['N_num']
@@ -63,7 +74,10 @@ class RNN_LIF(nn.Module):
             self.I_num = self.dict['I_num']
             self.weight_Dale = self.dict['weight_Dale']
             #set_instance_variable(self, self.dict, keys=['E_num', 'I_num', 'weight_Dale'])
+<<<<<<< HEAD
         '''
+=======
+>>>>>>> 2ced3c8656146ce297dcc8ba68cfd5f4dffd9f6f
         # set up weights and biases
         if load:
             #self.register_parameter('i', self.i)

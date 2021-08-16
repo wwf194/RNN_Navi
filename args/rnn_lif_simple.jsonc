@@ -1,5 +1,6 @@
 {
     "neurons":{
+<<<<<<< HEAD
         "isExcitatoryInhibitory": true,
         "isExcitatoryInhibitory.weight": [
             "&weights.recurrent",
@@ -15,18 +16,38 @@
     "weights":{
         "recurrent":{
             "size":["$neurons.num","$neurons.num"],
+=======
+        "separate_ei": true,
+        "separate_ei_weight": [
+            "recurrent_weight",
+            "output_weight"
+        ],
+        "neuron_num": 2048,
+        "excitatory_ratio": 0.8
+    },
+    "weights":{
+        "input_num": "unknown",
+        "recurrent_weight":{
+>>>>>>> 2ced3c8656146ce297dcc8ba68cfd5f4dffd9f6f
             "initialize":{
                 "method": "glorot",
                 "coeff": 1.0e-1
             },
+<<<<<<< HEAD
             "bias": true,
             "activation_function":"$neurons.activation_function"
         },
         "output":{
+=======
+            "bias": true
+        },
+        "output_weight":{
+>>>>>>> 2ced3c8656146ce297dcc8ba68cfd5f4dffd9f6f
             "initialize":{
                 "method": "glorot",
                 "coeff": 1.0e-1
             },
+<<<<<<< HEAD
             "bias":true,
             "activation_function":"$neurons.activation_function"
         },
@@ -36,6 +57,15 @@
             },
             "bias": true,
             "activation_function":"$neurons.activation_function"
+=======
+            "bias":true
+        },
+        "input_weight":{
+            "initialize":{
+                "method": "glorot"
+            },
+            "bias": true
+>>>>>>> 2ced3c8656146ce297dcc8ba68cfd5f4dffd9f6f
         }
     },
     "dynamics":{

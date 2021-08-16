@@ -6,8 +6,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 #training parameters.
+<<<<<<< HEAD
 #from utils import *
 from Models.place_cells import PlaceCells
+=======
+from utils_anal import *
+from Place_Cells import Place_Cells
+>>>>>>> 2ced3c8656146ce297dcc8ba68cfd5f4dffd9f6f
 
 class LSTM_Navi(nn.Module):
     def __init__(self, dict_=None, load=False, f=None):
