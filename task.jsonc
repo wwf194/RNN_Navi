@@ -1,0 +1,33 @@
+[
+    {
+        "name":"add_config_dict",
+        "args":{
+            "name":"config_sys",
+            "path":"./config_sys.jsonc"
+        }
+    },
+    {
+        "name":"add_lib_path",
+        "args":{
+            "name":"utils_pytorch",
+            "path":"!get_from_config"
+        }
+    },
+    {
+        "name":"add_lib_path",
+        "args":{
+            "name":"utils_local",
+            "path":"./utils/"
+        }       
+    },
+    {
+        "name":"build_model",
+        "args":{
+            "type":"rnn_lif",
+            "path":"./args/rnn_lif_simple.jsonc"
+        }
+    }
+]
+
+
+

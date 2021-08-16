@@ -1,5 +1,5 @@
-from utils_ import *
-from utils_ import get_best_gpu
+from utils_pytorch.utils import *
+#from utils_pytorch import get_best_gpu
 
 def build_model(dict_, load=False):
     import Models

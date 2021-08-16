@@ -1,34 +1,41 @@
 {
     "neurons":{
-        "separate_ei": true,
-        "separate_ei_weight": [
-            "recurrent_weight",
-            "output_weight"
+        "isExcitatoryInhibitory": true,
+        "isExcitatoryInhibitory.weight": [
+            "&weights.recurrent",
+            "&weights.output"
         ],
-        "neuron_num": 2048,
-        "excitatory_ratio": 0.8
+        "num": 2048,
+        "excitatory":{
+            "ratio": 0.8,
+        },
+        "inhibitory":{},
+        "activation_function":"relu"
     },
     "weights":{
-        "input_num": "unknown",
-        "recurrent_weight":{
+        "recurrent":{
+            "size":["$neurons.num","$neurons.num"],
             "initialize":{
                 "method": "glorot",
                 "coeff": 1.0e-1
             },
-            "bias": true
+            "bias": true,
+            "activation_function":"$neurons.activation_function"
         },
-        "output_weight":{
+        "output":{
             "initialize":{
                 "method": "glorot",
                 "coeff": 1.0e-1
             },
-            "bias":true
+            "bias":true,
+            "activation_function":"$neurons.activation_function"
         },
-        "input_weight":{
+        "input":{
             "initialize":{
                 "method": "glorot"
             },
-            "bias": true
+            "bias": true,
+            "activation_function":"$neurons.activation_function"
         }
     },
     "dynamics":{

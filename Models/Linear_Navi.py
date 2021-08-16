@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from Place_Cells import Place_Cells
+from Models.place_cells import PlaceCells
 #from Neurons_LIF import Neurons_LIF
 
 class Linear_Navi(nn.Module):
