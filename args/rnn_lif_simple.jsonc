@@ -1,79 +1,98 @@
 {
     "neurons":{
-<<<<<<< HEAD
         "isExcitatoryInhibitory": true,
         "isExcitatoryInhibitory.weight": [
-            "&weights.recurrent",
-            "&weights.output"
+            "&modules.recurrent.weight",
+            "&modules.output.weight",
         ],
         "num": 2048,
         "excitatory":{
             "ratio": 0.8,
         },
         "inhibitory":{},
-        "activation_function":"relu"
+        "nonlinear":"relu"
     },
-    "weights":{
+    "modules":{
         "recurrent":{
-            "size":["$neurons.num","$neurons.num"],
-=======
-        "separate_ei": true,
-        "separate_ei_weight": [
-            "recurrent_weight",
-            "output_weight"
-        ],
-        "neuron_num": 2048,
-        "excitatory_ratio": 0.8
-    },
-    "weights":{
-        "input_num": "unknown",
-        "recurrent_weight":{
->>>>>>> 2ced3c8656146ce297dcc8ba68cfd5f4dffd9f6f
-            "initialize":{
-                "method": "glorot",
-                "coeff": 1.0e-1
+            "type":"SingleLayer",
+            "subtype":"f(Wx+b)",
+            "weight":{
+                "size":["$neurons.num", "$neurons.num"],
+                "initialize":{
+                    "method": "glorot",
+                    "coeff": 1.0e-1
+                }
             },
-<<<<<<< HEAD
             "bias": true,
-            "activation_function":"$neurons.activation_function"
+            "nonlinear":"$neurons.nonlinear"
         },
         "output":{
-=======
-            "bias": true
-        },
-        "output_weight":{
->>>>>>> 2ced3c8656146ce297dcc8ba68cfd5f4dffd9f6f
             "initialize":{
                 "method": "glorot",
                 "coeff": 1.0e-1
             },
-<<<<<<< HEAD
             "bias":true,
-            "activation_function":"$neurons.activation_function"
+            "nonlinear":"$neurons.nonlinear"
         },
         "input":{
-            "initialize":{
-                "method": "glorot"
+            "type":"f(Wx+b)",
+            "weight":{
+                "initialize":{
+                    "method": "glorot"
+                }
             },
             "bias": true,
-            "activation_function":"$neurons.activation_function"
-=======
-            "bias":true
+            "nonlinear":"$neurons.nonlinear"
         },
-        "input_weight":{
-            "initialize":{
-                "method": "glorot"
-            },
-            "bias": true
->>>>>>> 2ced3c8656146ce297dcc8ba68cfd5f4dffd9f6f
+        "initialize":{
+            "type":"mlp",
+            "layer":{
+                "num": 3,
+                "neurons":{
+                    "num":["$neurons.num // 2"]
+                }
+            }
         }
     },
     "dynamics":{
-        "noise_coeff": 0.0,
-        "time_const": 1.0,
-        "activation_function": "relu",
-        "initial_state":{
-            "method":"input_mlp"
+        "initialize":{
+            "in":["x0"],
+            "out":["h0", "c0"]
+        },
+        "run":{
+            "in":["x0", "x", "time"],
+            "out":["o", ""],
+            "internal":[
+                ["x0", "&initialize", ["h", "c"]],
+                {
+                    "type": "repeat",
+                    "module": "&iterate",
+                    "time": "time",
+                    "in": ["x[time]", "h", "c"],
+                    "out": ["h", "c", "o"]
+                }
+            ]
+        },
+        "iterate":{
+            "in":["x", "h", "c"],
+            "out":["h", "c", "o"],
+            "internal":[
+                ["x", "&input", "i"],
+                [["i", "h", "c"], "&recurrent", "h", "c"],
+                ["h", "&output", "o"]
+            ]
+        },
+        "input":{
+            "in":["x"],
+            "out":["i"]
+        },
+        "recurrent":{
+            "in":["i","h","c"],
+            "out":["h", "c"]
+        },
+        "output":{
+            "in":["h"],
+            "out":["o"]
         }
     }
 }

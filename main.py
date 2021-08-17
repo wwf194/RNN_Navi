@@ -1,5 +1,6 @@
 import os
 import sys
+import argparse
 import json
 import json5
 import time
@@ -73,13 +74,10 @@ def get_time(format="%Y-%m-%d %H:%M:%S", verbose=False):
     if verbose:
         print(time_str)
     return time_str
-import json
-import args
-
 
 def get_config_sys_from_json():
     with open('./config_sys.jsonc', 'r') as f:
-        config_sys = json.load(f)
+        config_sys = json5.loads(f)
     #systype = config_sys['os.type']
     #print(systype)
     return config_sys
@@ -99,6 +97,7 @@ def build_rnn_lif(args):
     return Models.rnn_lif.init_model(args)
 
 def load_json(file_path):
+    print(file_path)
     with open(file_path, "r") as f:
         json_dict = json5.load(f)
     return json_dict
@@ -143,28 +142,4 @@ task_implement_method = {
 
 if __name__=="__main__":
     main()
-    model_type = args['name']
-    
-    if model_type in ['rnn']:
-        build_rnn(args)
-def build_rnn(args):
-    from Models import rnn
-    return rnn(args)
 
-do_task = {
-    'build_model': build_model
-}
-
-def main():
-    with open('./config_tasks.json') as f:
-        config_tasks = json.load(f)
-    
-    tasks = config_tasks['tasks']
-    for task in tasks:
-        do_task[task['name']](task['arg'])        
-
-
-
-
-if __name__=="__main__":
-    get_config_sys_from_json

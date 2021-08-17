@@ -10,14 +10,14 @@ import torch.nn.functional as F
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 
-<<<<<<< HEAD
-from utils import dict_to_object, ensure_attrs, has_attrs, set_attrs, get_attrs, parse_json_dict, new_json_file
+from utils import json_obj_to_object, ensure_attrs, has_attrs, set_attrs, get_attrs, parse_json_obj, new_json_file, list_attrs
 from utils import object_to_json_str
+from utils_model import build_module
 
 def init_model(args):
     model = RNN_LIF()
     args_origin = args
-    args_parsed = parse_json_dict(args)
+    args_parsed = parse_json_obj(args)
     model.init_from_json_dict(args_parsed)
     return model
 
@@ -29,10 +29,10 @@ class RNN_LIF(nn.Module):
     def __init__(self):
         super(RNN_LIF, self).__init__()
 
-    def init_from_json_dict(self, json_dict):
-        self.json_dict = json_dict
+    def init_from_json_dict(self, param_json):
+        self.param_json = param_json
         self.json_external_dict = {}
-        self.params = dict_to_object(json_dict)
+        self.params = json_obj_to_object(param_json)
         params = self.params
         neurons = params.neurons
         ensure_attrs(params, "neurons", "isExcitatoryInhibitory", default=False)
@@ -43,21 +43,21 @@ class RNN_LIF(nn.Module):
                 set_attrs(neurons, "excitatory.num", value=int(neurons.neurons.num * excitatory_ratio))
                 set_attrs(neurons, "inhibitory.num", value=(neurons.num - neurons.excitatory.num))
         
+        
+
+        # initialize modules
+        #for module in list_attrs(params.modules):
+        modules = params.modules
+        for name, module in list_attrs(modules):
+            if module.type in ["SingleLayer"]:
+                self.add_module(name, build_module(module))
+        
+
         new_json_file(object_to_json_str(params), "./args/rnn_lif_temp.jsonc")
 
         '''
         #set_instance_variable(self, self.dict)
         self.separate_ei = self.dict['separate_ei']
-=======
-class rnn_lif(nn.Module):
-    # recurrent single layer perceptron with leak-integrate-and-fire dynamics
-    def __init__(rnn_lif, dict_=None, load=False):
-        super(RSLP_LIF, self).__init__()
-        self.dict = dict_
-        #set_instance_variable(self, self.dict)
-        self.separate_ei = self.dict['separate_ei']
-        self.load = load
->>>>>>> 2ced3c8656146ce297dcc8ba68cfd5f4dffd9f6f
         self.device_str = self.dict.setdefault('device', 'cpu')
         self.device = torch.device(self.device_str)
         self.N_num = self.dict['N_num']
@@ -74,10 +74,7 @@ class rnn_lif(nn.Module):
             self.I_num = self.dict['I_num']
             self.weight_Dale = self.dict['weight_Dale']
             #set_instance_variable(self, self.dict, keys=['E_num', 'I_num', 'weight_Dale'])
-<<<<<<< HEAD
         '''
-=======
->>>>>>> 2ced3c8656146ce297dcc8ba68cfd5f4dffd9f6f
         # set up weights and biases
         if load:
             #self.register_parameter('i', self.i)

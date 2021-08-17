@@ -11,11 +11,7 @@ import matplotlib as mpl
 from matplotlib import pyplot as plt
 
 import utils
-<<<<<<< HEAD
 from utils import set_instance_variable, contain, get_name, get_items_from_dict, get_name_args, ensure_path, get_np_stat
-=======
-from utils import set_instance_variable, contain, get_name, get_items_from_dict, get_name_args, ensure_path, linspace, get_np_stat
->>>>>>> 2ced3c8656146ce297dcc8ba68cfd5f4dffd9f6f
 #from utils_anal import *
 from utils_model import get_act_func, get_mask, get_ei_mask, init_weight, build_mlp, print_model_param, get_tensor_info, get_tensor_stat
 from utils_plot import norm_and_map
