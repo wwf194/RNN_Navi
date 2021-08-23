@@ -1,4 +1,4 @@
-from utils_ import search_dict, get_from_dict, ensure_path
+from utils_torch import search_dict, get_from_dict, ensure_path
 
 def get_epoch_info(dict_):
     epoch_start = dict_.get('epoch_start')

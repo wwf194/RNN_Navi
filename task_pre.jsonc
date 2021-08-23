@@ -1,0 +1,22 @@
+[
+    {
+        "name":"LoadConfigurationFile",
+        "args":{
+            "path":"./config_sys.jsonc",
+            "name":"config_sys"
+        }
+    },
+    {
+        "name":"AddLibraryPath",
+        "args":[
+            {
+                "name":"utils_torch",
+                "path":"!get_from_config"
+            },
+            {
+                "name":"utils_local",
+                "path":"./utils/"
+            }
+        ]
+    },
+]

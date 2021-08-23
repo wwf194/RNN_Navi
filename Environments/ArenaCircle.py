@@ -1,8 +1,19 @@
+import utils_torch
+from utils_torch import ensure_attrs, set_attrs, has_attrs, match_attrs
+
+import Environments
+
+class ArenaCircle(Environments.Arena):
+    def __init__(self, param=None):
+        super().__init__()
+        if param is not None:
+            self.init_from_param(param)
+
+    def init_from_param(self, param):
+        self.param = param
 
 
-class ArenaCircle(Arena):
-    def __init__(self, dict_, load=False):
-        super().__init__(dict_, load)
+
 
         self.type = self.dict['type'] = 'circle'
         self.radius = get_from_dict(self.dict, 'radius', default=None, write_default=True)

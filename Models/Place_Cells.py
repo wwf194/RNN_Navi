@@ -13,10 +13,10 @@ import matplotlib.pyplot as plt
 
 import cv2 as cv
 
-from utils import ensure_path, search_dict, get_from_dict
-from utils_plot import *
-from model import *
-from utils_plot import get_float_coords, get_float_coords_np, get_res_xy
+from utils_torch import ensure_path, search_dict, get_from_dict
+from utils.plot import *
+from utils.model import *
+from utils.plot import get_float_coords, get_float_coords_np, get_res_xy
 
 class Place_Cells(object):
     def __init__(self, dict_, load=False, verbose=True):

@@ -3,25 +3,46 @@ import sys
 import argparse
 import json
 import json5
-import time
 import warnings
 import logging
 import traceback
 
-sys.path.append("./utils/")
-from utils import *
+parser = argparse.ArgumentParser()
+parser.add_argument("task", nargs="?", default="DoTasks")
+args = parser.parse_args()
 
-def main():
-    set_logger_global()
-    logger = get_logger_global()
+#sys.path.append("./utils/")
+
+import utils
+from utils import set_logger_global, get_logger_global, add_log, add_warning
+
+set_logger_global()
+logger = get_logger_global()
+
+def do_tasks():
+
     try: # catch all unhandled exceptions
-        tasks = JsonFile2JsonObj('./task.jsonc')
-        for task in tasks:
-            #add_log("main: doing task: %s"%task['name'])
-            #print(task)
-            TaskImplementFunction[task['name']](task['args'])
+        do_tasks_pre()
+        #import utils_torch
+        #utils.args_global = utils.json.JsonObj2PyObj(utils.args_global)
+        do_tasks_main()
     except Exception:
         logger.error(traceback.format_exc())
+
+def do_tasks_pre():
+    tasks = utils.json.JsonFile2PyObj('./task_pre.jsonc')
+    for task in tasks:
+        TaskImplementFunction[task.name](task.args)
+    import utils_torch
+    utils_torch.set_logger(get_logger_global())
+
+def do_tasks_main():
+    import utils_torch
+    tasks = utils.json.JsonFile2PyObj('./task.jsonc')
+    for task in tasks:
+        #add_log("main: doing task: %s"%task['name'])
+        #print(task)
+        TaskImplementFunction[task.name](task.args)
 
 def build_object(args):
     if isinstance(args, list):
@@ -32,32 +53,9 @@ def build_object(args):
 
 def _build_object(args):
     import utils_torch
-    name = args["name"]
-    Class = utils_torch.import_module(args["ModulePath"])
-    args_global["objects"][name] = Class.init_from_param(utils_torch.JsonObj2PyObj(args_global["param_dicts"][args["ParameterName"]]))
-
-def build_model(args):
-    import utils_torch
-    method = args.setdefault("method", "FromParameter")
-    if method in ["FromParameter"]:
-        args_model = args_global["param_dicts"][args["ParameterName"]]
-    elif method in ["FromPath"]:
-        args_model = JsonFile2JsonObj(args["path"])
-    else:
-        raise Exception()
-    param = utils_torch.JsonObj2PythonObj(args_model)
-    if param.type in ["rnn_lif"]:
-        add_log("Building RNN_LIF from args.")
-        import Models
-        return Models.rnn_lif.init_model(param)
-    else:
-        raise Exception()
-
-def JsonFile2JsonObj(file_path):
-    with open(file_path, "r") as f:
-        json_dict = json5.load(f)
-    return json_dict
-
+    Class = utils_torch.import_module(args.ModulePath)
+    obj = Class.init_from_param(getattr(utils.args_global.ParamDicts, args.ParamName))
+    setattr(utils.args_global.Objects, args.name, obj)
 def load_parameter_file(args):
     if isinstance(args, dict):
         _load_parameter_file(args)
@@ -68,30 +66,26 @@ def load_parameter_file(args):
         raise Exception()
 
 def _load_parameter_file(args):
-    path, name = args["path"], args["name"]
-    args_global["param_dicts"][name] = JsonFile2JsonObj(path)
-    add_log("Loading parameter file %s to parameter %s"%(path, name))
+    import utils_torch
+    setattr(utils.args_global.ParamDicts, args.name, utils_torch.JsonFile2PyObj(args.path))
+    add_log("Loading parameter file %s to parameter %s"%(args.path, args.name))
 
 def load_configuration_file(args):
-    if isinstance(args, dict):
-        _load_configuration_file(args)
-    elif isinstance(args, list):
+    if isinstance(args, list):
         for args_dict in args:
-            _load_configuration_file(args)
+            _load_configuration_file(args_dict)
     else:
-        raise Exception()
+        _load_configuration_file(args)
 
 def _load_configuration_file(args):
     path, name = args["path"], args["name"]
-    with open(path, 'r') as f:
-        config_dict = json5.load(f) # json5 allows comment in .json file.
-    args_global["config_dicts"][name] = JsonFile2JsonObj(path)
+    utils.args_global["ConfigDicts"][name] = utils.JsonFile2JsonObj(path)
     add_log("Loaded configuration file from to %s config %s."%(path, name))
 
 def add_library_path(args):
     if isinstance(args, dict):
         _add_library_path(args)
-    elif isinstance(args,list):
+    elif isinstance(args, list):
         for args_dict in args:
             _add_library_path(args_dict)
     else:
@@ -103,7 +97,7 @@ def _add_library_path(args):
     lib_path = args['path']
     if lib_path=="!get_from_config":
         success = False
-        for config_name, config_dict in args_global["config_dicts"].items():
+        for config_name, config_dict in utils.args_global.ConfigDicts.__dict__.items():
             if config_dict.get("libs") is not None:
                 libs = config_dict["libs"]
                 if libs.get(lib_name) is not None:
@@ -124,19 +118,40 @@ def _add_library_path(args):
 
 def parse_parameter(args):
     import utils_torch
-    param_json_dicts_parsed = utils_torch.utils.parse_param_json_dicts(args_global["param_dicts"])
-    args_global["param_dicts_origin"] = args_global["param_dicts"]
-    args_global["param_dicts"] = args_global["param_dicts_parsed"] = param_json_dicts_parsed
+    print(type(utils.args_global))
+    ParamJsonObjParsed = utils_torch.utils.parse_param_py_obj(utils.args_global.ParamDicts)
+    utils.args_global.ParamDictsOrigin = utils.args_global.ParamDicts
+    utils.args_global.ParamDicts = utils.args_global.ParamDictsParsed = ParamJsonObjParsed
+
+def train(args):
+    if args.type in ["SupervisedLearning"]:
+        train_supervised_learning(args)
+    else:
+        raise Exception()
+
+def train_supervised_learning(args):
+    return
 
 TaskImplementFunction = {
-    "BuildModel": build_model,
+    #"BuildModel": build_model,
     "AddLibraryPath": add_library_path,
     "LoadConfigurationFile": load_configuration_file,
     "LoadParameterFile": load_parameter_file,
     "ParseParameter": parse_parameter,
     "BuildObject": build_object,
+    "Train": train,
 }
 
+def clean_log():
+    do_tasks_pre()
+    import utils_torch
+    utils_torch.RemoveAllFiles("./log/")
+
 if __name__=="__main__":
-    main()
+    if args.task in ["CleanLog", "clean_log", "cleanlog"]:
+        clean_log()
+    elif args.task in ["DoTasks"]:
+        do_tasks()
+    else:
+        raise Exception()
 

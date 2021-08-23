@@ -50,9 +50,7 @@ class RNN_LIF(nn.Module):
         for name, module in list_attrs(param.modules):
             self.add_module(name, build_module(module))
 
-        
-
-        utils_torch.JsonStr2JsonFile(object_to_json_str(param), "./args/rnn_lif_temp.jsonc")
+        utils_torch.JsonStr2JsonFile(object_to_json_str(param), "./params/rnn_lif_temp.jsonc")
         
     def forward(self, data): # ([batch_size, step_num, input_num], [batch_size, input_num])
         x, x_init = get_items_from_dict(data, ['input', 'input_init'])

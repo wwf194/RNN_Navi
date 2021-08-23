@@ -9,7 +9,6 @@ import warnings
 
 import torch
 import torch.nn.functional as F
-import torchvision.transforms as transforms
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -18,70 +17,29 @@ import matplotlib.patches as patches
 from matplotlib.lines import Line2D
 import cv2 as cv
 
-import config_sys
-config_sys.set_sys_path()
-
 import utils
-from utils import get_from_dict, get_items_from_dict, search_dict, get_name_args, ensure_path, contain, remove_suffix, get_ax
-from utils import build_Optimizer
-from utils_plot import get_res_xy, plot_polyline, get_int_coords_np, norm_and_map
-import utils_train
-from utils_train import set_train_info
-import model
-from model import get_tensor_info, get_tensor_stat
+from utils_torch import get_from_dict, get_items_from_dict, search_dict, get_name_args, ensure_path, contain, remove_suffix, get_ax
+from utils.plot import get_res_xy, plot_polyline, get_int_coords_np, norm_and_map
+import utils.train
+from utils.train import set_train_info
+import utils.model
+from utils.model import get_tensor_info, get_tensor_stat
 
-
-from anal_grid import get_score
+from utils.anal import calculate_grid_score
 
 from Models.Place_Cells import Place_Cells
 
+def init_from_param(param):
+    return Agent(param)
+
 class Agent(object):
-    def __init__(self, dict_, load=False):
-        self.dict = dict_
-        self.task = self.dict['task']
-        self.input_mode = self.dict['input_mode']
-        self.stop_prob = self.dict.setdefault('stop_prob', 0.0)
-        self.step_num = self.dict.setdefault('step_num', 100)
-        self.plot_heat_map = self.plot_act_map
-
-        self.load = load
-
-        if self.task in ['pc', 'pc_coord']:
-            self.place_cells = Place_Cells(dict_ = self.dict['place_cells'], load=self.load)
-
-        # loss settings
-        self.loss_dict = self.dict['loss']
-        #print(self.loss_dict)
-        #print(self.loss_dict['main'])
-        self.main_loss = self.loss_dict['main']['type']
-        self.main_coeff = self.loss_dict['main']['coeff']
-        self.act_coeff = self.loss_dict['act']
-        self.weight_coeff = self.loss_dict['weight']
+    def __init__(self, param=None):
+        if param is not None:
+            self.init_from_param(param)
         
-        self.dynamic_weight_coeff = self.loss_dict['dynamic_weight_coeff']['enable']
-        if self.dynamic_weight_coeff:
-            self.alt_weight_coeff_count = 0
-            self.weight_ratio = self.loss_dict['dynamic_weight_coeff']['ratio_to_main_loss']
-            self.weight_ratio_min = self.loss_dict['dynamic_weight_coeff']['ratio_to_main_loss_min']
-            self.weight_ratio_max = self.loss_dict['dynamic_weight_coeff']['ratio_to_main_loss_max']
-            #self.weight_coeff_0 = self.loss_dict['weight_coeff_0'] = self.weight_coeff      
-
-        self.perform_list = {'main':0.0, 'act':0.0, 'weight':0.0}
-        self.init_perform()
-        self.loss_dict = self.dict['loss']
-        self.main_loss = self.loss_dict['main']['type']
-        self.main_coeff = self.loss_dict['main']['coeff']
-        self.act_coeff = self.loss_dict['act']
-        self.weight_coeff = self.loss_dict['weight']
-
-        '''
-        if self.task in ['pc', 'pc_coord']:
-            self.dict['pc_error'] = 0.0
-        '''
-        self.sample_count = 0
-        self.batch_count = 0
-
-        self.cache = {}
+    def init_from_param(self, param):
+        self.param = param
+        
     def report_perform(self, prefix='', verbose=True):
         report = prefix
         for key in self.perform_list.keys():

@@ -4,39 +4,16 @@
 import os
 import time
 import logging
+import json5
 
-def build_model(dict_, load=False):
-    import Models
-    type_ = dict_['type']
-    print('build_model: model_type: %s'%type_)
-    if type_ in ['rnn', 'rslp']:
-        return Models.RSLP_LIF(dict_=dict_, load=load)
-    else:
-        raise Exception('Options: Invalid model type: %s'%str(type_))
+import utils
 
-def build_agent(dict_, load=False):
-    import Agent
-    return Agent.Agent(dict_=dict_, load=load)
+args_global = utils.json.JsonObj2PyObj({
+    "ConfigDicts":{},
+    "ParamDicts":{},
+    "Objects":{}
+})
 
-def build_arenas(dict_, load=False):
-    import Arenas
-    return Arenas.Arenas(dict_ = dict_, load=load)
-
-def build_Optimizer(dict_, load=False, params=None, model=None):
-    import Optimizers
-    type_ = dict_['type']
-    if type_ in ['BP', 'bp']:
-        return Optimizers.Optimizer_BP(dict_, load=load, params=params, model=model)
-    elif type_ in ['CHL', 'chl']:
-        return Optimizers.Optimizer_CHL(dict_, load=load, params=params, model=model)
-    elif type_ in ['TP', 'tp']:
-        return Optimizers.Optimizer_TP(dict_, load=load, params=params, model=model)
-    else:
-        raise Exception('Invalid optimizer type: %s'%str(type_))
-
-def build_trainer(dict_, load=False):
-    import Trainers
-    return Trainers.Trainer(dict_, load=load)
 
 def get_device(args):
     if hasattr(args, 'device'):
@@ -81,17 +58,12 @@ def get_required_file_recur(file, file_list):
             #print('file_rel_main: %s'%file_rel_main)
             get_required_file_recur(file_rel_main, file_list)
 
-args_global = {
-    "config_dicts":{},
-    "param_dicts":{},
-    "objects":{}
-}
 
 def set_logger_global():
-    args_global["logger_global"] = get_logger('log-global')
+    args_global.logger_global = get_logger('log-global')
 
 def get_logger_global():
-    return args_global["logger_global"]
+    return args_global.logger_global
 
 def get_logger(logger_name='log'):
     # 输出到console
@@ -137,3 +109,10 @@ def get_time(format="%Y-%m-%d %H:%M:%S", verbose=False):
     if verbose:
         print(time_str)
     return time_str
+
+
+# basic Json manipulation methods
+def JsonFile2JsonObj(file_path):
+    with open(file_path, "r") as f:
+        json_dict = json5.load(f)
+    return json_dict

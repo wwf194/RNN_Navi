@@ -1,37 +1,17 @@
 [
     {
-        "name":"LoadConfigurationFile",
-        "args":{
-            "path":"./config_sys.jsonc",
-            "name":"config_sys"
-        }
-    },
-    {
-        "name":"AddLibraryPath",
-        "args":[
-            {
-                "name":"utils_torch",
-                "path":"!get_from_config"
-            },
-            {
-                "name":"utils_local",
-                "path":"./utils/"
-            }
-        ]
-    },
-    {
         "name":"LoadParameterFile",
         "args":[
             {
-                "path":"./args/rnn_lif_simple.jsonc",
+                "path":"./params/rnn_lif_simple.jsonc",
                 "name":"model",
             },
             {
-                "path":"./args/arena_square.jsonc",
+                "path":"./params/arena_square.jsonc",
                 "name":"environment",
             },
             {
-                "path":"./args/agent.jsonc",
+                "path":"./params/agent.jsonc",
                 "name":"agent"
             }
         ]
@@ -40,41 +20,47 @@
         "name":"ParseParameter",
         "args":{}
     },
-    // {
-    //     "name":"BuildModel",
-    //     "args":{
-    //         "method": "FromParameter",
-    //         //"path":"./args/rnn_lif_simple.jsonc" # load args from another file
-    //         "ParameterName": "model"
-    //     }
-    // },
-    // {
-    //     "name":"BuildEnvironment",
-    //     "args":{
-    //         "method": "FromParameter",
-    //         "ParameterName": "environment"
-    //     }
-    // },
     {
         "name":"BuildObject",
         "args":[
             {
                 "name": "model",
                 "ModulePath": "Models.rnn_lif",
-                "ParameterName": "model",
+                "ParamName": "model",
             },
             {
                 "name": "environment",
                 "ModulePath": "Environments.Arenas2D",
-                "ParameterName": "environment",
+                "ParamName": "environment",
             },
             {
                 "name": "agent",
                 "ModulePath": "Agents.Agent",
-                "ParameterName": "agent"
+                "ParamName": "agent"
             }
         ]
-    }
+    },
+    {
+        "name": "Train",
+        "args": {
+            "type": "SupervisedLearning",
+            "method": "GradientDescend",
+            "mode": "EpochBatch",
+            "epoch.num": 200,
+            "batch.num": "$1000 * 2$",
+            "batch.size": "200",
+            "TrajectoryConfig": {
+                "numPerBatch": "$args.batch.size",
+                "stepPerBatch": 50,
+            },
+            "batch.internal":[
+                "TrajectoryConfig |--> &agent.generateRandomTrajectory |--> Trajectory",
+                "Trjectory |--> &agent.generateModelInput |--> ModelInput",
+                "Trajectory |--> &agent.generateModelOutput |--> ModelOutputTarget",
+                "[ModelInput, ModelOutputTraget] |--> &model.train |--> ModelOutput",
+            ]
+        }
+    },
 ]
 
 

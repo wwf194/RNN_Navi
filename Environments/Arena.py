@@ -1,5 +1,8 @@
+import numpy as np
+import torch
+import utils_torch
 
-class Arena(abc.ABC):
+class Arena():
     def __init__(self, dict_, load=False):
         self.dict = dict_
     #@abc.abstractmethod

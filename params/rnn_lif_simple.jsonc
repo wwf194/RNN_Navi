@@ -20,42 +20,42 @@
             "nonlinear":"relu"
         },
         "output":{
-            "num": "$neurons.recurrent.num // 4"
+            "num": "@neurons.recurrent.num // 4"
         },
-        "num": "$neurons.recurrent.num"
+        "num": "@neurons.recurrent.num"
     },
     "modules":{
         "recurrent":{
             "type":"SingleLayer",
             "subtype":"f(Wx+b)",
             "weight":{
-                "size":["$neurons.recurrent.num", "$neurons.recurrent.num"],
+                "size":["@neurons.recurrent.num", "@neurons.recurrent.num"],
                 "initialize":{
                     "method": "kaiming",
                     "coefficient": 1.0e-1
                 }
             },
             "bias": true,
-            "nonlinear":"$neurons.recurrent.nonlinear"
+            "nonlinear":"@neurons.recurrent.nonlinear"
         },
         "output":{
             "type":"SingleLayer",
             "subtype":"Wx+b",
             "weight":{
-                "size":["$neurons.recurrent.num", "$neurons.output.num"],
+                "size":["@neurons.recurrent.num", "@neurons.output.num"],
                 "initialize":{
                     "method": "kaiming",
                     "coefficient": 1.0e-1
                 }
             },
             "bias":true,
-            "nonlinear":"$neurons.recurrent.nonlinear"
+            "nonlinear":"@neurons.recurrent.nonlinear"
         },
         "input":{
             "type": "SingleLayer",
             "subtype":"f(Wx+b)",
-            "input.num":"$neurons.input.num",
-            "output.num":"$neurons.recurrent.num",
+            "input.num":"@neurons.input.num",
+            "output.num":"@neurons.recurrent.num",
             "weight":{
                 "initialize":{
                     "method": "kaiming",
@@ -63,22 +63,22 @@
                 }
             },
             "bias": true,
-            "nonlinear":"$neurons.recurrent.nonlinear"
+            "nonlinear":"@neurons.recurrent.nonlinear"
         },
         "initialize":{
             "type":"MultiLayerPerceptron",
-            "output":{"num":"$neurons.recurrent.num"},
+            "output":{"num":"@neurons.recurrent.num"},
             "initialize.method":"FromNeuronNum",
             "neurons":{
                 "num":[
                     "^environment.input_initialize.num",
-                    "$neurons.recurrent.num // 2",
-                    "$neurons.recurrent.num"
+                    "@neurons.recurrent.num // 2",
+                    "@neurons.recurrent.num"
                 ]
             },
             "layers":{
-                "num": "len($modules.initialize.neurons.num) - 1",
-                "nonlinear": "$neurons.recurrent.nonlinear",
+                "num": "len(@modules.initialize.neurons.num) - 1",
+                "nonlinear": "@neurons.recurrent.nonlinear",
                 "bias": true,
             }
         }
