@@ -1,4 +1,16 @@
 {
+    "arenas":[
+        {
+            "type": "Polygon",
+            "subtype": "RegularPolygon",
+            "initialize.method":"CenterRadiusTheta",
+            "initialize": {
+                "Center": [0.0, 0.0],
+                "Radius": 1.0,
+                "Rotation": 0.0,
+            }
+        }
+    ],
     "input":{
         "type": "dxdy",
         "num": 2

@@ -66,7 +66,7 @@
             {
                 "name": "environment",
                 "ModulePath": "Environments.Arenas2D",
-                "class": ""
+                "ParameterName": "environment",
             },
             {
                 "name": "agent",

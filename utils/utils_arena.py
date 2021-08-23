@@ -2,10 +2,8 @@ import random
 import math
 
 import numpy as np
-import config_sys
-config_sys.set_sys_path()
-
-from utils import polar2xy, xy2polar, get_from_dict, search_dict
+from utils_torch.math import polar2xy, xy2polar
+from utils_torch import get_from_dict, search_dict
 
 def get_polygon_regular(**kw):
     edge_num = search_dict(kw, ["point_num", "edge_num"])
