@@ -1,98 +1,116 @@
 {
+    "type": "rnn_lif",
     "neurons":{
-        "isExcitatoryInhibitory": true,
-        "isExcitatoryInhibitory.weight": [
-            "&modules.recurrent.weight",
-            "&modules.output.weight",
-        ],
-        "num": 2048,
-        "excitatory":{
-            "ratio": 0.8,
+        "input":{
+            "num":"^environment.input.num"
         },
-        "inhibitory":{},
-        "nonlinear":"relu"
+        "recurrent":{
+            "ExciInhi":{
+                "enable": true,
+                "weight": [
+                    "&modules.recurrent.weight",
+                    "&modules.output.weight"
+                ]
+            },
+            "num": 2048,
+            "excitatory":{
+                "ratio": 0.8
+            },
+            "inhibitory":{},
+            "nonlinear":"relu"
+        },
+        "output":{
+            "num": "$neurons.recurrent.num // 4"
+        },
+        "num": "$neurons.recurrent.num"
     },
     "modules":{
         "recurrent":{
             "type":"SingleLayer",
             "subtype":"f(Wx+b)",
             "weight":{
-                "size":["$neurons.num", "$neurons.num"],
+                "size":["$neurons.recurrent.num", "$neurons.recurrent.num"],
                 "initialize":{
-                    "method": "glorot",
-                    "coeff": 1.0e-1
+                    "method": "kaiming",
+                    "coefficient": 1.0e-1
                 }
             },
             "bias": true,
-            "nonlinear":"$neurons.nonlinear"
+            "nonlinear":"$neurons.recurrent.nonlinear"
         },
         "output":{
-            "initialize":{
-                "method": "glorot",
-                "coeff": 1.0e-1
+            "type":"SingleLayer",
+            "subtype":"Wx+b",
+            "weight":{
+                "size":["$neurons.recurrent.num", "$neurons.output.num"],
+                "initialize":{
+                    "method": "kaiming",
+                    "coefficient": 1.0e-1
+                }
             },
             "bias":true,
-            "nonlinear":"$neurons.nonlinear"
+            "nonlinear":"$neurons.recurrent.nonlinear"
         },
         "input":{
-            "type":"f(Wx+b)",
+            "type": "SingleLayer",
+            "subtype":"f(Wx+b)",
+            "input.num":"$neurons.input.num",
+            "output.num":"$neurons.recurrent.num",
             "weight":{
                 "initialize":{
-                    "method": "glorot"
+                    "method": "kaiming",
+                    "coefficient": 1.0e-1
                 }
             },
             "bias": true,
-            "nonlinear":"$neurons.nonlinear"
+            "nonlinear":"$neurons.recurrent.nonlinear"
         },
         "initialize":{
-            "type":"mlp",
-            "layer":{
-                "num": 3,
-                "neurons":{
-                    "num":["$neurons.num // 2"]
-                }
+            "type":"MultiLayerPerceptron",
+            "output":{"num":"$neurons.recurrent.num"},
+            "initialize.method":"FromNeuronNum",
+            "neurons":{
+                "num":[
+                    "^environment.input_initialize.num",
+                    "$neurons.recurrent.num // 2",
+                    "$neurons.recurrent.num"
+                ]
+            },
+            "layers":{
+                "num": "len($modules.initialize.neurons.num) - 1",
+                "nonlinear": "$neurons.recurrent.nonlinear",
+                "bias": true,
             }
         }
     },
     "dynamics":{
-        "initialize":{
-            "in":["x0"],
-            "out":["h0", "c0"]
-        },
         "run":{
-            "in":["x0", "x", "time"],
-            "out":["o", ""],
+            "in":["inputInit", "inputSeries", "time"],
+            "out":["outputSeries"],
+            "time": "&time",
             "internal":[
-                ["x0", "&initialize", ["h", "c"]],
-                {
-                    "type": "repeat",
-                    "module": "&iterate",
-                    "time": "time",
-                    "in": ["x[time]", "h", "c"],
-                    "out": ["h", "c", "o"]
-                }
+                "inputSeries |--> inputSender",
+                "x0 |--> &initialize |--> stateHidden, stateCell",
+                "|--> &iterate |--> || repeat=&time",
+                "&outputReceiver |--> outputSeries"
             ]
         },
         "iterate":{
-            "in":["x", "h", "c"],
-            "out":["h", "c", "o"],
+            "in":["inputProcessed", "stateHidden", "stateCell"],
+            "out":["stateHidden", "stateCell", "output"],
             "internal":[
-                ["x", "&input", "i"],
-                [["i", "h", "c"], "&recurrent", "h", "c"],
-                ["h", "&output", "o"]
+                "&inputSender |--> input",
+                "input |-->&input |--> inputProcessed",
+                "inputProcessed, hiddenState, cellState |--> &recurrent |--> hiddenState, cellState, outputRecurrent",
+                "outRecurrent |--> &output |--> output",
+                "output |--> &outputReceiver"
             ]
         },
-        "input":{
-            "in":["x"],
-            "out":["i"]
+        "outputReceiver":{
+            "type":"SerialReceiver"
         },
-        "recurrent":{
-            "in":["i","h","c"],
-            "out":["h", "c"]
+        "inputSender":{
+            "type":"SerialSender"
         },
-        "output":{
-            "in":["h"],
-            "out":["o"]
-        }
     }
 }

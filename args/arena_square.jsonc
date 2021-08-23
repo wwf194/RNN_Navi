@@ -1,0 +1,10 @@
+{
+    "input":{
+        "type": "dxdy",
+        "num": 2
+    },
+    "input_initialize":{
+        "type": "PlaceCellsActivation",
+        "num": "^agent.PlaceCells.num"
+    }
+}

@@ -102,10 +102,6 @@ class Arena(abc.ABC):
             for i in range(res_y):
                 points_grid_int[:, i, 0] = i # x_index
             points_grid = get_float_coords_np( points_grid_int.reshape(res_x * res_y, 2), self.xy_range, res_x, res_y ) # [res_x * res_y, 2]
-        
-
-
-
         arena_mask = np.ones((res_x, res_y)).astype(np.bool)
         #print('res_x: %d res_y: %d'%(res_x, res_y))
         #print(points_grid.shape)

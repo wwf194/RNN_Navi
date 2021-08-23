@@ -4,7 +4,7 @@ sys.path.append('./Optimizers/')
 
 import torch
 from utils import get_from_dict, set_instance_variable, search_dict
-import utils_model
+import model
 
 from LRSchedulers import LinearLR
 

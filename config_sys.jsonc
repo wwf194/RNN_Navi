@@ -2,10 +2,10 @@
     "os.type":"Linux",
     "machine.name":"img17",
     "libs":{
-        "utils_pytorch":{
-            "path":"/home/wangweifan/data3/libs_python/" //utils_pytorch package is located in directory .../libs_python/utils_pytorch/
+        "utils_torch":{
+            "path":"/home/wangweifan/data3/LibsPython/" //utils_torch package is located in directory .../libs_python/utils_torch/
             /*
-            "img17":"/home/wangweifan/data3/libs_python/utils_pytorch/"
+            "img17":"/home/wangweifan/data3/libs_python/utils_torch/"
             */
         }
     }

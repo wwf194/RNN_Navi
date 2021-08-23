@@ -359,7 +359,7 @@ def copy_project_files(args, verbose=True):
         'utils_arena.py',
         'utils_plot.py',
         'utils_anal.py',
-        'utils_model.py',
+        'model.py',
         'utils_train.py',
     ]
     copy_files(file_list, path_from='./src/', path_to=path + 'src/', verbose=verbose)

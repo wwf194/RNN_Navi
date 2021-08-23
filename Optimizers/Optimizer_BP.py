@@ -2,7 +2,7 @@
 import torch
 
 from utils import search_dict, get_items_from_dict
-import utils_model
+import model
 from Optimizers.Optimizer import *
 
 class Optimizer_BP(Optimizer):
@@ -21,11 +21,11 @@ class Optimizer_BP(Optimizer):
         self.build_optimizer(model=model, load=load)
         self.build_scheduler(load=load)
     def build_optimizer(self, load=False, model=None, params=None):
-        self.optimizer = utils_model.build_optimizer(self.dict['optimizer'], params=params, model=model, load=load)
+        self.optimizer = model.build_optimizer(self.dict['optimizer'], params=params, model=model, load=load)
     def build_scheduler(self, load=False, verbose=False):
         #self.lr_decay = self.dict['lr_decay']
         print(self.dict.keys())
-        self.scheduler = utils_model.build_scheduler(self.dict['scheduler'], optimizer=self.optimizer, load=load)
+        self.scheduler = model.build_scheduler(self.dict['scheduler'], optimizer=self.optimizer, load=load)
         scheduler_type = search_dict(self.dict['scheduler'], ['type', 'method'], default='None', write_default=True)
         if verbose:
             print('Optimizer_BP.lr_decay_method: %s'%scheduler_type)

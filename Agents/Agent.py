@@ -27,8 +27,8 @@ from utils import build_Optimizer
 from utils_plot import get_res_xy, plot_polyline, get_int_coords_np, norm_and_map
 import utils_train
 from utils_train import set_train_info
-import utils_model
-from utils_model import get_tensor_info, get_tensor_stat
+import model
+from model import get_tensor_info, get_tensor_stat
 
 
 from anal_grid import get_score

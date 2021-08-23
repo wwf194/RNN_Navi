@@ -1,31 +1,79 @@
 [
     {
-        "name":"add_config_dict",
+        "name":"LoadConfigurationFile",
         "args":{
-            "name":"config_sys",
-            "path":"./config_sys.jsonc"
+            "path":"./config_sys.jsonc",
+            "name":"config_sys"
         }
     },
     {
-        "name":"add_lib_path",
-        "args":{
-            "name":"utils_pytorch",
-            "path":"!get_from_config"
-        }
+        "name":"AddLibraryPath",
+        "args":[
+            {
+                "name":"utils_torch",
+                "path":"!get_from_config"
+            },
+            {
+                "name":"utils_local",
+                "path":"./utils/"
+            }
+        ]
     },
     {
-        "name":"add_lib_path",
-        "args":{
-            "name":"utils_local",
-            "path":"./utils/"
-        }       
+        "name":"LoadParameterFile",
+        "args":[
+            {
+                "path":"./args/rnn_lif_simple.jsonc",
+                "name":"model",
+            },
+            {
+                "path":"./args/arena_square.jsonc",
+                "name":"environment",
+            },
+            {
+                "path":"./args/agent.jsonc",
+                "name":"agent"
+            }
+        ]
     },
     {
-        "name":"build_model",
-        "args":{
-            "type":"rnn_lif",
-            "path":"./args/rnn_lif_simple.jsonc"
-        }
+        "name":"ParseParameter",
+        "args":{}
+    },
+    // {
+    //     "name":"BuildModel",
+    //     "args":{
+    //         "method": "FromParameter",
+    //         //"path":"./args/rnn_lif_simple.jsonc" # load args from another file
+    //         "ParameterName": "model"
+    //     }
+    // },
+    // {
+    //     "name":"BuildEnvironment",
+    //     "args":{
+    //         "method": "FromParameter",
+    //         "ParameterName": "environment"
+    //     }
+    // },
+    {
+        "name":"BuildObject",
+        "args":[
+            {
+                "name": "model",
+                "ModulePath": "Models.rnn_lif",
+                "ParameterName": "model",
+            },
+            {
+                "name": "environment",
+                "ModulePath": "Environments.Arenas2D",
+                "class": ""
+            },
+            {
+                "name": "agent",
+                "ModulePath": "Agents.Agent",
+                "ParameterName": "agent"
+            }
+        ]
     }
 ]
 
