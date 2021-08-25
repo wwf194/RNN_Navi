@@ -1,31 +1,30 @@
 import utils_torch
 from utils_torch import get_from_dict
-
+import numpy as np
 import Environments
 
-class ArenaPolygon(Environments.Arena):
+from utils_torch.attrs import CheckAttrs, EnsureAttrs, GetAttrs, HasAttrs, SetAttrs
+
+class Polygon2D(Environments.Arena2D):
     def __init__(self, param=None):
-        super().__init__(dict_, load)
+        super().__init__(param)
         if param is not None:
             self.InitFromParams(param)
-    def InitFromParams(self, param):
-
-        #set_instance_variable(self, self.dict, ['width', 'height', 'type'])
-        self.width = self.dict['width'] # maximum rectangle
-        self.height =self.dict['height']
-        self.type_ = self.type = self.dict['type']
-        
-        self.center_coord = get_from_dict(self.dict, 'center_coord', default=[0.0, 0.0], write_default=True)
-        #print(self.center_coord)
-        #print(self.width)
-        #print(self.height)
-        # By opencv convention, origin is at the top-left corner of the pircture.
-        self.x0 = self.center_coord[0] - self.width / 2
-        self.x1 = self.center_coord[0] + self.width / 2
-        self.y0 = self.center_coord[1] - self.width / 2
-        self.y1 = self.center_coord[1] + self.width / 2
-        self.xy_range = (self.x0, self.x0, self.x1, self.y1)
-        self.square_min_size = min(self.width, self.height)
+    def InitFromParam(self, param):
+        # Check Arena Type
+        if GetAttrs(param.Type) in ["Pylogon", "Rectangle"]:
+            SetAttrs(param.Type, "Polygon")
+        else:
+            raise Exception
+        # Calculate Boundary Box
+        if not HasAttrs(param, "BoundaryBox"):
+            EdgesNp = np.array(param.Edges, dtype=np.float32) # [VertexNum, (x, y)]
+            xMin = np.min(EdgesNp[:, 0])
+            xMax = np.max(EdgesNp[:, 0])
+            yMin = np.min(EdgesNp[:, 1])
+            yMax = np.max(EdgesNp[:, 1])
+            SetAttrs(param, "BoundaryBox", value=[[xMin, yMin], [xMax, yMax]])
+        #EnsureAttrs(param.Edges.Num, )
 
         self.get_random_max = self.get_random_square = self.get_random_max_rectangle
 

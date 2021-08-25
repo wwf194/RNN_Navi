@@ -59,7 +59,8 @@ def load_parameter_file(args):
 
 def _load_parameter_file(args):
     import utils_torch
-    setattr(utils.args_global.ParamDicts, args.name, utils_torch.JsonFile2PyObj(args.path))
+    ParamPyObj = utils_torch.JsonFile2PyObj(args.path)
+    setattr(utils.args_global.ParamDicts, args.name, ParamPyObj)
     add_log("Loading parameter file %s to parameter %s"%(args.path, args.name))
 
 def load_configuration_file(args):
@@ -110,7 +111,6 @@ def _add_library_path(args):
 
 def parse_parameter(args):
     import utils_torch
-    print(type(utils.args_global))
     ParamJsonObjParsed = utils_torch.parse.ParseParamPyObj(utils.args_global.ParamDicts)
     utils.args_global.ParamDictsOrigin = utils.args_global.ParamDicts
     utils.args_global.ParamDicts = utils.args_global.ParamDictsParsed = ParamJsonObjParsed

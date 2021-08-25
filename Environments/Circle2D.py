@@ -5,7 +5,7 @@ from utils_torch.attrs import EnsureAttrs, SetAttrs, HasAttrs, MatchAttrs
 
 import Environments
 
-class ArenaCircle(Environments.Arena):
+class Circle2D(Environments.Arena2D):
     def __init__(self, param=None):
         super().__init__()
         if param is not None:

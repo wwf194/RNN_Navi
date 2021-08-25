@@ -7,10 +7,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
-from utils.plot import *
-from utils.plot import get_int_coords, get_int_coords_np, get_res_xy, get_float_coords_np
 import utils
 from utils_torch.attrs import *
+from utils_torch.plot import get_int_coords, get_int_coords_np, get_res_xy, get_float_coords_np
 
 from utils.arena import *
 
@@ -19,13 +18,13 @@ import Environments
 def InitFromParams(param):
     return Arenas2D(param)
 
-def build_arena(param):
-    if param.type in ["Polygon"]:
-        return Environments.ArenaPolygon(param)
-    elif param.type in ["Circle"]:
-        return Environments.ArenaCircle(param)
+def BuildArena(Param):
+    if Param.Type in ["Polygon"]:
+        return Environments.Polygon2D(Param)
+    elif Param.Type in ["Circle"]:
+        return Environments.ArenaCircle(Param)
     else:
-        raise Exception()
+        raise Exception('Arenas: Unsupported arena type: '+str(Param.Type))
 
 class Arenas2D:
     def __init__(self, param=None):
@@ -39,19 +38,10 @@ class Arenas2D:
             self.InitFromParams(param)
     def InitFromParams(self, param):
         self.arenas = []
-        for arenaParam in param.arenas:
-            self.arenas.append(build_arena(arenaParam))
+        for ArenaParam in param.Arenas:
+            self.arenas.append(BuildArena(ArenaParam))
         self.set_current_arena(0)
 
-    def build_arena(self, arena_dict, load):
-        type_ = arena_dict['type']
-        if type_ in ['sqaure', 'polygon', 'square_max', 'rec', 'rectangle', 'rec_max'] or isinstance(type_, int):
-            return Arena_Polygon(arena_dict, load=load)    
-        elif type_ in ['circle']:
-            return Arena_Circle(arena_dict, load=load)
-        else:
-            raise Exception('Arenas: Unsupported arena_type: '+str(type_))
-    
     '''
     def plot_arenas_cv(self, save=True, save_path='./', **kw):
         for index, arena in enumerate(self.arenas):

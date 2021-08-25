@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import utils_torch
 
-class Arena():
+class Arena2D():
     def __init__(self, dict_, load=False):
         self.dict = dict_
     #@abc.abstractmethod
