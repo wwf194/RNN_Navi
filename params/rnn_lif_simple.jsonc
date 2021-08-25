@@ -1,116 +1,117 @@
 {
-    "type": "rnn_lif",
-    "neurons":{
-        "input":{
-            "num":"^environment.input.num"
+    "Type": "rnn_lif",
+    "Neurons":{
+        "Input":{
+            "Num":"^environment.Input.Num"
         },
-        "recurrent":{
+        "Recurrent":{
             "ExciInhi":{
-                "enable": true,
-                "weight": [
-                    "&modules.recurrent.weight",
-                    "&modules.output.weight"
+                "Enable": true,
+                "Weight": [
+                    "&Modules.Recurrent.Weight",
+                    "&Modules.Output.Weight"
                 ]
             },
-            "num": 2048,
-            "excitatory":{
-                "ratio": 0.8
+            "Num": 2048,
+            "Excitatory":{
+                "Ratio": 0.8
             },
-            "inhibitory":{},
-            "nonlinear":"relu"
+            "Inhibitory":{},
+            "NonLinear":"ReLU"
         },
-        "output":{
-            "num": "@neurons.recurrent.num // 4"
+        "Output":{
+            "Num": "@Neurons.Recurrent.Num // 4"
         },
-        "num": "@neurons.recurrent.num"
+        "Num": "@Neurons.Recurrent.Num"
     },
-    "modules":{
-        "recurrent":{
-            "type":"SingleLayer",
-            "subtype":"f(Wx+b)",
-            "weight":{
-                "size":["@neurons.recurrent.num", "@neurons.recurrent.num"],
-                "initialize":{
-                    "method": "kaiming",
-                    "coefficient": 1.0e-1
+    "Modules":{
+        "Recurrent":{
+            "Type":"SingleLayer",
+            "Subtype":"f(Wx+b)",
+            "Weight":{
+                "Size":["@Neurons.Recurrent.Num", "@Neurons.Recurrent.Num"],
+                "Initialize":{
+                    "Method": "kaiming",
+                    "Coefficient": 1.0e-1
                 }
             },
-            "bias": true,
-            "nonlinear":"@neurons.recurrent.nonlinear"
+            "Bias": true,
+            "NonLinear":"@Neurons.Recurrent.NonLinear"
         },
-        "output":{
-            "type":"SingleLayer",
-            "subtype":"Wx+b",
-            "weight":{
-                "size":["@neurons.recurrent.num", "@neurons.output.num"],
-                "initialize":{
-                    "method": "kaiming",
-                    "coefficient": 1.0e-1
+        "Output":{
+            "Type":"SingleLayer",
+            "Subtype":"Wx+b",
+            "Weight":{
+                "Size":["@Neurons.Recurrent.Num", "@Neurons.Output.Num"],
+                "Initialize":{
+                    "Method": "kaiming",
+                    "Coefficient": 1.0e-1
                 }
             },
-            "bias":true,
-            "nonlinear":"@neurons.recurrent.nonlinear"
+            "Bias":true,
+            "NonLinear":"@Neurons.Recurrent.NonLinear"
         },
-        "input":{
-            "type": "SingleLayer",
-            "subtype":"f(Wx+b)",
-            "input.num":"@neurons.input.num",
-            "output.num":"@neurons.recurrent.num",
-            "weight":{
-                "initialize":{
-                    "method": "kaiming",
-                    "coefficient": 1.0e-1
+        "Input":{
+            "Type": "SingleLayer",
+            "Subtype":"f(Wx+b)",
+            "Input.Num":"@Neurons.Input.Num",
+            "Output.Num":"@Neurons.Recurrent.Num",
+            "Weight":{
+                "Initialize":{
+                    "Method": "kaiming",
+                    "Coefficient": 1.0e-1
                 }
             },
-            "bias": true,
-            "nonlinear":"@neurons.recurrent.nonlinear"
+            "Bias": true,
+            "NonLinear":"@Neurons.Recurrent.NonLinear"
         },
-        "initialize":{
-            "type":"MultiLayerPerceptron",
-            "output":{"num":"@neurons.recurrent.num"},
-            "initialize.method":"FromNeuronNum",
-            "neurons":{
-                "num":[
-                    "^environment.input_initialize.num",
-                    "@neurons.recurrent.num // 2",
-                    "@neurons.recurrent.num"
+        "Initialize":{
+            "Type":"MultiLayerPerceptron",
+            "Output":{"Num":"@Neurons.Recurrent.Num"},
+            "Initialize.Method":"FromNeuronNum",
+            "Neurons":{
+                "Num":[
+                    "^environment.InputInit.Num",
+                    "@Neurons.Recurrent.Num // 2",
+                    "@Neurons.Recurrent.Num"
                 ]
             },
-            "layers":{
-                "num": "len(@modules.initialize.neurons.num) - 1",
-                "nonlinear": "@neurons.recurrent.nonlinear",
-                "bias": true,
+            "Layers":{
+                "Num": "len(@Modules.Initialize.Neurons.Num) - 1",
+                "NonLinear": "@Neurons.Recurrent.NonLinear",
+                "Bias": true,
             }
-        }
+        },
+        "OutputReceiver":{
+            "Type":"SerialReceiver"
+        },
+        "InputSender":{
+            "Type":"SerialSender"
+        },
     },
-    "dynamics":{
-        "run":{
-            "in":["inputInit", "inputSeries", "time"],
-            "out":["outputSeries"],
-            "time": "&time",
-            "internal":[
-                "inputSeries |--> inputSender",
-                "x0 |--> &initialize |--> stateHidden, stateCell",
-                "|--> &iterate |--> || repeat=&time",
-                "&outputReceiver |--> outputSeries"
+    "Dynamics":{
+        "Run":{
+            "In":["inputInit", "inputSeries", "time"],
+            "Out":["OutputSeries"],
+            "Routings":[
+                "inputSeries |--> &InputSender.Receive |-->",
+                "inputInit |--> &Initialize |--> stateHidden, stateCell",
+                "|--> &Iterate |--> || repeat=#time",
+                "|--> &OutputReceiver.Send |--> OutputSeries"
             ]
         },
-        "iterate":{
-            "in":["inputProcessed", "stateHidden", "stateCell"],
-            "out":["stateHidden", "stateCell", "output"],
-            "internal":[
-                "&inputSender |--> input",
-                "input |-->&input |--> inputProcessed",
-                "inputProcessed, hiddenState, cellState |--> &recurrent |--> hiddenState, cellState, outputRecurrent",
-                "outRecurrent |--> &output |--> output",
-                "output |--> &outputReceiver"
+        "Iterate":{
+            "In":["stateHidden", "stateCell"],
+            "Out":["stateHidden", "stateCell", "Output"],
+            "Routings":[
+                "|--> &InputSender |--> input",
+                "input |-->&Input |--> inputProcessed",
+                "inputProcessed, hiddenState, cellState |--> &Recurrent |--> hiddenState, cellState, OutputRecurrent",
+                "outRecurrent |--> &Output |--> Output",
+                "Output |--> &OutputReceiver.Receive |-->"
             ]
         },
-        "outputReceiver":{
-            "type":"SerialReceiver"
-        },
-        "inputSender":{
-            "type":"SerialSender"
-        },
-    }
+        "__Entry__":"&Dynamics.Run"
+    },
+    
 }

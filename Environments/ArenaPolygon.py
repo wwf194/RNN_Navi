@@ -7,8 +7,8 @@ class ArenaPolygon(Environments.Arena):
     def __init__(self, param=None):
         super().__init__(dict_, load)
         if param is not None:
-            self.init_from_param(param)
-    def init_from_param(self, param):
+            self.InitFromParams(param)
+    def InitFromParams(self, param):
 
         #set_instance_variable(self, self.dict, ['width', 'height', 'type'])
         self.width = self.dict['width'] # maximum rectangle

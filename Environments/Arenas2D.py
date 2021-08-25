@@ -10,11 +10,14 @@ from matplotlib.lines import Line2D
 from utils.plot import *
 from utils.plot import get_int_coords, get_int_coords_np, get_res_xy, get_float_coords_np
 import utils
-from utils_torch import get_from_dict, ensure_path, write_dict_info, set_instance_variable, set_dict_variable, set_dict_and_instance_variable
+from utils_torch.attrs import *
+
 from utils.arena import *
 
-def init_from_param(param):
-    return Arenas(param)
+import Environments
+
+def InitFromParams(param):
+    return Arenas2D(param)
 
 def build_arena(param):
     if param.type in ["Polygon"]:
@@ -33,8 +36,8 @@ class Arenas2D:
             raise Exception('Arenas: options must not be None.')
         '''
         if param is not None:
-            self.init_from_param(param)
-    def init_from_param(self, param):
+            self.InitFromParams(param)
+    def InitFromParams(self, param):
         self.arenas = []
         for arenaParam in param.arenas:
             self.arenas.append(build_arena(arenaParam))

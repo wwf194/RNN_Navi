@@ -30,7 +30,7 @@ if task in ['pc', 'pc_coord']:
     act_center = 1.0
     act_decay = 0.15
     if task in ['pc', 'pc_coord']:
-        norm_local = True # make all pc fire rate at one location sum to 1, so that it can be interpreted as a probability distribution.
+        norm_local = True # make all pc fire rate at one location sum to 1, so that it can be interpreted as a probability Distribution.
     elif task in ['coord']:
         norm_local = False
     else: raise Exception('Invalid task: %s'%task)

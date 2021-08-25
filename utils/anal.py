@@ -325,7 +325,7 @@ def plot_dist(data, logger, name="undefined", ran=[], save_path="./", bins=100, 
         sig_check=False
         while sig:
             try:
-                title=name+" distribution"
+                title=name+" Distribution"
                 if(cumulative==True):
                     title+="(cumu)"
                 hist_dir = save_dir + title +".jpg"

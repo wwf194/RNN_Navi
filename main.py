@@ -11,8 +11,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("task", nargs="?", default="DoTasks")
 args = parser.parse_args()
 
-#sys.path.append("./utils/")
-
 import utils
 from utils import set_logger_global, get_logger_global, add_log, add_warning
 
@@ -20,11 +18,8 @@ set_logger_global()
 logger = get_logger_global()
 
 def do_tasks():
-
     try: # catch all unhandled exceptions
         do_tasks_pre()
-        #import utils_torch
-        #utils.args_global = utils.json.JsonObj2PyObj(utils.args_global)
         do_tasks_main()
     except Exception:
         logger.error(traceback.format_exc())
@@ -37,11 +32,8 @@ def do_tasks_pre():
     utils_torch.set_logger(get_logger_global())
 
 def do_tasks_main():
-    import utils_torch
     tasks = utils.json.JsonFile2PyObj('./task.jsonc')
     for task in tasks:
-        #add_log("main: doing task: %s"%task['name'])
-        #print(task)
         TaskImplementFunction[task.name](task.args)
 
 def build_object(args):
@@ -54,7 +46,7 @@ def build_object(args):
 def _build_object(args):
     import utils_torch
     Class = utils_torch.import_module(args.ModulePath)
-    obj = Class.init_from_param(getattr(utils.args_global.ParamDicts, args.ParamName))
+    obj = Class.InitFromParams(getattr(utils.args_global.ParamDicts, args.ParamName))
     setattr(utils.args_global.Objects, args.name, obj)
 def load_parameter_file(args):
     if isinstance(args, dict):
@@ -119,7 +111,7 @@ def _add_library_path(args):
 def parse_parameter(args):
     import utils_torch
     print(type(utils.args_global))
-    ParamJsonObjParsed = utils_torch.utils.parse_param_py_obj(utils.args_global.ParamDicts)
+    ParamJsonObjParsed = utils_torch.parse.ParseParamPyObj(utils.args_global.ParamDicts)
     utils.args_global.ParamDictsOrigin = utils.args_global.ParamDicts
     utils.args_global.ParamDicts = utils.args_global.ParamDictsParsed = ParamJsonObjParsed
 

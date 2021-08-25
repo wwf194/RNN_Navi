@@ -1,22 +1,27 @@
 {
-    "arenas":[
+    "Arenas":[
         {
-            "type": "Polygon",
-            "subtype": "RegularPolygon",
-            "initialize.method":"CenterRadiusTheta",
-            "initialize": {
+            "Type": "Polygon",
+            "Subtype": "RegularPolygon",
+            "Initialize.Method":"CenterRadiusTheta",
+            "Initialize": {
                 "Center": [0.0, 0.0],
                 "Radius": 1.0,
                 "Rotation": 0.0,
             }
+        },
+        {
+            "Type": "Circle",
+            "Center": [0.0, 0.0],
+            "Radius": [1.0],
         }
     ],
-    "input":{
-        "type": "dxdy",
-        "num": 2
+    "Input":{
+        "Type": "dxdy",
+        "Num": 2
     },
-    "input_initialize":{
-        "type": "PlaceCellsActivation",
-        "num": "^agent.PlaceCells.num"
+    "InputInit":{
+        "Type": "PlaceCellsActivation",
+        "Num": "^agent.PlaceCells.Num"
     }
 }

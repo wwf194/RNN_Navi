@@ -46,11 +46,11 @@
             "type": "SupervisedLearning",
             "method": "GradientDescend",
             "mode": "EpochBatch",
-            "epoch.num": 200,
-            "batch.num": "$1000 * 2$",
+            "epoch.Num": 200,
+            "batch.Num": "$1000 * 2$",
             "batch.size": "200",
             "TrajectoryConfig": {
-                "numPerBatch": "$args.batch.size",
+                "NumPerBatch": "$args.batch.size",
                 "stepPerBatch": 50,
             },
             "batch.internal":[

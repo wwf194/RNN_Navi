@@ -29,15 +29,15 @@ from utils.anal import calculate_grid_score
 
 from Models.Place_Cells import Place_Cells
 
-def init_from_param(param):
+def InitFromParams(param):
     return Agent(param)
 
 class Agent(object):
     def __init__(self, param=None):
         if param is not None:
-            self.init_from_param(param)
+            self.InitFromParams(param)
         
-    def init_from_param(self, param):
+    def InitFromParams(self, param):
         self.param = param
         
     def report_perform(self, prefix='', verbose=True):
@@ -379,7 +379,7 @@ class Agent(object):
         v_random = np.random.rayleigh(b, [batch_size, step_num]) # random velocity.
         
         if self.stop_prob > 0.0:
-            offset = - math.log(1.0 - self.stop_prob, math.e) * 2 * (b ** 2) # CDF of rayleigh distribution is 1 - exp{ - x^2 / (2 * b^2) }
+            offset = - math.log(1.0 - self.stop_prob, math.e) * 2 * (b ** 2) # CDF of rayleigh Distribution is 1 - exp{ - x^2 / (2 * b^2) }
             v_random = v_random - offset
             v_random = ( 1 * (v_random > 0.0) ) * v_random
         '''

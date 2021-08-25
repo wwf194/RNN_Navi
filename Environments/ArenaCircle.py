@@ -1,5 +1,7 @@
+
+import numpy as np
 import utils_torch
-from utils_torch import ensure_attrs, set_attrs, has_attrs, match_attrs
+from utils_torch.attrs import EnsureAttrs, SetAttrs, HasAttrs, MatchAttrs
 
 import Environments
 
@@ -7,13 +9,12 @@ class ArenaCircle(Environments.Arena):
     def __init__(self, param=None):
         super().__init__()
         if param is not None:
-            self.init_from_param(param)
+            self.InitFromParams(param)
 
-    def init_from_param(self, param):
+    def InitFromParams(self, param):
         self.param = param
 
-
-
+        EnsureAttrs()
 
         self.type = self.dict['type'] = 'circle'
         self.radius = get_from_dict(self.dict, 'radius', default=None, write_default=True)

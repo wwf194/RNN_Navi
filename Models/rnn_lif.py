@@ -10,16 +10,15 @@ import torch.nn.functional as F
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 
-from utils_torch import json_obj_to_object, parse_json_obj, new_json_file
-from utils_torch import ensure_attrs, has_attrs, set_attrs, get_attrs, list_attrs, match_attrs, remove_attrs
-from utils_torch import object_to_json_str
-from utils_torch.model import build_module
+from utils_torch.attrs import *
+from utils_torch.json import JsonObj2JsonStr
+from utils_torch.model import ParseRouters, build_module
 import utils_torch
 import utils
 
-def init_from_param(param):
+def InitFromParams(param):
     model = RNN_LIF()
-    model.init_from_param(param)
+    model.InitFromParams(param)
     return model
 
 def load_model(args):
@@ -29,73 +28,48 @@ class RNN_LIF(nn.Module):
     # Singel-Layer Recurrent Neural Network with Leaky Integrate-and-Fire Dynamics
     def __init__(self):
         super(RNN_LIF, self).__init__()
-
-    def init_from_param(self, param):
+    def InitFromParams(self, Params):
         utils.add_log("RNN_LIF: Initializing from param...")
-        self.param = param
-        self.json_external_dict = {}
-        neurons = param.neurons
-        ensure_attrs(param, "neurons", "isExciInhi", default=False)
-        if match_attrs(neurons.recurrent, "isExciInhi", value=True):
-            remove_attrs(neurons.recurrent.isExciInhi)
-            set_attrs(neurons.recurrent.ExciInhi, value={"enable":True})
-        if match_attrs(neurons.recurrent, "isExciInhi.enable", value=True):
-            if not has_attrs(neurons.recurrent, "excitatory", "num"):
-                excitatory_ratio = neurons.recurrent.excitatory.ratio
-                set_attrs(neurons.recurrent, "excitatory.num", value=int(neurons.neurons.num * excitatory_ratio))
-                set_attrs(neurons.recurrent, "inhibitory.num", value=(neurons.num - neurons.excitatory.num))
+        CheckAttrs(Params, "Type", value="rnn_lif")
+        self.Params = Params
+        #self.json_external_dict = {}
+        Neurons = Params.Neurons
+        EnsureAttrs(Params, "Neurons", "isExciInhi", default=False)
+        if MatchAttrs(Neurons.Recurrent, "isExciInhi", value=True):
+            RemoveAttrs(Neurons.Recurrent.isExciInhi)
+            SetAttrs(Neurons.Recurrent.ExciInhi, value={"Enable":True})
+        if MatchAttrs(Neurons.Recurrent, "isExciInhi.Enable", value=True):
+            if not HasAttrs(Neurons.Recurrent, "Excitatory.Num"):
+                SetAttrs(Neurons.Recurrent, "Excitatory.Num", value=int(Neurons.Recurrent.Num * Neurons.Recurrent.Excitatory.Ratio))
+                SetAttrs(Neurons.Recurrent, "Inhibitory.Num", value=(Neurons.Num - Neurons.excitatory.Num))
+
+        Nodes = utils_torch.EmptyPyObj()
+        Nodes.Modules = utils_torch.EmptyPyObj()
+        Nodes.Routers = utils_torch.EmptyPyObj()
+        self.Nodes = Nodes
         # initialize modules
-        #for module in list_attrs(param.modules):
-        modules = param.modules
-        for name, module in list_attrs(param.modules):
-            self.add_module(name, build_module(module))
+        #for module in ListAttrs(param.modules):
+        for moduleName, moduleParam in ListAttrs(Params.Modules):
+            Module = build_module(moduleParam)
+            self.add_module(moduleName, Module)
+            SetAttrs(Nodes.Modules, moduleName, Module)
 
-        utils_torch.JsonStr2JsonFile(object_to_json_str(param), "./params/rnn_lif_temp.jsonc")
-        
-    def forward(self, data): # ([batch_size, step_num, input_num], [batch_size, input_num])
-        x, x_init = get_items_from_dict(data, ['input', 'input_init'])
-        x_init = x_init.to(self.device) # [batch_size, input_init_num]
-        x = x.to(self.device) # [batch_size, step_num, input_num]
+        for name, signalFlowParam in ListAttrs(Params.Dynamics):
+            if name in ["__Entry__"]:
+                continue
+            Router = utils_torch.BuildRouter(signalFlowParam)
+            setattr(Nodes.Routers, name, Router)
 
-        i = self.cal_input_batch_time(x=x) # [batch_size, step_num, N_num]
+        DefaultDynamicsEntry = "&Dynamics.%s"%ListAttrs(Params.Dynamics)[0][0]
+        EnsureAttrs(Params.Dynamics, "__Entry__", default=DefaultDynamicsEntry)
+        utils_torch.model.ParseRouters(Nodes.Routers, [Nodes.Modules, Nodes.Routers, Nodes])
 
-        x_size = list(x.size())
-        #i_ = x.mm(self.get_i()) #[batch_size, step_num, N_num]
-        '''
-        x = x.view(x_size[0] * x_size[1], x_size[2])
-        i_ = ( x.mm(self.get_i()) ) # [batch_size, step_num, N_num]
-        i_ = i_.view(x_size[0], x_size[1], -1)
-        r0 = self.reset(x=x, i0=self.prep_x0(x_init))
-        '''
-        '''
-        if pre_input:
-            x0 = torch.squeeze(x[:, 0, :]).detach().cpu().numpy() #(batch_size, input_num)
-            x0 = torch.from_numpy(x0).to(self.device)
-            x0[:, 2] = 0.0 #set velocity to 0.
-            i0 = x0.mm(self.get_i())
-            #print(x0)
-            for time in range(2):
-                f, r, u = self.forward(i0 + r)
-        '''
-        batch_size, step_num = x.size(0), x.size(1)
-        act_list = []
-        output_list = []
-        s, h = get_items_from_dict(self.cal_init_state(x_init=x_init), ['s_init', 'h_init'])
-        for time in range(x_size[1]):
-            state = self.forward_once(s=s, h=h, i=i[:, time, :])
-            s, u, h, o = get_items_from_dict(state, ['s', 'u', 'h', 'o'])
-            act_list.append(u) # [batch_size, N_num]
-            output_list.append(o) # [batch_size, output_num]
-        
-        #output_list = list(map(lambda x:torch.unsqueeze(x, 1), output_list))
-        #act_list = list(map(lambda x:torch.unsqueeze(x, 1), act_list))
+        utils_torch.PyObj2JsonFile(Params, "./params/rnn_lif_temp.jsonc")
 
-        output = torch.stack(output_list, dim=1) # [batch_size, step_num, N_num]
-        act = torch.stack(act_list, dim=1) # [batch_size, step_num, N_num]
-        return {
-            'output': output,
-            'act': act
-        }
+    def forward(self, Input):
+        Output = self.Nodes.__Entry__.forward(Input)
+        return Output
+
     def forward_once(self, s=None, h=None, i=None):
         batch_size = i.size(0)
         '''
@@ -117,12 +91,12 @@ class RNN_LIF(nn.Module):
         return {
             's': s, # cell state
             'u': u, # firing rate
-            'h': h, # recurrent output
+            'h': h, # Recurrent output
             'o': o, # output
         }
     def plot_act(self, data=None, ax=None, data_type='u', save=True, save_path='./', save_name='act_map.png', cmap='jet', plot_N_num=200, select_strategy='first', verbose=False):
         if isinstance(data, torch.Tensor):
-            data = data.detach().cpu().numpy() # [step_num, N_num]
+            data = data.detach().cpu().Numpy() # [step_num, N_num]
 
         step_num = data.shape[0]
         N_num = data.shape[1]
@@ -175,7 +149,7 @@ class RNN_LIF(nn.Module):
             if select_strategy in ['first']:
                 x_label = 'Neuron index'
             elif select_strategy in ['random']:
-                x_label = '%d randomly selected neurons'
+                x_label = '%d randomly selected Neurons'
             else:
                 raise Exception('Invalid select strategy: %s'%select_strategy)
         else:
@@ -248,7 +222,7 @@ class RNN_LIF(nn.Module):
         loss_weight_0 = self.cal_loss_weight()
         #loss_weight_0 = self.weight_coeff * torch.mean(self.get_r() ** 2)
         #print(loss_weight_0)
-        # dynamically alternate weight coefficient
+        # dynamically alternate weight Coefficient
         #print(loss_weight_0.size())
         if self.weight_coeff > 0.0:
             if self.dynamic_weight_coeff:
@@ -344,7 +318,7 @@ class RNN_LIF(nn.Module):
         #print(act.size())
         output = torch.mm(act, self.get_o())
         if to_array:
-            output = output.detach().cpu().numpy()
+            output = output.detach().cpu().Numpy()
         return output
 
     def save(self, save_path, save_name):
@@ -371,7 +345,7 @@ class RNN_LIF(nn.Module):
                 #print('name: {0},\t grad: {1}'.format(name, value.requires_grad))
                 #print(value)
                 #print(value.grad)
-                value_np = value.detach().cpu().numpy()
+                value_np = value.detach().cpu().Numpy()
                 if self.cache.get(name) is not None:  
                     #print('  change in %s: '%name, end='')
                     #print(value_np - self.cache[name])
@@ -380,14 +354,14 @@ class RNN_LIF(nn.Module):
                 self.cache[name] = value_np
     def anal_weight_change(self, verbose=True):
         result = ''
-        r_1 = self.get_r().detach().cpu().numpy()
+        r_1 = self.get_r().detach().cpu().Numpy()
         if self.cache.get('r') is not None:
             r_0 = self.cache['r']
             r_change_rate = np.sum(abs(r_1 - r_0)) / np.sum(np.abs(r_0))
             result += 'r_change_rate: %.3e '%r_change_rate
         self.cache['r'] = r_1
 
-        o_1 = self.get_o().detach().cpu().numpy()
+        o_1 = self.get_o().detach().cpu().Numpy()
         if self.cache.get('o') is not None:
             o_0 = self.cache['o']
             f_change_rate = np.sum(abs(o_1 - o_0)) / np.sum(np.abs(o_0))
@@ -395,7 +369,7 @@ class RNN_LIF(nn.Module):
         self.cache['o'] = o_1
 
         if hasattr(self, 'get_i'):
-            i_1 = self.get_i().detach().cpu().numpy()
+            i_1 = self.get_i().detach().cpu().Numpy()
             if self.cache.get('i') is not None:
                 i_0 = self.cache['i']
                 i_change_rate = np.sum(abs(i_1 - i_0)) / np.sum(np.abs(i_0))
@@ -447,8 +421,8 @@ class RNN_LIF(nn.Module):
         outputs = outputs.to(self.device)
         return (inputs, init), outputs
     '''
-    def plot_recurrent_weight(self, ax, cmap):
-        weight_r = self.get_r().detach().cpu().numpy()
+    def plot_Recurrent_weight(self, ax, cmap):
+        weight_r = self.get_r().detach().cpu().Numpy()
         weight_r_mapped, weight_min, weight_max = norm_and_map(weight_r, cmap=cmap, return_min_max=True) # weight_r_mapped: [N_num, res_x, res_y, (r,g,b,a)]
         
         ax.set_title('Recurrent weight')
@@ -491,10 +465,10 @@ class RNN_LIF(nn.Module):
 
         fig.suptitle('Weight Visualization of 1-layer RNN')
 
-        # plot recurrent weight
+        # plot Recurrent weight
         ax = axes[0, 0] # raises error is row_num==col_num==1
         
-        self.plot_recurrent_weight(ax, cmap)
+        self.plot_Recurrent_weight(ax, cmap)
 
         # plot input_weight
         if self.init_method in ['linear']:

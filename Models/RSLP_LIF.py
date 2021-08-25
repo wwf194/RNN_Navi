@@ -520,7 +520,7 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
         loss_weight_0 = self.cal_loss_weight()
         #loss_weight_0 = self.weight_coeff * torch.mean(self.get_r() ** 2)
         #print(loss_weight_0)
-        # dynamically alternate weight coefficient
+        # dynamically alternate weight Coefficient
         #print(loss_weight_0.size())
         if self.weight_coeff > 0.0:
             if self.dynamic_weight_coeff:

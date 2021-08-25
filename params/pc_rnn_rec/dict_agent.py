@@ -7,7 +7,7 @@ pc_type = 'diff_gaussian'
 
 act_center = 1.0
 act_decay = 0.15
-norm_local = True # make all pc fire rate at one location sum to 1, so that it can be interpreted as a probability distribution.
+norm_local = True # make all pc fire rate at one location sum to 1, so that it can be interpreted as a probability Distribution.
 
 if pc_type in ['diff_gaussian']:
     act_ratio = 2.0
