@@ -1,15 +1,37 @@
 import numpy as np
+import random
 import torch
 import utils_torch
 
+import matplotlib as mpl
+from matplotlib import pyplot as plt
+
 class Arena2D():
-    def __init__(self, dict_, load=False):
-        self.dict = dict_
+    def __init__(self, param=None):
+        self.param = param
+    def InitFromParam(self, param):
+        self.param = param
     #@abc.abstractmethod
     def get_random_xy(self): # must be implemented by child class.
         return
-    def get_random_max_rectangle(self, point_num):
-        return np.stack( [np.random.uniform(self.x0, self.x1, point_num), np.random.uniform(self.y0, self.y1, point_num)], axis=0 ) #[points_num, (x, y)]
+    def GenerateRandomPointsInBoundaryBox(self, Num):
+        param = self.param
+        return np.stack([np.random.uniform(self.xMin, self.xMax, Num), np.random.uniform(self.y0, self.y1, Num)], axis=0) #[points_num, (x, y)]
+    def GenerateRandomInternalPoints(self, Num=100, MinimumDistance2Border=None):
+        if MinimumDistance2Border is None:
+            MinimumDistance2Border = self.MinimumDistance2Border
+        PointsNum = 0
+        PointsList = []
+        while(PointsNum < Num):
+            Points = self.GenerateRandomPointsInBoundaryBox(int(2.2 * Num))            
+            Points = np.delete(Points, self.isOutside(Points, MinimumDistance2Border=MinimumDistance2Border), axis=0)
+            PointsList.append(Points)
+            PointsNum += Points.shape[0]
+            #print('total valid points:%d'%count)
+        Points = np.concatenate(PointsList, axis=0)
+        if PointsNum > Num:
+            Points = np.delete(Points, random.sample(range(PointsNum), PointsNum - Num), axis=0)
+        return Points
     def get_random_xy_max(self, num=100):
         xs = np.random.uniform(self.x0, self.x1, num) # x_0
         ys = np.random.uniform(self.y0, self.y1, num) # y_0
@@ -51,3 +73,12 @@ class Arena2D():
                 arena_mask[points_out_of_region[i,0], points_out_of_region[i,1]] = 0.0        
             #arena_mask[points_out_of_region] = 0.0 does not work.
         return arena_mask
+    def PlotRandomInternalPoints(self, PointNum, SavePath):
+        fig, ax = plt.subplots()
+        Points = self.GenerateRandomInternalPoints(PointNum)
+        self.PlotBoundary(ax)
+        utils_torch.plot.PlotPointsNp(Points)
+        plt.savefig(SavePath)
+
+
+        

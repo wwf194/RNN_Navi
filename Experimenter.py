@@ -1,4 +1,4 @@
-from utils import ensure_path, get_from_dict, set_instance_variable, search_dict
+from utils import EnsurePath, get_from_dict, set_instance_variable, search_dict
 
 class Experimenter:
     def __init__(self, dict_):
@@ -89,7 +89,7 @@ class Experimenter:
         # save directory setting
         self.save_path = search_dict(self.dict, ['save_path', 'save_model_path', 'save_dir_model'], default='./saved_models/',
                                            write_default=True, write_default_key='save_path')
-        ensure_path(self.save_path)
+        EnsurePath(self.save_path)
 
         self.save = search_dict(self.dict, ['save', 'save_model'], default=True, write_default=True)
         self.save_after_train = get_from_dict(self.dict, 'save_after_train', default=True, write_default=True)
@@ -120,7 +120,7 @@ class Experimenter:
                 save_path = self.anal_path + 'epoch=%d/'%(epoch_index)
             else:
                 save_path = self.anal_path + 'epoch=%s/'%(title)
-        ensure_path(save_path)
+        EnsurePath(save_path)
         agent.anal(save_path=save_path, trainer=self)
     
     def get_epoch_info(self, dict_):

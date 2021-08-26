@@ -174,7 +174,7 @@ class RNN_LIF(nn.Module):
             cbar.set_label('Membrane potential')
         
         if save:
-            ensure_path(save_path)
+            EnsurePath(save_path)
             plt.savefig(save_path + save_name)
         return ax
     '''
@@ -322,7 +322,7 @@ class RNN_LIF(nn.Module):
         return output
 
     def save(self, save_path, save_name):
-        ensure_path(save_path)
+        EnsurePath(save_path)
         #self.update_before_save()
         with open(save_path + save_name, 'wb') as f:
             self.to(torch.device('cpu'))
@@ -480,7 +480,7 @@ class RNN_LIF(nn.Module):
 
         plt.tight_layout()
         if save:
-            ensure_path(save_path)
+            EnsurePath(save_path)
             plt.savefig(save_path + save_name)
     def reset_zero(self, **kw):
         batch_size = kw['i0'].size(0)

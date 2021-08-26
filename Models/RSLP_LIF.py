@@ -11,7 +11,7 @@ import matplotlib as mpl
 from matplotlib import pyplot as plt
 
 import utils
-from utils import set_instance_variable, contain, get_name, get_items_from_dict, get_name_args, ensure_path, get_np_stat
+from utils import set_instance_variable, contain, get_name, get_items_from_dict, get_name_args, EnsurePath, get_np_stat
 #from utils_anal import *
 from model import get_act_func, get_mask, get_ei_mask, init_weight, build_mlp, print_model_param, get_tensor_info, get_tensor_stat
 from utils_plot import norm_and_map
@@ -472,7 +472,7 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
             cbar.set_label('Membrane potential')
         
         if save:
-            ensure_path(save_path)
+            EnsurePath(save_path)
             plt.savefig(save_path + save_name)
         return ax
     '''
@@ -620,7 +620,7 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
         return output
 
     def save(self, save_path, save_name):
-        ensure_path(save_path)
+        EnsurePath(save_path)
         #self.update_before_save()
         with open(save_path + save_name, 'wb') as f:
             self.to(torch.device('cpu'))
@@ -778,7 +778,7 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
 
         plt.tight_layout()
         if save:
-            ensure_path(save_path)
+            EnsurePath(save_path)
             plt.savefig(save_path + save_name)
     def reset_zero(self, **kw):
         batch_size = kw['i0'].size(0)

@@ -20,42 +20,42 @@
             "NonLinear":"ReLU"
         },
         "Output":{
-            "Num": "@Neurons.Recurrent.Num // 4"
+            "Num": "$Neurons.Recurrent.Num // 4"
         },
-        "Num": "@Neurons.Recurrent.Num"
+        "Num": "$Neurons.Recurrent.Num"
     },
     "Modules":{
         "Recurrent":{
             "Type":"SingleLayer",
             "Subtype":"f(Wx+b)",
             "Weight":{
-                "Size":["@Neurons.Recurrent.Num", "@Neurons.Recurrent.Num"],
+                "Size":["$Neurons.Recurrent.Num", "$Neurons.Recurrent.Num"],
                 "Initialize":{
                     "Method": "kaiming",
                     "Coefficient": 1.0e-1
                 }
             },
             "Bias": true,
-            "NonLinear":"@Neurons.Recurrent.NonLinear"
+            "NonLinear":"$Neurons.Recurrent.NonLinear"
         },
         "Output":{
             "Type":"SingleLayer",
             "Subtype":"Wx+b",
             "Weight":{
-                "Size":["@Neurons.Recurrent.Num", "@Neurons.Output.Num"],
+                "Size":["$Neurons.Recurrent.Num", "$Neurons.Output.Num"],
                 "Initialize":{
                     "Method": "kaiming",
                     "Coefficient": 1.0e-1
                 }
             },
             "Bias":true,
-            "NonLinear":"@Neurons.Recurrent.NonLinear"
+            "NonLinear":"$Neurons.Recurrent.NonLinear"
         },
         "Input":{
             "Type": "SingleLayer",
             "Subtype":"f(Wx+b)",
-            "Input.Num":"@Neurons.Input.Num",
-            "Output.Num":"@Neurons.Recurrent.Num",
+            "Input.Num":"$Neurons.Input.Num",
+            "Output.Num":"$Neurons.Recurrent.Num",
             "Weight":{
                 "Initialize":{
                     "Method": "kaiming",
@@ -63,22 +63,22 @@
                 }
             },
             "Bias": true,
-            "NonLinear":"@Neurons.Recurrent.NonLinear"
+            "NonLinear":"$Neurons.Recurrent.NonLinear"
         },
         "Initialize":{
             "Type":"MultiLayerPerceptron",
-            "Output":{"Num":"@Neurons.Recurrent.Num"},
+            "Output":{"Num":"$Neurons.Recurrent.Num"},
             "Initialize.Method":"FromNeuronNum",
             "Neurons":{
                 "Num":[
                     "^environment.InputInit.Num",
-                    "@Neurons.Recurrent.Num // 2",
-                    "@Neurons.Recurrent.Num"
+                    "$Neurons.Recurrent.Num // 2",
+                    "$Neurons.Recurrent.Num"
                 ]
             },
             "Layers":{
-                "Num": "len(@Modules.Initialize.Neurons.Num) - 1",
-                "NonLinear": "@Neurons.Recurrent.NonLinear",
+                "Num": "len($Modules.Initialize.Neurons.Num) - 1",
+                "NonLinear": "$Neurons.Recurrent.NonLinear",
                 "Bias": true,
             }
         },
@@ -96,7 +96,7 @@
             "Routings":[
                 "inputSeries |--> &InputSender.Receive |-->",
                 "inputInit |--> &Initialize |--> stateHidden, stateCell",
-                "|--> &Iterate |--> || repeat=#time",
+                "|--> &Iterate |--> || repeat=%time",
                 "|--> &OutputReceiver.Send |--> OutputSeries"
             ]
         },

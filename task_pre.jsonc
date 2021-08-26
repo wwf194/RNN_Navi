@@ -2,8 +2,8 @@
     {
         "name":"LoadConfigurationFile",
         "args":{
-            "path":"./config_sys.jsonc",
-            "name":"config_sys"
+            "path":"./ConfigSystem.jsonc",
+            "name":"ConfigSystem"
         }
     },
     {

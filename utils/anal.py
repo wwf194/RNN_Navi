@@ -64,7 +64,7 @@ def get_log_data_1d(data):
     return data_log, note
 
 def visualize_weight(net, name="r", save_path="./"):
-    ensure_dir(save_path)
+    EnsureDir(save_path)
     color_map = plt.cm.get_cmap('jet')
     w = net.get_weight(name, positive=True).detach().cpu().numpy()
     shape = w.shape
@@ -181,7 +181,7 @@ def load_net(epoch=None): #load lastest model saved in save_dir_stat
 
 
 def compare_traj(net=None, save_path="./", x_resolution=400, save_name="undefined traj plot", sequence_length_0=None, arena_index=0, plot_num=1, outputs=None, outputs_0=None):
-    ensure_path(save_path)
+    EnsurePath(save_path)
     if sequence_length_0 is None:
         sequence_length_0 = sequence_length #use sequence length in param_config.py
 
@@ -223,7 +223,7 @@ def compare_traj(net=None, save_path="./", x_resolution=400, save_name="undefine
     cv.imwrite(save_path +  save_name + ".jpg", img)
 
 def plot_init_positions(trajectory_generator=None, x_resolution=400, plot_num=50, save_path="./", save_name="init_positions_plot"):
-    ensure_dir(save_path)
+    EnsureDir(save_path)
     if trajectory_generator is None:
         path = global_trajectory_generator
     else:
@@ -251,7 +251,7 @@ def plot_init_positions(trajectory_generator=None, x_resolution=400, plot_num=50
             cv.imwrite(save_dir +  "%s(%s).jpg"%(save_name, str(arena_type)), img)
 
 def plot_traj(trajectory_generator=None, save_path="./", res=400, save_name="undefined traj plot", plot_num=10): # res: resolution of longest dimension.
-    ensure_path(save_path)
+    EnsurePath(save_path)
     
     if trajectory_generator is None:
         path = global_trajectory_generator
@@ -460,7 +460,7 @@ def set_lim(x, y=None, plt=""):
 
         return xlim, ylim
 
-def ensure_path(path):
+def EnsurePath(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
@@ -681,7 +681,7 @@ def compute_ratemaps(net, res=100, random_init=False, arena_index=0):
     return activations, masks
 '''
 def save_ratemaps(net, res=30, save_path="./", exaggerate=False, cmap='jet', random_init=False):
-    ensure_dir(save_path)
+    EnsureDir(save_path)
     activations = compute_ratemaps(net, res=res, random_init=random_init)
     rm_fig = plot_ratemaps(activations, n_plots=len(activations), exaggerate=exaggerate, cmap=cmap, width=16)
     count = 0
@@ -723,7 +723,7 @@ import scipy.signal
 import os
 import time
 
-from utils_torch import ensure_path
+from utils_torch import EnsurePath
 
 def calculate_grid_score(act_maps, coord_range, save_path='./', save_name='plot_scores.png', plot=False, nbins=20, cm="jet", sort_by_score_60=False, verbose=False):
     
@@ -796,7 +796,7 @@ def calculate_grid_score(act_maps, coord_range, save_path='./', save_name='plot_
               title=title,
               cmap=cm)
       # Save
-      ensure_path(save_path)
+      EnsurePath(save_path)
       plt.savefig(save_path + save_name)
       plt.close(fig)
     return (np.asarray(score_60), np.asarray(score_90),

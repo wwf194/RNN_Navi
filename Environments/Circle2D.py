@@ -1,7 +1,9 @@
 
 import numpy as np
+import utils
+
 import utils_torch
-from utils_torch.attrs import EnsureAttrs, SetAttrs, HasAttrs, MatchAttrs
+from utils_torch.attrs import CheckAttrs, EnsureAttrs, GetAttrs, SetAttrs, HasAttrs, MatchAttrs
 
 import Environments
 
@@ -10,26 +12,18 @@ class Circle2D(Environments.Arena2D):
         super().__init__()
         if param is not None:
             self.InitFromParams(param)
-
     def InitFromParams(self, param):
         self.param = param
+        CheckAttrs(param, "Type", value="Circle2D")
+        EnsureAttrs(param, "Initialize.Method", default="CenterRadius")
+        if param.Initialize.Method in ["CenterRadius"]:
+            self.CenterXy = np.array(GetAttrs(param, "CenterXy"), dtype=np.float32)
+            self.Radius = GetAttrs(param.Radius)
+        else:
+            raise Exception()
 
-        EnsureAttrs()
-
-        self.type = self.dict['type'] = 'circle'
-        self.radius = get_from_dict(self.dict, 'radius', default=None, write_default=True)
-        self.center_coord = get_from_dict(self.dict, 'center_coord', default=[0.0, 0.0], write_default=True)
-        if isinstance(self.center_coord, list):
-            self.center_coord = np.array(self.center_coord, dtype=np.float)
-        
-        # By opencv convention, origin is at the top-left corner of the pircture.
-        self.x0 = self.center_coord[0] - self.radius
-        self.x1 = self.center_coord[0] + self.radius
-        self.y0 = self.center_coord[1] - self.radius
-        self.y1 = self.center_coord[1] + self.radius
-        self.xy_range = (self.x0, self.x0, self.x1, self.y1)
-        self.square_min_size = self.width = self.height = 2 * self.radius
-        self.border_region_width = search_dict(self.dict, ['border_region_width'], default=0.03 * self.square_min_size, write_default=True)
+        if isinstance(self.CenterXy, list):
+            self.CenterXy = np.array(self.CenterXy, dtype=np.float)
 
         self.get_random_max = self.get_random_square = self.get_random_max_rectangle
         
@@ -38,52 +32,40 @@ class Circle2D(Environments.Arena2D):
         self.get_random_xy = self.get_random_xy_circle
         
         self.plot_arena = self.plot_arena_plt
-        #self.plot_arena(save_path='./anal/', save_name='arena_plot_circle.png')
+        #self.plot_arena(save_path="./anal/", save_name="arena_plot_circle.png")
         #self.print_info()
-    def print_info(self):
-        print('Arena_Circle: ', end='')
-        print('center_coord:(%.1f, %.1f)'%(self.center_coord[0], self.center_coord[1]))
-        print('vertices:', end='')
-        for index in range(self.edge_num):
-            print('(%.1f, %.1f)'%(self.vertices[index][0], self.vertices[index][1]), end='')
-        print('\n')
-    def get_nearest_border(self, points, ):
-        return
-    def get_random_xy_circle(self, num=100, thres=None):    
-        if thres is None or thres in ['default']:
-            thres = self.border_region_width
-        count = 0
-        points_list = []
-        while(count < num):
-            points = self.get_random_xy_max(int(2.2*num))            
-            points = np.delete(points, self.out_of_region(points, thres=thres), axis=0)
-            points_list.append(points)
-            count += points.shape[0]
-            #print('total valid points:%d'%count)
-        points = np.concatenate(points_list, axis=0)
-        if count > num:
-            #print(points.shape)
-            points = np.delete(points, random.sample(range(count), count - num), axis=0)
-            #print(points.shape)
-        return points
-    def get_dist_from_center(self, points):
-        vec_from_center = points - self.center_coord[np.newaxis, :] # [point_num, (x, y)]
-        dist_from_center = np.linalg.norm(vec_from_center, ord=2, axis=-1)[:, np.newaxis] # [point_num]
-        return dist_from_center
+    def CalculateBoundaryBox(self):
+        param = self.param
+        # Calculate Boundary Box
+        if not HasAttrs(param, "BoundaryBox"):
+            EdgesNp = np.array(param.Edges, dtype=np.float32) # [VertexNum, (x, y)]
+            xMin = param.CenterXy.X - param.Radius
+            xMax = param.CenterXy.X + param.Radius
+            yMin = param.CenterXy.Y - param.Radius
+            yMax = param.CenterXy.Y + param.Radius
+            SetAttrs(param, "BoundaryBox", value=[[xMin, yMin], [xMax, yMax]])
+            SetAttrs(param.BoundaryBox, "xMin", xMin)
+            SetAttrs(param.BoundaryBox, "xMax", xMax)
+            SetAttrs(param.BoundaryBox, "yMin", yMin)
+            SetAttrs(param.BoundaryBox, "yMax", yMax)
+
+    def Distance2Center(self, Points):
+        Vector2Center = self.CenterXy[np.newaxis, :] - Points # [point_num, (x, y)]
+        Distance2Center = np.linalg.norm(Vector2Center, axis=-1) # [point_num]
+        return Distance2Center
     def get_dist_and_theta_from_center(self, xy): # xy: [point_num, 2]
-        vec_from_center = xy - self.center_coord[np.newaxis, :] # [point_num, (x, y)]
+        vec_from_center = xy - self.CenterXy[np.newaxis, :] # [point_num, (x, y)]
         dist_from_center = np.linalg.norm(vec_from_center, ord=2, axis=-1) # [point_num]
         theta_from_center = np.arctan2(xy[:, 1], xy[:, 0])
         return dist_from_center, theta_from_center
-
-    def out_of_region_circle(self, points, thres=None): # coords:[point_num, (x, y)]. This method is only valid for convex polygon.
-        if thres is None or thres in ['default']:
-            thres = self.border_region_width
-        dist_from_center = self.get_dist_from_center(points).squeeze()
-        #print(dist_from_center)
-        return np.argwhere( dist_from_center > (self.radius - thres) ).squeeze() # indices of out-of-region points: [out_of_region_point_num]
+    def isOutside(self, Points): # Points:[PointNum, (x, y)]. This method is only valid for convex polygon.
+        return self.Distance2Center(Points) > (self.Radius)
+    def Vector2NearstBorder(self, Points):
+        
+        
+        return        
     def avoid_border_circle(self, xy, theta, thres=None): # xy: [batch_size, (x, y)], theta: velocity direction.
-        if thres is None or thres in ['default']:
+        if thres is None or thres in ["default"]:
             thres = self.border_region_width
         dist_from_center, theta_from_center = self.get_dist_and_theta_from_center(xy) # [batch_size]
 
@@ -124,7 +106,7 @@ class Circle2D(Environments.Arena2D):
         return is_near_wall, theta_adjust
     def plot_border(self, img): # img: [H, W, C], np.uint8. 
         return # to be implemented   
-    def plot_arena_plt(self, ax=None, save=True, save_path='./', save_name='arena_random_xy.png', line_width=2, color=(0,0,0)):
+    def plot_arena_plt(self, ax=None, save=True, save_path="./", save_name="arena_random_xy.png", line_width=2, color=(0,0,0)):
         if ax is None:
             figure, ax = plt.subplots()
 
@@ -134,15 +116,15 @@ class Circle2D(Environments.Arena2D):
         ax.set_yticks(np.linspace(self.y0, self.y1, 5))
         ax.set_aspect(1)
 
-        circle = plt.Circle(self.center_coord, self.radius, color=(0.0, 0.0, 0.0), fill=False)        
+        circle = plt.Circle(self.CenterXy, self.radius, color=(0.0, 0.0, 0.0), fill=False)        
         ax.add_patch(circle)
         if save:
-            ensure_path(save_path)
+            EnsurePath(save_path)
             plt.savefig(save_path + save_name)
 
         return ax
     
-    def plot_random_xy_plt(self, ax=None, save=True, save_path='./', save_name='arena_random_xy.png', num=100, color=(0.0,1.0,0.0), plot_arena=True, **kw):
+    def plot_random_xy_plt(self, ax=None, save=True, save_path="./", save_name="arena_random_xy.png", num=100, color=(0.0,1.0,0.0), plot_arena=True, **kw):
         if ax is None:
             figure, ax = plt.subplots()
             if plot_arena:
@@ -152,16 +134,16 @@ class Circle2D(Environments.Arena2D):
                 ax.set_ylim(self.y0, self.y1)
                 ax.set_aspect(1) # so that x and y has same unit length in image.
         points = self.get_random_xy(num=100)
-        ax.scatter(points[:,0], points[:,1], marker='o', color=color, edgecolors=(0.0,0.0,0.0), label='Start Positions')
+        ax.scatter(points[:,0], points[:,1], marker="o", color=color, edgecolors=(0.0,0.0,0.0), label="Start Positions")
         plt.legend()
 
         if save:
-            ensure_path(save_path)
+            EnsurePath(save_path)
             plt.savefig(save_path + save_name)
         return ax
 
-    def write_info(self, save_path='./', save_name='Arena Dict.txt'):
-        ensure_path(save_path)
-        utils.write_dict()
-        with open(save_path + save_name, 'w') as f:
-            return # to be implemented
+    def ReportInfo(self):
+        param = self.param
+        utils.add_log("Circle2D: ", end="")
+        utils.add_log("CenterXy:(%.1f, %.1f)"%(param.CenterXy.X, param.CenterXy.Y))
+        utils.add_log("Radius:(%.3f)"%param.Radius)

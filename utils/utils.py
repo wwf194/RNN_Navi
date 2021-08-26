@@ -5,7 +5,6 @@ import os
 import time
 import logging
 import json5
-
 import utils
 
 args_global = utils.json.JsonObj2PyObj({

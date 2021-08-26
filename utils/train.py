@@ -1,4 +1,4 @@
-from utils_torch import search_dict, get_from_dict, ensure_path
+from utils_torch import search_dict, get_from_dict, EnsurePath
 
 def get_epoch_info(dict_):
     epoch_start = dict_.get('epoch_start')
@@ -31,7 +31,7 @@ def get_epoch_info(dict_):
 def set_train_info(dict_):
     save_path = search_dict(dict_, ['save_path', 'save_model_path', 'save_dir_model'], default='./saved_models/',
                                         write_default=True, write_default_key='save_path')
-    ensure_path(save_path)
+    EnsurePath(save_path)
 
     save = search_dict(dict_, ['save', 'save_model'], default=True, write_default=True)
     save_after_train = search_dict(dict_, ['save_after_train'], default=True, write_default=True)

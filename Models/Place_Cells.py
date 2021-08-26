@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 import cv2 as cv
 
-from utils_torch import ensure_path, search_dict, get_from_dict
+from utils_torch import EnsurePath, search_dict, get_from_dict
 from utils.plot import *
 from utils.model import *
 from utils.plot import get_float_coords, get_float_coords_np, get_res_xy
@@ -247,9 +247,9 @@ class Place_Cells(object):
         ax.scatter(self.coords_np[:,0], self.coords_np[:,1], marker='d', color=(0.0, 1.0, 0.0), edgecolors=(0.0,0.0,0.0), label='Start Positions') # marker='d' for diamond
         ax.set_title('Place Cells Positions')
         if save:
-            ensure_path(save_path)
+            EnsurePath(save_path)
             #cv.imwrite(save_path + save_name, imgs) # so that origin is in left-bottom corner.
-            ensure_path(save_path)
+            EnsurePath(save_path)
             plt.savefig(save_path + save_name)
             plt.close()
     
@@ -333,7 +333,7 @@ class Place_Cells(object):
         ax.axis('off')
         
         if save:
-            ensure_path(save_path)
+            EnsurePath(save_path)
             #cv.imwrite(save_path + save_name, imgs) # so that origin is in left-bottom corner.
             plt.savefig(save_path + save_name)
             plt.close()

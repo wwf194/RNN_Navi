@@ -18,7 +18,7 @@ from matplotlib.lines import Line2D
 import cv2 as cv
 
 import utils
-from utils_torch import get_from_dict, get_items_from_dict, search_dict, get_name_args, ensure_path, contain, remove_suffix, get_ax
+from utils_torch import get_from_dict, get_items_from_dict, search_dict, get_name_args, EnsurePath, contain, remove_suffix, get_ax
 from utils.plot import get_res_xy, plot_polyline, get_int_coords_np, norm_and_map
 import utils.train
 from utils.train import set_train_info
@@ -85,7 +85,7 @@ class Agent(object):
             save_path = dict_['save_path']
         else:
             dict_['save_path'] = save_path
-        ensure_path(save_path)
+        EnsurePath(save_path)
         save, save_interval, save_before_train, save_after_train = get_items_from_dict(dict_,
             ['save', 'save_interval', 'save_before_train', 'save_after_train'])
         anal, anal_interval, anal_before_train, anal_after_train = get_items_from_dict(dict_,
@@ -517,7 +517,7 @@ class Agent(object):
         plt.tight_layout()
 
         if save:
-            ensure_path(save_path)
+            EnsurePath(save_path)
             plt.savefig(save_path + save_name)
 
         return ax
@@ -642,7 +642,7 @@ class Agent(object):
         
         plt.tight_layout() # try to make elements lie inside the canvas
         if save:
-            ensure_path(save_path)
+            EnsurePath(save_path)
             plt.savefig(save_path + save_name)
         return ax
     def cal_act_map(self, model, arena, res=50, batch_size=200, batch_num=20, step_num=None):
@@ -971,7 +971,7 @@ class Agent(object):
 
             plt.tight_layout()
             if save:
-                ensure_path(save_path)
+                EnsurePath(save_path)
                 #cv.imwrite(save_path + save_name, imgs) # so that origin is in left-bottom corner.
                 save_name = remove_suffix(save_name, '.png')
                 plt.savefig(save_path + save_name + '(%d~%d)'%(index_base, min(index_base + num_per_page, plot_num)) + '.png')
@@ -1007,7 +1007,7 @@ class Agent(object):
         ax.set_title('Sample Num When Plotting Rate Maps')
 
         if save:
-            ensure_path(save_path)
+            EnsurePath(save_path)
             plt.savefig(save_path + save_name)
     
     def plot_place_cells_prediction(self, act_map_info=None, model=None, arena=None, trainer=None, 
@@ -1035,7 +1035,7 @@ class Agent(object):
         self.place_cells.plot_place_cells(act_map=pc_map, arena=arena, save_path=save_path, save_name='place_cells_predicted.png')
         '''
         if save:
-            ensure_path(save_path)
+            EnsurePath(save_path)
             plt.savefig(save_path + save_name)
         '''
     def bind_arenas(self, arenas, index=None):
@@ -1069,7 +1069,7 @@ class Agent(object):
                             separate_ei=self.model.separate_ei
                         )
     def save(self, save_path, save_name):
-        ensure_path(save_path)
+        EnsurePath(save_path)
         with open(save_path + save_name, 'wb') as f:
             torch.save(self.dict, f)
         self.model.save(save_path, '%s_model'%save_name)

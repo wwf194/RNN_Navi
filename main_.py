@@ -21,10 +21,10 @@ import shutil
 from inspect import getmembers, isfunction
 
 sys.path.append('./src/')
-import config_sys
+import ConfigSystem
 #print(sys.path)
 from utils import build_model, build_agent, build_arenas, build_Optimizer, build_trainer, copy_folder, cal_path_rel_main, get_items_from_dict
-from utils import scan_files, copy_files, path_to_module, remove_suffix, select_file, ensure_path, get_device, import_file, join_path
+from utils import scan_files, copy_files, path_to_module, remove_suffix, select_file, EnsurePath, get_device, import_file, join_path
 #from config import Options
 from utils_anal import compare_traj, get_input_output
 
@@ -281,7 +281,7 @@ def get_param_file(args, verbose=True):
     if verbose:
         print('Setting params according to config file: %s.'%config_file)
     Config_Param = import_file(param_path + config_file)
-    #Config_Param = importlib.import_module(path_to_module(param_path) + remove_suffix(config_file))
+    #Config_Param = importlib.ImportModule(path_to_module(param_path) + remove_suffix(config_file))
     #print(Config_Param.dict_)
     #print('config_file: %s'%config_file)
     if config_file.startswith('./'):
@@ -339,7 +339,7 @@ def copy_project_files(args, verbose=True):
     path = args.path
     if path is None:
         raise Exception('copy_project_files: args.path must not be none. please give path to copy files to')
-    ensure_path(args.path)
+    EnsurePath(args.path)
     if args.param_path is None:
         param_path = './params/'
     #print(path)
@@ -366,7 +366,7 @@ def copy_project_files(args, verbose=True):
     
     file_list = [
         'main.py',
-        'config_sys.py',
+        'ConfigSystem.py',
     ]
     copy_files(file_list, path_from='./', path_to=path, verbose=verbose)
     

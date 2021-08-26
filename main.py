@@ -45,7 +45,7 @@ def build_object(args):
 
 def _build_object(args):
     import utils_torch
-    Class = utils_torch.import_module(args.ModulePath)
+    Class = utils_torch.ImportModule(args.ModulePath)
     obj = Class.InitFromParams(getattr(utils.args_global.ParamDicts, args.ParamName))
     setattr(utils.args_global.Objects, args.name, obj)
 def load_parameter_file(args):

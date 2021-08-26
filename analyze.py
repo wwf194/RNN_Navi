@@ -75,7 +75,7 @@ def eval_net(net, logger):
     logger.write('val_loss:%.4f val_acc:%.4f'%(val_loss, val_acc))
 
 def test_anal(net=None, logger=None, save_dir=save_dir_anal):
-    ensure_dir(save_dir)
+    EnsureDir(save_dir)
     if net is None:
         net = load_net()
         net = net.to(device)
@@ -111,7 +111,7 @@ def test_anal(net=None, logger=None, save_dir=save_dir_anal):
             count += 1
 
 def quick_anal(net=None, logger=None, save_dir=save_dir_anal):
-    ensure_dir(save_dir)
+    EnsureDir(save_dir)
     if net is None:
         net = load_net()
         net = net.to(device)
@@ -127,7 +127,7 @@ def quick_anal(net=None, logger=None, save_dir=save_dir_anal):
         visualize_weight(net, name="r", save_dir=save_dir)
 
 def full_anal(net=None, logger=None, save_dir=save_dir_anal):
-    ensure_dir(save_dir)
+    EnsureDir(save_dir)
     if(net is None):
         net = load_net()
         net = net.to(device)
