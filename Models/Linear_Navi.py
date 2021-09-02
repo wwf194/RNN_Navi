@@ -47,13 +47,13 @@ class Linear_Navi(nn.Module):
 
         self.task = self.dict["task"]
         if(self.task=="pc"):
-            self.get_loss = self.get_loss_pc
+            self.Getloss = self.Getloss_pc
             self.loss_list = {"pc":0.0, "act":0.0, "weight":0.0}
         elif(self.task=="coords"):
-            self.get_loss = self.get_loss_coords
+            self.Getloss = self.Getloss_coords
             self.loss_list = {"coords":0.0, "act":0.0, "weight":0.0}
         elif(self.task=="pc_coords"):
-            self.get_loss = self.get_loss_pc_coords
+            self.Getloss = self.Getloss_pc_coords
             self.loss_list = {"pc":0.0, "coords":0.0, "act":0.0, "weight":0.0}
         else:
             print("invalid task:"+str(self.task))
@@ -62,25 +62,25 @@ class Linear_Navi(nn.Module):
             self.dict["pc_error"] = 0.0
 
         if("i_0" in self.dict["positive_weight"]):
-            self.get_i_0 = lambda :torch.abs(self.i_0)
+            self.Geti_0 = lambda :torch.abs(self.i_0)
         else:
-            self.get_i_0 = lambda :self.i_0
+            self.Geti_0 = lambda :self.i_0
         if("f" in self.dict["positive_weight"]):            
-            self.get_f = lambda :torch.abs(self.f)
+            self.Getf = lambda :torch.abs(self.f)
         else:
-            self.get_f = lambda :self.f
+            self.Getf = lambda :self.f
         
         self.loss_count = 0
         self.place_cells_act_cache = None
-        self.act_func = get_act_func(self.dict["act_func"])
+        self.act_func = Getact_func(self.dict["act_func"])
     def forward(self, inputs):
         x_0 = inputs[1]
         x_0 = x_0.to(device)#(batch_size, 2)
-        place_cells_act = torch.squeeze(self.place_cells.get_activation(torch.unsqueeze(x_0,1)).float())#(batch_size, place_cells_num)
+        place_cells_act = torch.squeeze(self.place_cells.Getactivation(torch.unsqueeze(x_0,1)).float())#(batch_size, place_cells_num)
         self.place_cells_act_cache = place_cells_act
-        cell_state = torch.mm(place_cells_act, self.get_i_0())#(batch_size, N_num)
+        cell_state = torch.mm(place_cells_act, self.Geti_0())#(batch_size, N_num)
         act = self.act_func(cell_state)
-        output = torch.mm(act, self.get_f())#(batch_size, place_cells_num)
+        output = torch.mm(act, self.Getf())#(batch_size, place_cells_num)
         return output, act
     def reset_loss(self):
         #print("aaa")
@@ -93,7 +93,7 @@ class Linear_Navi(nn.Module):
             #print("%s:%s"%(key, str(self.loss_list[key]/self.loss_count)), end=" ")
             print("%s:%.4e"%(key, self.loss_list[key]/self.loss_count), end=" ")
         print("\n")
-    def get_loss_pc(self, inputs, outputs_0):
+    def Getloss_pc(self, inputs, outputs_0):
         output, act = self.forward(inputs)
         self.dict["act_avg"] = torch.mean(torch.abs(act))
         pc_output = self.place_cells_act_cache

@@ -1,4 +1,4 @@
-from utils import EnsurePath, get_from_dict, set_instance_variable, search_dict
+from utils import EnsurePath, GetFromDict, set_instance_variable, search_dict
 
 class Experimenter:
     def __init__(self, dict_):
@@ -6,7 +6,7 @@ class Experimenter:
     def bind_agent(self, agent):
         agent = agent
     def train(self, dict_, agent=None, report_in_batch=None, report_interval=None):
-        epoch_start, epoch_num, epoch_end = self.get_epoch_info(dict_)
+        epoch_start, epoch_num, epoch_end = self.Getepoch_info(dict_)
         if agent is None:
             agent = agent
 
@@ -48,7 +48,7 @@ class Experimenter:
                         print('batch=%d/%d' % (batch_index, self.batch_num))
                         agent.report_perform()
                         agent.reset_perform()
-                        print('lr: %.3e'%self.optimizer.get_lr())
+                        print('lr: %.3e'%self.optimizer.Getlr())
                 #batch_num += 1
             train_perform = agent.report_perform(prefix='train: ')
 
@@ -79,9 +79,9 @@ class Experimenter:
             self.anal_path = self.dict.setdefault('anal_path', './anal/')
 
         '''
-        epoch_index = get_from_dict(self.dict, 'epoch_index', default=self.epoch_start, write_default=True)
-        self.epoch_start = get_from_dict(self.dict, 'epoch_start', default=1, write_default=True)
-        epoch_end = get_from_dict(self.dict, 'epoch_end', default=self.epoch_um, write_default=True)
+        epoch_index = GetFromDict(self.dict, 'epoch_index', default=self.epoch_start, write_default=True)
+        self.epoch_start = GetFromDict(self.dict, 'epoch_start', default=1, write_default=True)
+        epoch_end = GetFromDict(self.dict, 'epoch_end', default=self.epoch_um, write_default=True)
         '''
         epoch_index = 0
         epoch_end = self.epoch_num - 1
@@ -92,9 +92,9 @@ class Experimenter:
         EnsurePath(self.save_path)
 
         self.save = search_dict(self.dict, ['save', 'save_model'], default=True, write_default=True)
-        self.save_after_train = get_from_dict(self.dict, 'save_after_train', default=True, write_default=True)
-        self.save_before_train = get_from_dict(self.dict, 'save_before_train', default=True, write_default=True)
-        self.anal_before_train = get_from_dict(self.dict, 'anal_before_train', default=True, write_default=True)
+        self.save_after_train = GetFromDict(self.dict, 'save_after_train', default=True, write_default=True)
+        self.save_before_train = GetFromDict(self.dict, 'save_before_train', default=True, write_default=True)
+        self.anal_before_train = GetFromDict(self.dict, 'anal_before_train', default=True, write_default=True)
 
         if self.save:
             self.save_interval = search_dict(self.dict, ['save_interval', 'save_model_interval'], default=int(self.epoch_num / 10), write_default=True)
@@ -123,7 +123,7 @@ class Experimenter:
         EnsurePath(save_path)
         agent.anal(save_path=save_path, trainer=self)
     
-    def get_epoch_info(self, dict_):
+    def Getepoch_info(self, dict_):
         epoch_start = dict_.get('epoch_start')
         epoch_num = dict_.get('epoch_num')
         epoch_end = dict_.get('epoch_end')

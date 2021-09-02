@@ -17,29 +17,31 @@ import matplotlib.patches as patches
 from matplotlib.lines import Line2D
 import cv2 as cv
 
+# import utils
+# from utils_torch import GetFromDict, Getitems_FromDict, search_dict, Getname_args, EnsurePath, contain, remove_suffix, Getax
+# from utils_torch.plot import Getres_xy, PlotPolyLineFromVerticesPlt, Getint_coords_np, norm_and_map
+# import utils.train
+# from utils.train import set_train_info
+# import utils.model
+# from utils.model import Gettensor_info, Gettensor_stat
+# from utils.anal import calculate_grid_score
+
 import utils
-from utils_torch import get_from_dict, get_items_from_dict, search_dict, get_name_args, EnsurePath, contain, remove_suffix, get_ax
-from utils.plot import get_res_xy, plot_polyline, get_int_coords_np, norm_and_map
-import utils.train
-from utils.train import set_train_info
-import utils.model
-from utils.model import get_tensor_info, get_tensor_stat
+from utils_torch.attrs import *
 
-from utils.anal import calculate_grid_score
-
-from Models.Place_Cells import Place_Cells
-
-def InitFromParams(param):
+def InitFromParam(param):
+    #setattr(param, "__ObjRoot__", utils.ArgsGlobal["ObjRoot"]) 
     return Agent(param)
 
 class Agent(object):
     def __init__(self, param=None):
         if param is not None:
-            self.InitFromParams(param)
-        
-    def InitFromParams(self, param):
+            self.InitFromParam(param)        
+    def InitFromParam(self, param):
         self.param = param
-        
+        EnsureAttrs(param, "Initialize", default=[])
+        for Task in param.Initialize:
+            utils_torch.ImplementInitializeTask(Task, self, utils.ArgsGlobal["ObjRoot"])
     def report_perform(self, prefix='', verbose=True):
         report = prefix
         for key in self.perform_list.keys():
@@ -58,17 +60,17 @@ class Agent(object):
         self.sample_count = 0
         for key in self.perform_list.keys():
             self.perform_list[key] = 0.0
-    def get_perform(self):
+    def Getperform(self):
         return # to be implemented
 
     def prep_data(self, path):
-        dxy, xy_init, xy = get_items_from_dict(self.prep_path(path), ['input', 'input_init', 'output'])
+        dxy, xy_init, xy = Getitems_FromDict(self.prep_path(path), ['input', 'input_init', 'output'])
         #print('Agent.prep_data: xy_init.shape: %s'%str(xy_init.size()))
         if self.task in ['pc']:
             data = {
                 'input': dxy,
-                'input_init': self.place_cells.get_act_batch(xy_init),
-                'output': self.place_cells.get_act(xy),
+                'input_init': self.place_cells.Getact_batch(xy_init),
+                'output': self.place_cells.Getact(xy),
             }
         elif self.task in ['coord']:
             data = {
@@ -78,17 +80,17 @@ class Agent(object):
             }
         return data
     def train(self, dict_, report_in_batch=None, report_interval=None, save_path=None, save_name=None, verbose=True):
-        optimizer = self.cache['optimizer'] = utils.build_Optimizer(dict_['optimizer'], params=self.model.get_train_param())
-        epoch_start, epoch_num, epoch_end = utils_train.get_epoch_info(dict_)
+        optimizer = self.cache['optimizer'] = utils.build_Optimizer(dict_['optimizer'], params=self.model.Gettrain_param())
+        epoch_start, epoch_num, epoch_end = utils_train.Getepoch_info(dict_)
         utils_train.set_train_info(dict_)
         if save_path is None:
             save_path = dict_['save_path']
         else:
             dict_['save_path'] = save_path
         EnsurePath(save_path)
-        save, save_interval, save_before_train, save_after_train = get_items_from_dict(dict_,
+        save, save_interval, save_before_train, save_after_train = Getitems_FromDict(dict_,
             ['save', 'save_interval', 'save_before_train', 'save_after_train'])
-        anal, anal_interval, anal_before_train, anal_after_train = get_items_from_dict(dict_,
+        anal, anal_interval, anal_before_train, anal_after_train = Getitems_FromDict(dict_,
             ['anal', 'anal_interval', 'anal_before_train', 'anal_after_train'])
 
         batch_num = dict_['batch_num']
@@ -127,19 +129,19 @@ class Agent(object):
                 data = self.prep_data(path)
                 #print(data.keys())
                 data = self.cal_perform(data)
-                #get_tensor_stat(data['output_pred'], name='output_pred', complete=False)
-                #get_tensor_stat(data['act'], name='firing rate', complete=False)
+                #Gettensor_stat(data['output_pred'], name='output_pred', complete=False)
+                #Gettensor_stat(data['act'], name='firing rate', complete=False)
                 #print(data.keys())
                 #optimizer.train(data)
                 # expansion of optimizer.train(data)
                 optimizer.optimizer.zero_grad()
-                loss = get_items_from_dict(data, ['loss'])
+                loss = Getitems_FromDict(data, ['loss'])
                 #loss = results['loss']
-                #self.model.get_weight_info()
+                #self.model.Getweight_info()
                 loss.backward()
                 optimizer.optimizer.step()
                 #print('*********************************************')
-                #self.model.get_weight_info()
+                #self.model.Getweight_info()
                 #optimizer.optimizer.zero_grad()
                 #self.model.anal_gradient()
                 #self.model.plot_act(data['act'][0], save_path='../anal/act_plot/', save_name='act_plot_%d:%d.png'%(epoch_index, batch_index))
@@ -150,15 +152,15 @@ class Agent(object):
                         self.report_perform()
                         self.reset_perform()
                         # analysis
-                        #print('lr: %.3e'%optimizer.get_lr())
-                        #self.model.get_weight_info()
+                        #print('lr: %.3e'%optimizer.Getlr())
+                        #self.model.Getweight_info()
                         self.model.plot_act(data['act'][0], save_path='../anal/act_plot/', save_name='act_plot_%d:%d.png'%(epoch_index, batch_index))
                         self.plot_path(path=path, save_path='../anal/path_plot/', save_name='path_plot._%d:%d.png'%(epoch_index, batch_index), \
                             model=self.model, plot_num=2)
-                        get_tensor_stat(data['output_pred'], name='output_pred', complete=False)
-                        get_tensor_stat(data['act'], name='firing rate', complete=False)
+                        Gettensor_stat(data['output_pred'], name='output_pred', complete=False)
+                        Gettensor_stat(data['act'], name='firing rate', complete=False)
                         self.model.anal_weight_change()
-                        self.model.get_weight_stat(complete=False)
+                        self.model.Getweight_stat(complete=False)
                         self.model.anal_gradient()
                 #batch_num += 1
             train_perform = self.report_perform(prefix='train: ')
@@ -181,8 +183,8 @@ class Agent(object):
         data.update(self.model.forward(data))
         return data
     def cal_perform(self, data):
-        output_truth = get_items_from_dict(data, ['output'])
-        output, act = get_items_from_dict(self.forward(data), ['output', 'act'])
+        output_truth = Getitems_FromDict(data, ['output'])
+        output, act = Getitems_FromDict(self.forward(data), ['output', 'act'])
         data.update({
             'output': output_truth,
             'output_pred': output,
@@ -194,19 +196,19 @@ class Agent(object):
     def cal_loss_main_mse(self, data):
         return
     def cal_loss_main_cel(self, data):
-        output_pred, output_truth = get_items_from_dict(data, ['output_pred', 'output_truth'])
+        output_pred, output_truth = Getitems_FromDict(data, ['output_pred', 'output_truth'])
         loss_main = - self.main_coeff * torch.mean( F.log_softmax(output_pred, dim=2) * output_truth)
         return loss_main
     def cal_perform_(self, data):
-        input_, output_truth = get_items_from_dict(data, ['input', 'output'])
+        input_, output_truth = Getitems_FromDict(data, ['input', 'output'])
         
         #output_truth = transforms.Normalize(0, 1)(output_truth)
         batch_size = input_.size(0)
-        #output, act = get_items_from_dict(self.forward(data), ['output', 'act'])
-        output_pred, act = get_items_from_dict(data, ['output_pred', 'act'])
+        #output, act = Getitems_FromDict(self.forward(data), ['output', 'act'])
+        output_pred, act = Getitems_FromDict(data, ['output_pred', 'act'])
         #print('output_pred_max: %s'%torch.max(torch.abs(output_pred)))
         #print('output_pred_mean: %s'%torch.mean(torch.abs(output_pred)))
-        #self.model.get_weight_stat(complete=False)
+        #self.model.Getweight_stat(complete=False)
         # normalization
         output_pred_mean = torch.mean(output_pred, dim=(0,1,2), keepdim=True).detach()
         output_pred_std = torch.std(output_pred, dim=(0,1,2), keepdim=True).detach()
@@ -231,11 +233,11 @@ class Agent(object):
             output_pred_log_softmax = F.log_softmax(output_pred, dim=2)
             output_truth_softmax = F.softmax(8.0 * output_truth, dim=2)
             #print(output_truth_softmax[-1, -1])
-            #get_tensor_stat(output_truth_softmax, name='output_truth_softmax')
+            #Gettensor_stat(output_truth_softmax, name='output_truth_softmax')
             
             output_pred_softmax = F.softmax(8.0 * output_pred, dim=2)
             #print(output_pred_softmax[-1, -1])
-            #get_tensor_stat(output_pred_softmax, name='output_pred_softmax')
+            #Gettensor_stat(output_pred_softmax, name='output_pred_softmax')
 
             #print(output_pred_softmax.size())
             #print('output_pred_softmax: %s' % output_pred_softmax[0,-5, 0:50])
@@ -291,18 +293,18 @@ class Agent(object):
         return loss_weight
     def cal_perform_pc_coord(self, data):
         #x, y = self.prep_path(path)
-        y = get_items_from_dict(data, ['output'])
+        y = Getitems_FromDict(data, ['output'])
         batch_size = y.size(0)
-        output, act = get_items_from_dict(self.forward(data), ['output', 'act'])
+        output, act = Getitems_FromDict(self.forward(data), ['output', 'act'])
         self.dict['act_avg'] = torch.mean(torch.abs(act))
-        pc_output = self.place_cells.get_act(y)
+        pc_output = self.place_cells.Getact(y)
         loss_coord =self.main_coeff_pc * F.mse_loss(output[:, :, 0:2], pc_output, reduction='mean')
         loss_main = self.main_coeff_coords * F.mse_loss(output[:, :, 2:-1], pc_output, reduction='mean')
         self.perform_list['pc_error_ratio'] += ( torch.sum(torch.abs(output[:, :, 2:-1] - pc_output)) / torch.sum(torch.abs(pc_output)) ).item() #relative place cells prediction error
         
         loss_act = self.act_coeff * torch.mean(act ** 2)
         
-        loss_weight = self.weight_coeff * ( torch.mean(self.get_o() ** 2) + torch.mean(self.get_i() ** 2) )
+        loss_weight = self.weight_coeff * ( torch.mean(self.Geto() ** 2) + torch.mean(self.Geti() ** 2) )
         
         self.perform_list['weight'] += loss_weight.item()
         self.perform_list['act'] += loss_act.item()
@@ -325,11 +327,11 @@ class Agent(object):
         self.arenas = self.options.arenas
         self.model = self.options.model if hasattr(options, 'model') else None
     '''
-    def get_init_xy(self, init_method, arena, batch_size):
-        init_method, init_args = get_name_args(init_method)
+    def Getinit_xy(self, init_method, arena, batch_size):
+        init_method, init_args = Getname_args(init_method)
         
         if init_method in ['uniform', 'random']:
-            return arena.get_random_xy(batch_size)
+            return arena.Getrandom_xy(batch_size)
 
     def prep_path(self, path): # prep data from path to feed to rnn model.
         if self.input_mode in ['v_xy']:
@@ -354,7 +356,7 @@ class Agent(object):
         step_num = self.step_num if step_num is None else step_num
         batch_size = search_dict(kw, ['batch_size', 'num'], default=100)
         #step_num = search_dict(kw, ['t_total', 'sequence_length', 'step_num'], default=self.step_num)
-        arena = search_dict(kw, ['arena'], default=self.arenas.get_current_arena())
+        arena = search_dict(kw, ['arena'], default=self.arenas.Getcurrent_arena())
         init_method = search_dict(kw, 'init_method', default='uniform')
 
         items = kw.setdefault('items', None)
@@ -365,7 +367,7 @@ class Agent(object):
         
         dt = 0.02  # time step increment (seconds)
         xy = np.zeros([batch_size, step_num + 1, 2]) # [batch_num, step_num + 2, (x,y)]
-        xy[:, 0, :] = self.get_init_xy(init_method, arena, batch_size)
+        xy[:, 0, :] = self.Getinit_xy(init_method, arena, batch_size)
         dl = np.zeros([batch_size, step_num]) # dl = v * dt : [batch_size, step_num]
         
         theta = np.zeros([batch_size, step_num + 1]) # head direction: [batch_num, step_num + 1]
@@ -442,7 +444,7 @@ class Agent(object):
         return path
 
     def plot_walk_random(self, arena=None, save=False, save_path='./', save_name='walk_random.png', plot_num=10, cmap='jet', **kw):
-        arena = self.arenas.get_current_arena() if arena is None else arena
+        arena = self.arenas.Getcurrent_arena() if arena is None else arena
 
         path = self.walk_random(num=plot_num, arena=arena, mode='plot', **kw)
         
@@ -455,7 +457,7 @@ class Agent(object):
 
         arena.plot_arena_plt(ax, save=False)
 
-        #colors = get_colors(plot_num)
+        #colors = Getcolors(plot_num)
 
         dl = path['dl']
         dl_max = np.max(dl)
@@ -466,7 +468,7 @@ class Agent(object):
         else:
             dl_norm = (dl - dl_min) / (dl_max - dl_min)
         
-        cmap_func = plt.cm.get_cmap(cmap)
+        cmap_func = plt.cm.Getcmap(cmap)
         dl_mapped = cmap_func(dl_norm) # [batch_size, ], res_x, res_y, (r,g,b,a)]        
 
         '''
@@ -485,7 +487,7 @@ class Agent(object):
                 'method':'given',
                 'data':dl_mapped[i]
             }
-            plot_polyline(ax, path['xy'][i,:,:], color=color, width=2)
+            PlotPolyLineFromVerticesPlt(ax, path['xy'][i,:,:], color=color, width=2)
         
         ax_ = ax.inset_axes([1.05, 0.0, 0.12, 0.8])
         norm = mpl.colors.Normalize(vmin=dl_min, vmax=dl_max)
@@ -523,7 +525,7 @@ class Agent(object):
         return ax
     def plot_path(self, path=None, model=None, plot_num=2, arena=None, save=True, save_path='./', save_name='path_plot', cmap='jet', **kw):
         if arena is None:
-            arena = self.arenas.get_current_arena()
+            arena = self.arenas.Getcurrent_arena()
         # generate path
         if path is None:
             path = self.walk_random(num=plot_num, arena=arena, mode='full', **kw)
@@ -544,12 +546,12 @@ class Agent(object):
         data = self.prep_data(path)
         #print(data.keys())
         data = self.cal_perform(data)
-        output_pred = get_items_from_dict(data, ['output_pred']) # act: [plot_num, step_num, N_num]
+        output_pred = Getitems_FromDict(data, ['output_pred']) # act: [plot_num, step_num, N_num]
         output_pred = output_pred.detach().cpu().numpy()
         if self.task in ['coord']:
             xy_pred = output_pred # [plot_num, step_num, (x, y)]
         elif self.task in ['pc']:
-            xy_pred = self.place_cells.get_coords_from_act(output_pred) # [plot_num, step_num, sample_num, (x, y)]
+            xy_pred = self.place_cells.Getcoords_from_act(output_pred) # [plot_num, step_num, sample_num, (x, y)]
             #print(xy_pred.shape)
             
             #print(xy_pred.shape)
@@ -573,7 +575,7 @@ class Agent(object):
         else:
             dl_norm = (dl - dl_min) / (dl_max - dl_min)
         
-        cmap_func = plt.cm.get_cmap(cmap)
+        cmap_func = plt.cm.Getcmap(cmap)
         dl_mapped = cmap_func(dl_norm) # [batch_size, res_x, res_y, (r,g,b,a)]
         '''
         #dl_mapped = norm_and_map(dl, cmap=cmap, return_min_max=True)
@@ -650,7 +652,7 @@ class Agent(object):
         N_num = model.dict['N_num']
         step_num = self.step_num if step_num is None else step_num
 
-        res_x, res_y = get_res_xy(res, arena.width, arena.height)
+        res_x, res_y = Getres_xy(res, arena.width, arena.height)
 
         point_act = np.zeros([N_num, res_x, res_y])
         point_count  = np.zeros([res_x, res_y])
@@ -663,14 +665,14 @@ class Agent(object):
             with torch.no_grad():
                 model.eval()
                 path = self.walk_random(num=batch_size, arena=arena, step_num=step_num)
-                output, act = get_items_from_dict(model.forward(self.prep_data(path)), ['output', 'act']) # act: [batch_size, step_num, N_num]
+                output, act = Getitems_FromDict(model.forward(self.prep_data(path)), ['output', 'act']) # act: [batch_size, step_num, N_num]
                 #print(act[0])
                 #input()
                 xy_float = path['xy'] # [batch_size, step_num, 2]
                 act = list(map(lambda x:x.detach().cpu(), act))
 
             #print(xy_float.shape)
-            xy_int = get_int_coords_np(xy_float.reshape(batch_size * step_num, 2), arena.xy_range, res_x, res_y) # [batch_size, step_num, 2]
+            xy_int = Getint_coords_np(xy_float.reshape(batch_size * step_num, 2), arena.xy_range, res_x, res_y) # [batch_size, step_num, 2]
             #print(xy_int.shape)
             xy_int = xy_int.reshape(batch_size, step_num, 2) # [batch_size, step_num, 2]
 
@@ -709,7 +711,7 @@ class Agent(object):
             'point_act': point_act,
             'act_map': point_act #, masks
         }
-    def get_relative_fire_rate(self, act_map, thres_up, thres_down):
+    def Getrelative_fire_rate(self, act_map, thres_up, thres_down):
         act_map_norm = (act_map - thres_down) / (thres_up - thres_down)
         act_map_norm[np.argwhere(act_map_norm>1.0)] = 1.0
         act_map_norm[np.argwhere(act_map_norm<0.0)] = 0.0
@@ -722,7 +724,7 @@ class Agent(object):
         if separate_ei is None:
             separate_ei = model.separate_ei
         if arena is None:
-            arena = self.arenas.get_current_arena()
+            arena = self.arenas.Getcurrent_arena()
         
         if batch_num is None:
             batch_num = int(batch_num / 10)
@@ -743,7 +745,7 @@ class Agent(object):
         if model is None:
             raise Exception('Agent.plot_act_map: Error: model is None.')
         if arena is None:
-            arena = self.arenas.get_current_arena()
+            arena = self.arenas.Getcurrent_arena()
     
         if separate_ei is None:
             separate_ei = model.separate_ei
@@ -756,7 +758,7 @@ class Agent(object):
                 
         act_map, point_count = act_map_info['act_map'], act_map_info['point_count'] # [N_num, res_x, res_y]
 
-        grid_score = get_score(act_map[:, :, :], coord_range=((arena.x0, arena.x1), (arena.y0, arena.y1)), save_path='./anal/')
+        grid_score = Getscore(act_map[:, :, :], coord_range=((arena.x0, arena.x1), (arena.y0, arena.y1)), save_path='./anal/')
         grid_score = np.array(grid_score[0]) # grid_score_60
         #grid_score_rank = np.argsort(-grid_score)
         
@@ -800,11 +802,11 @@ class Agent(object):
             nonzero_std = np.argwhere(act_std_N>0.0)
             zero_std = np.argwhere(act_std_N==0.0)
             act_map_norm[nonzero_std] = ( act_map[nonzero_std] - act_min_N[nonzero_std][:, np.newaxis, np.newaxis] ) / ((act_max_N - act_min_N)[nonzero_std][:, np.newaxis, np.newaxis])
-            act_map_norm[zero_std] = self.get_relative_fire_rate(act_map[zero_std], act_thres_up, act_thres_down) # dead neurons and neurons with unchanging fire rate
+            act_map_norm[zero_std] = self.Getrelative_fire_rate(act_map[zero_std], act_thres_up, act_thres_down) # dead neurons and neurons with unchanging fire rate
         else:
             raise Exception('Agent.plot_act_map: invalid map_method: %s'%map_method)    
         
-        cmap_func = plt.cm.get_cmap(cmap)
+        cmap_func = plt.cm.Getcmap(cmap)
         act_map_mapped = cmap_func(act_map_norm) # [N_num, res_x, res_y, (r,g,b,a)]
         
         for i in range(act_map_mapped.shape[0]):
@@ -813,7 +815,7 @@ class Agent(object):
 
         res_x, res_y = act_map.shape[1], act_map.shape[2]
         #print('res_x:%d res_y:%d'%(res_x, res_y))
-        arena_mask = arena.get_mask(res_x=res_x, res_y=res_y)
+        arena_mask = arena.Getmask(res_x=res_x, res_y=res_y)
         arena_mask_white = (~arena_mask).astype(np.float)[:, :, np.newaxis] * np.array([1.0, 1.0, 1.0, 1.0], dtype=np.float)
         #print(arena_mask_white.shape)
         act_map_mapped = act_map_mapped * arena_mask.astype(np.float)[np.newaxis, :, :, np.newaxis] + arena_mask_white[np.newaxis, :, :, :]
@@ -923,7 +925,7 @@ class Agent(object):
                 N_index = plot_index[i + index_base]
                 #print('page_plot_num:%d page_img_num:%d row_index:%d col_inedx:%d i:%d row_num:%d col_num:%d'
                 #   %(page_plot_num, page_img_num, row_index, col_index, i, row_num, col_num))
-                ax = get_ax(axes, row_index, col_index, row_num, col_num)
+                ax = Getax(axes, row_index, col_index, row_num, col_num)
                 
                 im = ax.imshow(act_map_mapped[N_index, :, :], extent=(arena.x0, arena.x1, arena.y0, arena.y1))
                 if grid_score is None:
@@ -940,7 +942,7 @@ class Agent(object):
             
             for i in range(page_plot_num + position_base, row_num * col_num):
                 row_index, col_index = (i + position_base) // col_num, (i + position_base) % col_num
-                ax = get_ax(axes, row_index, col_index, row_num, col_num)
+                ax = Getax(axes, row_index, col_index, row_num, col_num)
                 ax.axis('off')
 
             if map_method in ['universal', 'whole']:
@@ -984,7 +986,7 @@ class Agent(object):
         
         point_count_norm = (point_count - min_count) / (max_count - min_count)
 
-        cmap_func = plt.cm.get_cmap(cmap)
+        cmap_func = plt.cm.Getcmap(cmap)
         point_count_mapped = cmap_func(point_count_norm) # [N_num, res_x, res_y, (r,g,b,a)]
 
         norm = mpl.colors.Normalize(vmin=min_count, vmax=max_count)
@@ -1017,7 +1019,7 @@ class Agent(object):
         if model is None:
             raise Exception('Agent.plot_act_map: Error: model is None.')
         if arena is None:
-            arena = self.arenas.get_current_arena()
+            arena = self.arenas.Getcurrent_arena()
 
         if act_map_info is None:
             batch_size = trainer.batch_size
@@ -1029,7 +1031,7 @@ class Agent(object):
 
         act_map = act_map.reshape([act_map.shape[0], res_x * res_y]) # [N_num, res_x * res_y]
         act_map = act_map.transpose((1, 0)) # [res_x * res_y, N_num]
-        pc_map = model.get_output_from_act(act_map) # [res_x * res_y, place_cells_num]
+        pc_map = model.Getoutput_from_act(act_map) # [res_x * res_y, place_cells_num]
         pc_map = pc_map.transpose((1, 0)) # [place_cells_num, res_x * res_y]
         pc_map = pc_map.reshape([self.place_cells.N_num, res_x, res_y])
         self.place_cells.plot_place_cells(act_map=pc_map, arena=arena, save_path=save_path, save_name='place_cells_predicted.png')

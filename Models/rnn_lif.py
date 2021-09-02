@@ -16,9 +16,9 @@ from utils_torch.model import ParseRouters, build_module
 import utils_torch
 import utils
 
-def InitFromParams(param):
+def InitFromParam(param):
     model = RNN_LIF()
-    model.InitFromParams(param)
+    model.InitFromParam(param)
     return model
 
 def load_model(args):
@@ -28,8 +28,8 @@ class RNN_LIF(nn.Module):
     # Singel-Layer Recurrent Neural Network with Leaky Integrate-and-Fire Dynamics
     def __init__(self):
         super(RNN_LIF, self).__init__()
-    def InitFromParams(self, Params):
-        utils.add_log("RNN_LIF: Initializing from param...")
+    def InitFromParam(self, Params):
+        utils.AddLog("RNN_LIF: Initializing from param...")
         CheckAttrs(Params, "Type", value="rnn_lif")
         self.Params = Params
         #self.json_external_dict = {}
@@ -74,11 +74,11 @@ class RNN_LIF(nn.Module):
         batch_size = i.size(0)
         '''
         if s is None and h is None:
-            s, h = self.get_init_state_zero(batch_size=batch_size)
+            s, h = self.Getinit_state_zero(batch_size=batch_size)
         elif s is not None or h is not None:
             raise Exception('s and h must simultaneously be None or not None')
         '''
-        noise = self.get_noise(batch_size=batch_size)
+        noise = self.Getnoise(batch_size=batch_size)
         s = (1.0 - self.time_const) * (s + noise) + self.time_const * (h + i)# s:[batch_size, sequence_length, output_num]
         s = s + noise
         u = self.act_func(s)
@@ -86,8 +86,8 @@ class RNN_LIF(nn.Module):
         if self.drop_out:
             u = self.drop_out(u)
         '''
-        o = torch.mm(u, self.get_o()) # [batch_size, neuron_num] x [neuron_num, output_num]
-        h = torch.mm(u, self.get_r()) + self.r_b
+        o = torch.mm(u, self.Geto()) # [batch_size, neuron_num] x [neuron_num, output_num]
+        h = torch.mm(u, self.Getr()) + self.r_b
         return {
             's': s, # cell state
             'u': u, # firing rate
@@ -118,7 +118,7 @@ class RNN_LIF(nn.Module):
         if ax is None:
             #fig, ax = plt.subplots(figsize = (step_num / 20 * 5, plot_N_num / 20 * 5)) # figsize: (width, height), in inches
             fig, ax = plt.subplots(nrows=1, ncols=1, figsize = (plot_N_num / 20 * 2, step_num / 20 * 2))
-        data_min, data_max, data_mean, data_std = get_items_from_dict(get_np_stat(data, verbose=verbose), ['min','max','mean','std'])
+        data_min, data_max, data_mean, data_std = Getitems_FromDict(Getnp_stat(data, verbose=verbose), ['min','max','mean','std'])
         #print(np.argmax(data))
         #print(unravel_index(data.argmax(), data.shape))
 
@@ -138,7 +138,7 @@ class RNN_LIF(nn.Module):
         
         data_norm = (data - data_min) / (data_max - data_min)
         
-        cmap_func = plt.cm.get_cmap(cmap)
+        cmap_func = plt.cm.Getcmap(cmap)
         data_mapped = cmap_func(data_norm)
 
         im = ax.imshow(data_mapped)
@@ -179,10 +179,10 @@ class RNN_LIF(nn.Module):
         return ax
     '''
     def cal_perform_coord(self, data):
-        output_truth = get_items_from_dict(data, ['output'])
+        output_truth = Getitems_FromDict(data, ['output'])
         # x: [batch_size, step_num, input_num]
         # y: [batch_size, step_num, output_num]
-        output, act = get_items_from_dict(self.forward(data), ['output', 'act'])
+        output, act = Getitems_FromDict(self.forward(data), ['output', 'act'])
         self.dict['act_avg'] = torch.mean(torch.abs(act))
         loss_coords = self.main_coeff * F.mse_loss(output, y, reduction='mean')
         #loss_coords = 0.0
@@ -194,7 +194,7 @@ class RNN_LIF(nn.Module):
         #for time in range(x.size(1)):
         #    loss_act = loss_act + torch.mean(act[time] ** 2)
         #loss_act = loss_act / (x.size(1))
-        loss_weight = self.weight_coeff * ( torch.mean(self.get_o() ** 2) + torch.mean(self.get_i() ** 2) )
+        loss_weight = self.weight_coeff * ( torch.mean(self.Geto() ** 2) + torch.mean(self.Geti() ** 2) )
         self.perform_list['weight'] += loss_weight.item()
         self.perform_list['act'] += loss_act.item()
         self.perform_list['coord'] += + loss_coords.item()
@@ -202,9 +202,9 @@ class RNN_LIF(nn.Module):
         #self.sample_count += self
         return loss_coords + loss_act + loss_weight
     def cal_perform_pc(self, data):
-        x, x_init, output_truth = get_items_from_dict(data, ['input', 'input_init', 'output'])
+        x, x_init, output_truth = Getitems_FromDict(data, ['input', 'input_init', 'output'])
         batch_size = x.size(0)
-        output, act = get_items_from_dict(self.forward(data), ['output', 'act'])
+        output, act = Getitems_FromDict(self.forward(data), ['output', 'act'])
         
         self.dict['act_avg'] = torch.mean(torch.abs(act))
         
@@ -220,7 +220,7 @@ class RNN_LIF(nn.Module):
         loss_act = self.act_coeff * torch.mean(act ** 2)
         
         loss_weight_0 = self.cal_loss_weight()
-        #loss_weight_0 = self.weight_coeff * torch.mean(self.get_r() ** 2)
+        #loss_weight_0 = self.weight_coeff * torch.mean(self.Getr() ** 2)
         #print(loss_weight_0)
         # dynamically alternate weight Coefficient
         #print(loss_weight_0.size())
@@ -255,18 +255,18 @@ class RNN_LIF(nn.Module):
         }
     def cal_perform_pc_coord(self, data):
         #x, y = self.prep_path(path)
-        y = get_items_from_dict(data, ['output'])
+        y = Getitems_FromDict(data, ['output'])
         batch_size = y.size(0)
-        output, act = get_items_from_dict(self.forward(data), ['output', 'act'])
+        output, act = Getitems_FromDict(self.forward(data), ['output', 'act'])
         self.dict['act_avg'] = torch.mean(torch.abs(act))
-        pc_output = self.place_cells.get_act(y)
+        pc_output = self.place_cells.Getact(y)
         loss_coords =self.main_coeff_pc * F.mse_loss(output[:, :, 0:2], pc_output, reduction='mean')
         loss_main = self.main_coeff_coords * F.mse_loss(output[:, :, 2:-1], pc_output, reduction='mean')
         self.perform_list['pc_error_ratio'] += ( torch.sum(torch.abs(output[:, :, 2:-1] - pc_output)) / torch.sum(torch.abs(pc_output)) ).item() #relative place cells prediction error
         
         loss_act = self.act_coeff * torch.mean(act ** 2)
         
-        loss_weight = self.weight_coeff * ( torch.mean(self.get_o() ** 2) + torch.mean(self.get_i() ** 2) )
+        loss_weight = self.weight_coeff * ( torch.mean(self.Geto() ** 2) + torch.mean(self.Geti() ** 2) )
         
         self.perform_list['weight'] += loss_weight.item()
         self.perform_list['act'] += loss_act.item()
@@ -290,33 +290,33 @@ class RNN_LIF(nn.Module):
         #if coeff == 0.0:
         #    return torch.tensor([0.0], device=self.device)
         loss = 0.0
-        for get_weight in weight_cons:
-            weight = get_weight()
+        for Getweight in weight_cons:
+            weight = Getweight()
             if isinstance(weight, torch.Tensor):
                 loss += torch.mean(weight ** 2)
         loss = coeff * loss
         return loss
     def alt_pc_act_strength(self, path, verbose=True):
-        pc_mean, pc_pred_mean = self.get_output_ratio_pc(path, verbose)
+        pc_mean, pc_pred_mean = self.Getoutput_ratio_pc(path, verbose)
         act_center_0 = self.place_cells.act_center
         self.place_cells.act_center = act_center_1 = 1.0 * act_center_0 * pc_pred_mean / pc_mean
         if verbose:
             print('alternating pc peak activation from %.3e to %.3e'%(act_center_0, act_center_1))
-    def get_output_ratio_pc(self, path, verbose):
+    def Getoutput_ratio_pc(self, path, verbose):
         x, y = self.prep_path(path)
-        pc_output = self.place_cells.get_act(y)
-        output, act = get_items_from_dict(self.forward(x), ['output', 'act'])
+        pc_output = self.place_cells.Getact(y)
+        output, act = Getitems_FromDict(self.forward(x), ['output', 'act'])
         pc_mean = torch.mean(pc_output).item()
         pc_pred_mean = torch.mean(output).item()
         if verbose:
             print('pc_act mean: %.3e pc_act_pred_mean: %.3e'%(pc_mean, pc_pred_mean))
         return pc_mean, pc_pred_mean
-    def get_output_from_act(self, act, to_array=True):
+    def Getoutput_from_act(self, act, to_array=True):
         if isinstance(act, np.ndarray):
             # isinstance(act, type(np.ndarray)) does not work.
             act = torch.from_numpy(act).to(self.device).float()
         #print(act.size())
-        output = torch.mm(act, self.get_o())
+        output = torch.mm(act, self.Geto())
         if to_array:
             output = output.detach().cpu().Numpy()
         return output
@@ -328,11 +328,11 @@ class RNN_LIF(nn.Module):
             self.to(torch.device('cpu'))
             torch.save(self.dict, f)
             self.to(self.device)
-    def get_weight(self, name, detach=True):
+    def Getweight(self, name, detach=True):
         if name in ['r']:
-            w = self.get_r()
+            w = self.Getr()
         elif name in ['o']:
-            w = self.get_o()
+            w = self.Geto()
         else:
             raise Exception('Invalid weight name: %s'%name)
         if detach:
@@ -354,22 +354,22 @@ class RNN_LIF(nn.Module):
                 self.cache[name] = value_np
     def anal_weight_change(self, verbose=True):
         result = ''
-        r_1 = self.get_r().detach().cpu().Numpy()
+        r_1 = self.Getr().detach().cpu().Numpy()
         if self.cache.get('r') is not None:
             r_0 = self.cache['r']
             r_change_rate = np.sum(abs(r_1 - r_0)) / np.sum(np.abs(r_0))
             result += 'r_change_rate: %.3e '%r_change_rate
         self.cache['r'] = r_1
 
-        o_1 = self.get_o().detach().cpu().Numpy()
+        o_1 = self.Geto().detach().cpu().Numpy()
         if self.cache.get('o') is not None:
             o_0 = self.cache['o']
             f_change_rate = np.sum(abs(o_1 - o_0)) / np.sum(np.abs(o_0))
             result += 'f_change_rate: %.3e '%f_change_rate
         self.cache['o'] = o_1
 
-        if hasattr(self, 'get_i'):
-            i_1 = self.get_i().detach().cpu().Numpy()
+        if hasattr(self, 'Geti'):
+            i_1 = self.Geti().detach().cpu().Numpy()
             if self.cache.get('i') is not None:
                 i_0 = self.cache['i']
                 i_change_rate = np.sum(abs(i_1 - i_0)) / np.sum(np.abs(i_0))
@@ -378,19 +378,19 @@ class RNN_LIF(nn.Module):
         if verbose:
             print(result)
         return result
-    def get_weight_stat(self, verbose=True, complete=False):
+    def Getweight_stat(self, verbose=True, complete=False):
         result = ''
         for name in ['i', 'r', 'o']:
             if hasattr(self, name):
-                result += get_tensor_stat(getattr(self, name), name=name, verbose=False, complete=complete)
+                result += Gettensor_stat(getattr(self, name), name=name, verbose=False, complete=complete)
         if verbose:
             print(result)
         return result
-    def get_weight_info(self, verbose=True, complete=False):
+    def Getweight_info(self, verbose=True, complete=False):
         result = ''
         for name in ['i', 'r', 'o']:
             if hasattr(self, name):
-                result += get_tensor_info(getattr(self, name), name=name, verbose=False, complete=complete)
+                result += Gettensor_info(getattr(self, name), name=name, verbose=False, complete=complete)
         if verbose:
             print(result)
         return result
@@ -422,7 +422,7 @@ class RNN_LIF(nn.Module):
         return (inputs, init), outputs
     '''
     def plot_Recurrent_weight(self, ax, cmap):
-        weight_r = self.get_r().detach().cpu().Numpy()
+        weight_r = self.Getr().detach().cpu().Numpy()
         weight_r_mapped, weight_min, weight_max = norm_and_map(weight_r, cmap=cmap, return_min_max=True) # weight_r_mapped: [N_num, res_x, res_y, (r,g,b,a)]
         
         ax.set_title('Recurrent weight')
@@ -502,9 +502,9 @@ class RNN_LIF(nn.Module):
         return torch.cat([r0 for i in range(kw['i0'].size(0))], dim = 0) # [batch_size, input_num]
     def reset_from_given(self, **kw):
         self.x = kw['x0']
-    def get_noise_gaussian(self, batch_size):
+    def Getnoise_gaussian(self, batch_size):
         noise = torch.zeros((batch_size, self.dict['input_num']), device=self.device)
         torch.nn.init.normal_(noise, 0.0, self.noise_coeff)
         return noise
-    def get_train_param(self):
+    def Gettrain_param(self):
         return self.parameters()

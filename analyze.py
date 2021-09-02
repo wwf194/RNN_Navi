@@ -106,7 +106,7 @@ def test_anal(net=None, logger=None, save_dir=save_dir_anal):
             #imsave(save_dir + "/" + "heatmap_%s_%s_%d"%(cmap[count], str(arena_types[num]), num) + ".png", rm_fig[key])
             figs = rm_fig[key]
             for fig in figs:
-                grid_scores = grid_scorer_.get_scores(rate_map=fig)
+                grid_scores = grid_scorer_.Getscores(rate_map=fig)
                 print(grid_scores)
             count += 1
 
@@ -119,8 +119,8 @@ def quick_anal(net=None, logger=None, save_dir=save_dir_anal):
     res=ratemap_res
 
     if model_type=="linear":
-        logger.write("i_0:" + get_data_stat(net.get_i_0().detach().cpu().numpy()))
-        logger.write("f:" + get_data_stat(net.get_f().detach().cpu().numpy()))
+        logger.write("i_0:" + Getdata_stat(net.Geti_0().detach().cpu().numpy()))
+        logger.write("f:" + Getdata_stat(net.Getf().detach().cpu().numpy()))
 
     plot_spatial_pattern(net, res, save_dir)
     if model_type in ["rnn","linear"]:
@@ -135,8 +135,8 @@ def full_anal(net=None, logger=None, save_dir=save_dir_anal):
     res=ratemap_res
 
     if(model_type=="linear"):
-        logger.write("i_0:" + get_data_stat(net.get_i_0().detach().cpu().numpy()))
-        logger.write("f:" + get_data_stat(net.get_f().detach().cpu().numpy()))
+        logger.write("i_0:" + Getdata_stat(net.Geti_0().detach().cpu().numpy()))
+        logger.write("f:" + Getdata_stat(net.Getf().detach().cpu().numpy()))
 
     plot_spatial_pattern(net, res, save_dir)
 

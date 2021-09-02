@@ -28,7 +28,7 @@ class PlaceCells(object):
         else:
             self.us = self.dict["us"]
         
-    def get_activation(self, pos_torch):
+    def Getactivation(self, pos_torch):
         #print("pos size:"+str(list(pos_torch.size())))
         #input()
         pos = tf.convert_to_tensor(pos_torch.detach().cpu().numpy(), dtype=tf.float64)
@@ -71,7 +71,7 @@ class PlaceCells(object):
         outputs_ndarray = outputs.numpy()
         return torch.from_numpy(outputs_ndarray).float().to(device)
     
-    def get_nearest_cell_pos(self, activation, k=3):
+    def Getnearest_cell_pos(self, activation, k=3):
         '''
         Decode position using centers of k maximally active place cells.
         
@@ -113,7 +113,7 @@ class PlaceCells(object):
         pos = pos.astype(np.float32)
 
         #Maybe specify dimensions here again?
-        pc_outputs = self.get_activation(pos)
+        pc_outputs = self.Getactivation(pos)
         pc_outputs = tf.reshape(pc_outputs, (-1, self.cell_num))
 
         C = pc_outputs@tf.transpose(pc_outputs)

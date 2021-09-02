@@ -1,3 +1,30 @@
 {
-    "PlaceCells.Num": "^model.Neurons.Num // 4"
+    "Initialize":[
+        {
+            "Name": "CreateAttr",
+            "Args": {
+                "AttrName": "PlaceCells",
+                "Class": "Models.PlaceCells2D",
+                "param": "&param.PlaceCells"
+            }
+        }
+    ],
+    "PlaceCells":{
+        "Num": "^model.Neurons.Num // 4",
+        "XYs":{
+            "Initialize": {
+                "Method": "FromFunctionCall",
+                "Functions": [
+                    [
+                        "&^world.GetArenaByIndex(0).GenerateRandomInternalPoints",
+                        ["$PlaceCells.Num"]
+                    ],
+                    [
+                        "&^agent.PlaceCells.ReceiveXYs",
+                        ["__PreviousFunctionOutput__"]
+                    ]
+                ]
+            }
+        }
+    }
 }

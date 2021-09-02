@@ -35,10 +35,10 @@ from utils.anal import *
 
 from utils import *
 
-def get_data_stat(data):
+def Getdata_stat(data):
     return "mean=%.2e var=%.2e, min=%.2e, max=%.2e mid=%.2e"%(np.mean(data), np.var(data), np.min(data), np.max(data), np.median(data))
 
-def get_log_data_1d(data):
+def Getlog_data_1d(data):
     zero_index=[]
     count0=0
     count1=0
@@ -65,23 +65,23 @@ def get_log_data_1d(data):
 
 def visualize_weight(net, name="r", save_path="./"):
     EnsureDir(save_path)
-    color_map = plt.cm.get_cmap('jet')
-    w = net.get_weight(name, positive=True).detach().cpu().numpy()
+    color_map = plt.cm.Getcmap('jet')
+    w = net.Getweight(name, positive=True).detach().cpu().numpy()
     shape = w.shape
-    #w, note = get_log_data_1d(w.reshape((shape[0] * shape[1])))
+    #w, note = Getlog_data_1d(w.reshape((shape[0] * shape[1])))
     #w = w.reshape((shape[0], shape[1]))
     #print(note)
-    print(get_data_stat(w))
+    print(Getdata_stat(w))
     w = ( w - np.min(w) ) / (np.max(w) - np.min(w))
     #w = w * 25
     #w = np.float32(w > 1.0) + np.float32(w<=1.0) * w
-    print(get_data_stat(w))
+    print(Getdata_stat(w))
     w = color_map(w)
     w = np.uint8(w * 255)
     print(w.shape)
     imsave(save_path + "%s visualization.png"%(name), w)    
 
-def get_input_output(traj):
+def Getinput_output(traj):
     if input_type in ["v_xy"]:
         #print(traj["hd_x"])
         #print(traj["delta_xy"])
@@ -91,24 +91,24 @@ def get_input_output(traj):
         #print(traj["delta_xy"].shape)
         #input()
         inputs = torch.from_numpy(np.stack((traj["hd_x"] * traj["delta_xy"], traj["hd_y"] * traj["delta_xy"]), axis=-1)).float() #(batch_size, sequence_length, (cos, sin, v))
-        outputs = torch.from_numpy(np.stack((traj["target_x"], traj["target_y"]), axis=-1)).float() #(batch_size, sequence_length, (x, y))
+        outputs = torch.from_numpy(np.stack((traj["tarGetx"], traj["tarGety"]), axis=-1)).float() #(batch_size, sequence_length, (x, y))
     elif input_type in ["v_hd"]:
         inputs = torch.from_numpy(np.stack((traj["hd_x"], traj["hd_y"], traj["delta_xy"]), axis=-1)).float() #(batch_size, sequence_length, (cos, sin, v))
-        outputs = torch.from_numpy(np.stack((traj["target_x"], traj["target_y"]), axis=-1)).float() #(batch_size, sequence_length, (x, y))
+        outputs = torch.from_numpy(np.stack((traj["tarGetx"], traj["tarGety"]), axis=-1)).float() #(batch_size, sequence_length, (x, y))
     init = torch.cat( [torch.from_numpy(traj["init_x"]), torch.from_numpy(traj["init_y"])], dim=1 ) #(batch_size, 2)
     return (inputs, init), outputs
 
-def get_place_cells_activation(place_cells_0, x_resolution, y_resolution):
+def Getplace_cells_activation(place_cells_0, x_resolution, y_resolution):
     pos = np.empty(shape=[x_resolution * y_resolution, 2], dtype=float) #coordinates
 
     for i in range(x_resolution):
         for j in range(y_resolution):
-            pos[i * x_resolution + j][0], pos[i * x_resolution + j][1] = get_float_coords(i, j, box_width, box_height, x_resolution, y_resolution)
+            pos[i * x_resolution + j][0], pos[i * x_resolution + j][1] = Getfloat_coords(i, j, box_width, box_height, x_resolution, y_resolution)
 
     pos  = torch.from_numpy(pos)
     pos = pos.to(device)
     pos = torch.unsqueeze(pos, 0) #(1, coordinate_num, (x, y))
-    place_cells_act = place_cells_0.get_activation(pos) #(1, x_resolution * y_resolution, place_cells_num)
+    place_cells_act = place_cells_0.Getactivation(pos) #(1, x_resolution * y_resolution, place_cells_num)
     return torch.squeeze(place_cells_act)
 
 def plot_encoder_prediction(net=None, res=30, cmap='jet', exaggerate=False, save_path="./", save="img"):#(1, x_resolution * y_resolution, 2)
@@ -120,8 +120,8 @@ def plot_encoder_prediction(net=None, res=30, cmap='jet', exaggerate=False, save
 
     if model_type in ["linear", "rnn"]:
         place_cells_0 = net.place_cells
-        place_cells_act = get_place_cells_activation(place_cells_0, x_resolution, y_resolution).float() #(coordinate_num, place_cells_num)
-        prediction = (1.0 - net.time_const) * torch.mm(place_cells_act, net.get_i_0_x()) + net.time_const * ( torch.mm(place_cells_act, net.get_i_0_r()) + net.b)
+        place_cells_act = Getplace_cells_activation(place_cells_0, x_resolution, y_resolution).float() #(coordinate_num, place_cells_num)
+        prediction = (1.0 - net.time_const) * torch.mm(place_cells_act, net.Geti_0_x()) + net.time_const * ( torch.mm(place_cells_act, net.Geti_0_r()) + net.b)
         if model_type=="linear":
             prediction = net.act_func(prediction)
         elif model_type=="rnn":
@@ -130,7 +130,7 @@ def plot_encoder_prediction(net=None, res=30, cmap='jet', exaggerate=False, save
         pos = np.empty(shape=[x_resolution * y_resolution, 2], dtype=float) #coordinates
         for i in range(x_resolution):
             for j in range(y_resolution):
-                pos[i * x_resolution + j][0], pos[i * x_resolution + j][1] = get_float_coords(i, j, box_width, box_height, x_resolution, y_resolution)
+                pos[i * x_resolution + j][0], pos[i * x_resolution + j][1] = Getfloat_coords(i, j, box_width, box_height, x_resolution, y_resolution)
         pos = torch.from_numpy(pos)
         i_ = torch.zeros((pos.size(0), 1, net.dict["input_num"]), device=device)
         print(pos.size())
@@ -159,7 +159,7 @@ def plot_encoder_prediction(net=None, res=30, cmap='jet', exaggerate=False, save
 
 def load_net(epoch=None): #load lastest model saved in save_dir_stat
     if(epoch is None):
-        net_path = get_last_model(model_prefix="Navi_epoch_", base_dir="./", is_dir=True)
+        net_path = Getlast_model(model_prefix="Navi_epoch_", base_dir="./", is_dir=True)
     else:
         net_path=save_dir_stat + "Navi_epoch_%d/"%(epoch)
 
@@ -187,7 +187,7 @@ def compare_traj(net=None, save_path="./", x_resolution=400, save_name="undefine
 
     if outputs is None or outputs_0 is None:
         traj = global_trajectory_generator.generate_trajectory(batch_size=batch_size, sequence_length=sequence_length_0, random_init=random_init_, arena_index=arena_index)
-        inputs, outputs_0 = get_input_output(traj)
+        inputs, outputs_0 = Getinput_output(traj)
         #inputs = inputs.to(device)
         outputs_0 = outputs_0.to(device)
         if net is None:
@@ -233,7 +233,7 @@ def plot_init_positions(trajectory_generator=None, x_resolution=400, plot_num=50
         arena_dict = path.arena_dicts[num]
         arena_type = arena_dict["type"]
         traj = path.generate_trajectory(batch_size=plot_num, sequence_length=sequence_length, random_init=random_init_)
-        inputs, outputs_0 = get_input_output(traj)
+        inputs, outputs_0 = Getinput_output(traj)
 
         img = np.zeros((x_resolution, y_resolution, 3), np.uint8)
         img[:,:,:] = (255, 255, 255) #background color: white
@@ -243,7 +243,7 @@ def plot_init_positions(trajectory_generator=None, x_resolution=400, plot_num=50
         thickness = 4 # 可以为 0 、4、8
         for i in range(plot_num):
             #print("plot_num:%d"%i)
-            init_posi = get_int_coords(outputs_0[i, 0, 0], outputs_0[i, 0, 1], box_width, box_height, x_resolution, y_resolution)
+            init_posi = Getint_coords(outputs_0[i, 0, 0], outputs_0[i, 0, 1], box_width, box_height, x_resolution, y_resolution)
             cv.circle(img, init_posi, point_size, point_color, thickness)
         if arena_dict.get("points") is not None: #polygonal arena_type
             cv.imwrite(save_dir +  "%s(%s-%d).jpg"%(save_name, str(arena_type), arena_dict["points"].shape[0]), img)
@@ -263,7 +263,7 @@ def plot_traj(trajectory_generator=None, save_path="./", res=400, save_name="und
         
         traj = path.generate_trajectory(batch_size=plot_num, sequence_length=sequence_length, random_init=random_init_, arena_index=num)
 
-        inputs, outputs_0 = get_input_output(traj)
+        inputs, outputs_0 = Getinput_output(traj)
         #inputs = inputs.to(device)
         outputs_0 = outputs_0.to(device)
 
@@ -280,8 +280,8 @@ def plot_traj(trajectory_generator=None, save_path="./", res=400, save_name="und
         for i in range(plot_num):
             traj_0  = outputs_0[i]
             for i in range(sample_num-1):
-                startPoint = get_int_coords(traj_0[i][0], traj_0[i][1], box_width, box_height, x_resolution, y_resolution)
-                endPoint = get_int_coords(traj_0[i+1][0], traj_0[i+1][1], box_width, box_height, x_resolution, y_resolution)
+                startPoint = Getint_coords(traj_0[i][0], traj_0[i][1], box_width, box_height, x_resolution, y_resolution)
+                endPoint = Getint_coords(traj_0[i+1][0], traj_0[i+1][1], box_width, box_height, x_resolution, y_resolution)
                 cv.line(img, startPoint, endPoint, line_color, line_width, line_type)
         if arena_dict.get("points") is not None:
             cv.imwrite(save_path +  "%s(%s-%d).jpg"%(save_name, str(arena_type), arena_dict["points"].shape[0]), img)
@@ -467,7 +467,7 @@ def EnsurePath(path):
 def combine_name(name):
     return name[0] + " - " + name[1]
 
-def get_corr_note(corr):
+def Getcorr_note(corr):
     note="corr"
     if(corr.get("pearson") is not None):
         note+=" pearson:%.4f"%(corr["pearson"])
@@ -512,7 +512,7 @@ def check_array_1d(data, logger):
     logger.write(note)
     return data, note
 
-def get_corr(x, y, method="all", save=False, name="undefined", save_path="./"):
+def Getcorr(x, y, method="all", save=False, name="undefined", save_path="./"):
     corr={}
     method=set_corr_method(method)
 
@@ -556,7 +556,7 @@ def to_list(object):
         return [object]
 
 def rgb(im, cmap='jet', smooth=True, exaggerate=False, arena_index=0, mask=None):
-    cmap = plt.cm.get_cmap(cmap)
+    cmap = plt.cm.Getcmap(cmap)
     np.seterr(invalid='ignore')  # ignore divide by zero err
     if exaggerate:
         im = (im - np.min(im)) / (0.5 * (np.max(im) - np.min(im))) - 0.5
@@ -630,7 +630,7 @@ def compute_ratemaps(net, res=100, random_init=False, arena_index=0):
             count = 0
             loss_total = 0.0
             traj = path.generate_trajectory(batch_size=batch_size, sequence_length=sequence_length, random_init=random_init, arena_index=arena_index)
-            inputs, outputs_0 = get_input_output(traj)
+            inputs, outputs_0 = Getinput_output(traj)
             #print("inputs:"+str(list(inputs.size())))
             #print("outputs_0:"+str(list(outputs_0.size())))
             #inputs=inputs.to(device)
@@ -638,12 +638,12 @@ def compute_ratemaps(net, res=100, random_init=False, arena_index=0):
             outputs, act = net.forward(inputs) #act:(timestep, batch_size, N_num)
             #print("act shape:" + str(len(act)) + " " + str(len(act[0])) + str(list(act[0][0].size())))
 
-            x_positions = traj["target_x"] #(batch_size, time_step)
-            y_positions = traj["target_y"]
+            x_positions = traj["tarGetx"] #(batch_size, time_step)
+            y_positions = traj["tarGety"]
 
             act = list(map(lambda x:x.detach().cpu(), act))
 
-        #inputs, pos_batch, _ = trajectory_generator.get_test_batch()
+        #inputs, pos_batch, _ = trajectory_generator.Gettest_batch()
         #g_batch = model.g(inputs)
         
         #pos_batch = np.reshape(pos_batch, [-1, 2])
@@ -701,18 +701,18 @@ def save_autocorr(sess, model, save_name, trajectory_generator, step, flags):
     for _ in range(index_size):
       feed_dict = trajectory_generator.feed_dict(flags.box_width, flags.box_height)
       mb_res = sess.run({
-          'pos_xy': model.target_pos,
+          'pos_xy': model.tarGetpos,
           'bottleneck': model.g,
       }, feed_dict=feed_dict)
       res = utils.concat_dict(res, mb_res)
         
     filename = save_name + '/autocorrs_' + str(step) + '.pdf'
     imdir = flags.save_path + '/'
-    out = utils.get_scores_and_plot(
+    out = utils.Getscores_and_plot(
                 latest_epoch_scorer, res['pos_xy'], res['bottleneck'],
                 imdir, filename)
 
-def get_data_stat(data):
+def Getdata_stat(data):
     return "mean=%.2e var=%.2e, min=%.2e, max=%.2e mid=%.2e"%(np.mean(data), np.var(data), np.min(data), np.max(data), np.median(data))
 
 
@@ -757,11 +757,11 @@ def calculate_grid_score(act_maps, coord_range, save_path='./', save_name='plot_
         if act_std[index]==0.0:
             scores.append((-1.0, -1.0, -1.0, -1.0, -1.0))
         else:
-            scores.append(scorer.get_scores(act_map))
+            scores.append(scorer.Getscores(act_map))
     time_1 = time.time()
     if verbose: print('Time consumed: %s'%str(time_1 - time_0))
 
-    #scores = [scorer.get_scores(act_map) for act_map in act_maps]
+    #scores = [scorer.Getscores(act_map) for act_map in act_maps]
     score_60, score_90, max_60_mask, max_90_mask, sac = zip(
         *scores)
     print(type(max_60_mask[0]))
@@ -834,7 +834,7 @@ class GridScorer(object):
     #self._coords_range = coords_range
     self._corr_angles = [30, 45, 60, 90, 120, 135, 150]
     # Create all masks
-    self._masks = [(self._get_ring_mask(mask_min, mask_max), (mask_min, mask_max)) for mask_min, mask_max in mask_parameters]
+    self._masks = [(self._Getring_mask(mask_min, mask_max), (mask_min, mask_max)) for mask_min, mask_max in mask_parameters]
     # Mask for hiding the parts of the SAC that are never used
     self._plotting_sac_mask = circle_mask(
         [self._nbins * 2 - 1, self._nbins * 2 - 1],
@@ -851,7 +851,7 @@ class GridScorer(object):
         statistic=statistic,
         range=self._coords_range)[0]
   '''
-  def _get_ring_mask(self, mask_min, mask_max):
+  def _Getring_mask(self, mask_min, mask_max):
     n_points = [self._nbins * 2 - 1, self._nbins * 2 - 1]
     return (circle_mask(n_points, mask_max * self._nbins) *
             (1 - circle_mask(n_points, mask_min * self._nbins)))
@@ -918,7 +918,7 @@ class GridScorer(object):
         for angle in angles
     ]
 
-  def get_grid_scores_for_mask(self, sac, rotated_sacs, mask):
+  def Getgrid_scores_for_mask(self, sac, rotated_sacs, mask):
     """Calculate Pearson correlations of area inside mask at corr_angles."""
     masked_sac = sac * mask
     ring_area = np.sum(mask)
@@ -934,13 +934,13 @@ class GridScorer(object):
       corrs[angle] = cross_prod / variance
     return self.grid_score_60(corrs), self.grid_score_90(corrs), variance
 
-  def get_scores(self, act_map):
+  def Getscores(self, act_map):
     """Get summary of scrores for grid cells."""
     sac = self.calculate_sac(act_map)
     rotated_sacs = self.rotated_sacs(sac, self._corr_angles)
 
     scores = [
-        self.get_grid_scores_for_mask(sac, rotated_sacs, mask)
+        self.Getgrid_scores_for_mask(sac, rotated_sacs, mask)
         for mask, mask_params in self._masks  # pylint: disable=unused-variable
     ]
     scores_60, scores_90, variances = map(np.asarray, zip(*scores))  # pylint: disable=unused-variable

@@ -1,14 +1,19 @@
 {
     "Arenas":[
         {
-            "Type": "Polygon",
-            "Subtype": "RegularPolygon",
-            "Initialize.Method":"CenterRadiusTheta",
-            "Initialize": {
-                "Center": [0.0, 0.0],
-                "Radius": 1.0,
-                "Rotation": 0.0,
-            }
+            "Shapes":[
+                {
+                    "Type": "Polygon",
+                    "Subtype": "RegularPolygon",
+                    "Initialize.Method": "CenterRadiusTheta",
+                    "Initialize": {
+                        "Center": [0.0, 0.0],
+                        "Radius": 1.0,
+                        "Rotation": 0.0,
+                    },
+                    "Vertices.Num": 6
+                }
+            ]
         },
         {
             "Type": "Circle",

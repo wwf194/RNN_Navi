@@ -1,6 +1,6 @@
-from utils_torch import search_dict, get_from_dict, EnsurePath
+from utils_torch import search_dict, GetFromDict, EnsurePath
 
-def get_epoch_info(dict_):
+def Getepoch_info(dict_):
     epoch_start = dict_.get('epoch_start')
     epoch_num = dict_.get('epoch_num')
     epoch_end = dict_.get('epoch_end')

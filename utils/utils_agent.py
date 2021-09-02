@@ -16,13 +16,13 @@ def save_dict(net, dict=None):
 def load_dict(net, f):
     net.dict=pickle.load(f)
 
-def get_weight(net, name=""):
+def Getweight(net, name=""):
     try:
         if name in [""]:
             return net.weight_names
         else:
             names = name.split(".",1)
-            return net.name_index[(names[0].split("_",1))[0]].get_weight(names[1])
+            return net.name_index[(names[0].split("_",1))[0]].Getweight(names[1])
     except Exception:
         return "error"
 
@@ -39,7 +39,7 @@ def set_constraint_names(net):
             net.constraint_names.append(name+".l")
             net.constraint_names.append(name+".r")
 
-def get_weight_index(init_des=""):
+def Getweight_index(init_des=""):
     index = 1.00e-03
     ex_large_index = 1.00
     large_index = 0.10
@@ -52,7 +52,7 @@ def get_weight_index(init_des=""):
         index=middle_index
     return index
 
-def get_ei_mask(E_num, N_num, device=None):
+def Getei_mask(E_num, N_num, device=None):
     ei_mask = torch.zeros((N_num, N_num), device=device, requires_grad=False)
     for i in range(E_num):
         ei_mask[i][i] = 1.0
@@ -60,7 +60,7 @@ def get_ei_mask(E_num, N_num, device=None):
         ei_mask[i][i] = -1.0
     return ei_mask
 
-def get_mask(N_num, output_num, device=None):
+def Getmask(N_num, output_num, device=None):
     mask = torch.ones((N_num, output_num), device=device, requires_grad=False)
     return mask
 
@@ -72,7 +72,7 @@ def set_act_func(net, act_func_des="relu"):
             set_act_func_from_name(net, act_func_des[net.type])
         else:
             set_act_func_from_name(net, act_func_des["default"])
-def get_act_func_module(act_func_des):
+def Getact_func_module(act_func_des):
     name=act_func_des
     if name=="relu":
         return nn.ReLU()
@@ -83,7 +83,7 @@ def get_act_func_module(act_func_des):
     elif name=="sigmoid":
         return nn.Sigmoid()
 
-def get_act_func_from_name(name="relu", param="default"):
+def Getact_func_from_name(name="relu", param="default"):
     if(name=="none"):
         return lambda x:x
     elif(name=="relu"):
@@ -102,7 +102,7 @@ def get_act_func_from_name(name="relu", param="default"):
         else:
             return lambda x:param * F.relu(torch.tanh(x))
 
-def get_act_func(act_func_des):
+def Getact_func(act_func_des):
     if(isinstance(act_func_des, list)):
         act_func_name = act_func_des[0]
         act_func_param = act_func_des[1]
@@ -112,13 +112,13 @@ def get_act_func(act_func_des):
     elif(isinstance(act_func_des, dict)):
         act_func_name = act_func_des["name"]
         act_func_param = act_func_des["param"]
-    return get_act_func_from_name(act_func_name, act_func_param)
+    return Getact_func_from_name(act_func_name, act_func_param)
 
 def init_weight(weight, params, weight_name="unnamed"):
     dim_num = len(list(weight.size()))
-    name = get_name(params)
+    name = Getname(params)
     print("weight:%s init_method:%s"%(weight_name, str(name)))
-    coeff = get_arg(params)
+    coeff = Getarg(params)
     sig = False
     if dim_num==1:
         divider = weight.size(0)
@@ -152,7 +152,7 @@ def init_weight(weight, params, weight_name="unnamed"):
 
 
 def load_mlp(dict_):
-    act_func = get_act_func_module(dict_["act_func"])
+    act_func = Getact_func_module(dict_["act_func"])
     layers = []
     N_nums = dict_["N_nums"] #input_num, hidden_layer1_unit_num, hidden_layer2_unit_numm ... output_num
     layer_num = len(N_nums) - 1
@@ -174,7 +174,7 @@ def update_mlp(dict_, layers):
         else:
             pass
 def build_mlp(dict_):
-    act_func = get_act_func_module(dict_["act_func"])
+    act_func = Getact_func_module(dict_["act_func"])
     layers = []
     layer_dicts = []
     N_nums = dict_["N_nums"] #input_num, hidden_layer1_unit_num, hidden_layer2_unit_numm ... output_num

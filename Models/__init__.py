@@ -5,6 +5,8 @@
 #import Models.RNN_LIF import rnn_lif
 import Models.rnn_lif
 
+from Models.PlaceCells2D import PlaceCells2D
+
 def build_module(module):
     if module.type in ["LeakySingleLayer"]:
         # to be implemented

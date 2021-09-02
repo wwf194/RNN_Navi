@@ -8,7 +8,7 @@
             },
             {
                 "path":"./params/arena_square.jsonc",
-                "name":"environment",
+                "name":"world",
             },
             {
                 "path":"./params/agent.jsonc",
@@ -29,9 +29,9 @@
                 "ParamName": "model",
             },
             {
-                "name": "environment",
-                "ModulePath": "Environments.Arenas2D",
-                "ParamName": "environment",
+                "name": "world",
+                "ModulePath": "World2D.Arenas2D",
+                "ParamName": "world",
             },
             {
                 "name": "agent",

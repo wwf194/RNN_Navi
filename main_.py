@@ -23,10 +23,10 @@ from inspect import getmembers, isfunction
 sys.path.append('./src/')
 import ConfigSystem
 #print(sys.path)
-from utils import build_model, build_agent, build_arenas, build_Optimizer, build_trainer, copy_folder, cal_path_rel_main, get_items_from_dict
-from utils import scan_files, copy_files, path_to_module, remove_suffix, select_file, EnsurePath, get_device, import_file, join_path
+from utils import build_model, build_agent, build_arenas, build_Optimizer, build_trainer, copy_folder, cal_path_rel_main, Getitems_FromDict
+from utils import scan_files, copy_files, path_to_module, remove_suffix, select_file, EnsurePath, Getdevice, import_file, join_path
 #from config import Options
-from utils_anal import compare_traj, get_input_output
+from utils_anal import compare_traj, Getinput_output
 
 from Trainers import Trainer
 import Models
@@ -60,7 +60,7 @@ def test_place_cells():
     options.build()
     model = options.model
     model.place_cells.plot_place_cells(save=True, save_path='../anal/place_cells/', save_name='place_cells_plot_circle.png')
-    model.place_cells.plot_place_cells_coords(save=True, arena=options.arenas.get_arena(1), save_path='../anal/place_cells/', save_name='place_cells_coords_circle.png')     
+    model.place_cells.plot_place_cells_coords(save=True, arena=options.arenas.Getarena(1), save_path='../anal/place_cells/', save_name='place_cells_coords_circle.png')     
 
 def test_plot_weight():
     options = Options(mode='init', args=args)
@@ -205,7 +205,7 @@ def train(args=None, param_path=None, **kw):
             param_path = './params/'
         #sys.path.append(param_path)
 
-    param_dict = get_param_dict(args)
+    param_dict = Getparam_dict(args)
     model_dict = param_dict['model']
     arenas_dict = param_dict['arenas']
     agent_dict = param_dict['agent']
@@ -258,7 +258,7 @@ def scan_param_file(path, file_info):
         param_file[file_name] = scan_files(path, file_pattern, raise_not_found_error=False)
     return param_file
 
-def get_param_file(args, verbose=True):
+def Getparam_file(args, verbose=True):
     param_path = args.param_path
     if param_path is None:
         param_path = './params/'
@@ -293,8 +293,8 @@ def get_param_file(args, verbose=True):
         'param_file': Config_Param.dict_,
         'param_path': param_path,
     }
-def get_param_dict(args, verbose=True):
-    param_file, param_path = get_items_from_dict(get_param_file(args), ['param_file', 'param_path'])
+def Getparam_dict(args, verbose=True):
+    param_file, param_path = Getitems_FromDict(Getparam_file(args), ['param_file', 'param_path'])
     #print(param_file.keys())
 
     '''
@@ -314,7 +314,7 @@ def get_param_dict(args, verbose=True):
         param_dict[param_name] = Param.dict_
         Params.append(Param)
 
-    device = get_device(args)
+    device = Getdevice(args)
     if verbose:
         print('Using device: %s'%str(device))
 
@@ -371,7 +371,7 @@ def copy_project_files(args, verbose=True):
     copy_files(file_list, path_from='./', path_to=path, verbose=verbose)
     
     # select and copy param files
-    param_file, param_path = get_items_from_dict(get_param_file(args), ['param_file', 'param_path'])
+    param_file, param_path = Getitems_FromDict(Getparam_file(args), ['param_file', 'param_path'])
     #print('param_file: %s'%param_file)
     if isinstance(param_file, list):
         param_file = list(map(lambda file:join_path(param_path, file), param_file))
@@ -381,7 +381,7 @@ def copy_project_files(args, verbose=True):
         raise Exception('Invalid param file type:%s'%type(param_file))
     #print('param_file: %s'%param_file)
     #input()
-    param_file = get_required_file(param_file)
+    param_file = Getrequired_file(param_file)
 
     #copy_files(param_file, path_from=os.path.abspath('./'), path_to=path, verbose=verbose)
     copy_files(param_file, path_from='./', path_to=path, verbose=verbose)

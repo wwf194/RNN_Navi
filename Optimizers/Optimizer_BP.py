@@ -1,14 +1,14 @@
 
 import torch
 
-from utils import search_dict, get_items_from_dict
+from utils import search_dict, Getitems_FromDict
 import model
 from Optimizers.Optimizer import *
 
 class Optimizer_BP(Optimizer):
     def __init__(self, dict_=None, load=False, model=None, params=None):
         super().__init__(dict_, load)
-        self.get_lr = self.get_current_lr
+        self.Getlr = self.Getcurrent_lr
         self.load = load
         #self.optimizer = self.build_optimizer(load=load, model=model, params=params)
         if params is not None:
@@ -53,7 +53,7 @@ class Optimizer_BP(Optimizer):
         self.update_after_epoch_init()
     def train(self, data):
         self.optimizer.zero_grad()
-        loss = get_items_from_dict(data, ['loss'])
+        loss = Getitems_FromDict(data, ['loss'])
         #loss = results['loss']
         loss.backward()
         self.optimizer.step()
@@ -70,6 +70,6 @@ class Optimizer_BP(Optimizer):
             self.scheduler.step()
     def update_lr_none(self, **kw):
         return
-    def get_current_lr(self):
+    def Getcurrent_lr(self):
         return self.optimizer.state_dict()['param_groups'][0]['lr']
 

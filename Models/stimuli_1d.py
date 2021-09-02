@@ -41,7 +41,7 @@ class ring_stimuli(object):
 
         
 
-    def get_activation(self, direct): #direct:(batch_size), range:(-pi, pi)
+    def Getactivation(self, direct): #direct:(batch_size), range:(-pi, pi)
         
         dists = ( self.unit_positions - direct )
 
@@ -51,7 +51,7 @@ class ring_stimuli(object):
 
 
 
-    def get_activation_single(self, pos): #pos:(batch_size, sequence_length, (x,y))
+    def Getactivation_single(self, pos): #pos:(batch_size, sequence_length, (x,y))
         expand_pos = torch.unsqueeze(pos, dim=2)
         #print(list(expand_pos.size()))
         expand_coords = torch.unsqueeze(torch.unsqueeze(self.coords, dim=0), dim=0)

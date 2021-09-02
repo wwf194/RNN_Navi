@@ -1,6 +1,6 @@
 from typing import Any
 
-from utils import EnsurePath, get_from_dict, set_instance_variable, search_dict
+from utils import EnsurePath, GetFromDict, set_instance_variable, search_dict
 
 class Trainer:
     def __init__(self, dict_, load=False):
@@ -17,9 +17,9 @@ class Trainer:
             self.anal_path = self.dict.setdefault('anal_path', './anal/')
 
         '''
-        self.epoch_index = get_from_dict(self.dict, 'epoch_index', default=self.epoch_start, write_default=True)
-        self.epoch_start = get_from_dict(self.dict, 'epoch_start', default=1, write_default=True)
-        self.epoch_end = get_from_dict(self.dict, 'epoch_end', default=self.epoch_um, write_default=True)
+        self.epoch_index = GetFromDict(self.dict, 'epoch_index', default=self.epoch_start, write_default=True)
+        self.epoch_start = GetFromDict(self.dict, 'epoch_start', default=1, write_default=True)
+        self.epoch_end = GetFromDict(self.dict, 'epoch_end', default=self.epoch_um, write_default=True)
         '''
         self.epoch_index = 0
         self.epoch_end = self.epoch_num - 1
@@ -30,9 +30,9 @@ class Trainer:
         EnsurePath(self.save_path)
 
         self.save = search_dict(self.dict, ['save', 'save_model'], default=True, write_default=True)
-        self.save_after_train = get_from_dict(self.dict, 'save_after_train', default=True, write_default=True)
-        self.save_before_train = get_from_dict(self.dict, 'save_before_train', default=True, write_default=True)
-        self.anal_before_train = get_from_dict(self.dict, 'anal_before_train', default=True, write_default=True)
+        self.save_after_train = GetFromDict(self.dict, 'save_after_train', default=True, write_default=True)
+        self.save_before_train = GetFromDict(self.dict, 'save_before_train', default=True, write_default=True)
+        self.anal_before_train = GetFromDict(self.dict, 'anal_before_train', default=True, write_default=True)
 
         if self.save:
             self.save_interval = search_dict(self.dict, ['save_interval', 'save_model_interval'], default=int(self.epoch_num / 10), write_default=True)
@@ -89,7 +89,7 @@ class Trainer:
                         print('batch=%d/%d' % (batch_index, self.batch_num))
                         self.agent.report_perform()
                         self.agent.reset_perform()
-                        print('lr: %.3e'%self.optimizer.get_lr())
+                        print('lr: %.3e'%self.optimizer.Getlr())
                 #batch_num += 1
             train_perform = self.agent.report_perform(prefix='train: ')
             
@@ -154,10 +154,10 @@ class Evaluator():
         self.device = self.options.device
     def evaluate(self):
         # evaluate model
-        train_loader, test_loader = self.data_loader.get_loader()
+        train_loader, test_loader = self.data_loader.Getloader()
         self.agent.reset_perform()
         for data in list(train_loader):
             inputs, labels = data
-            self.agent.get_perform(inputs.to(self.device), labels.to(self.device))
+            self.agent.Getperform(inputs.to(self.device), labels.to(self.device))
         test_perform = self.agent.report_perform(prefix='test: ')
 '''

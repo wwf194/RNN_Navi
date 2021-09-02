@@ -2,7 +2,7 @@
     "Type": "rnn_lif",
     "Neurons":{
         "Input":{
-            "Num":"^environment.Input.Num"
+            "Num":"^world.Input.Num"
         },
         "Recurrent":{
             "ExciInhi":{
@@ -71,7 +71,7 @@
             "Initialize.Method":"FromNeuronNum",
             "Neurons":{
                 "Num":[
-                    "^environment.InputInit.Num",
+                    "^world.InputInit.Num",
                     "$Neurons.Recurrent.Num // 2",
                     "$Neurons.Recurrent.Num"
                 ]

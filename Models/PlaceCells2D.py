@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from Models.rnn_lif import InitFromParam
 import random
 
 import scipy
@@ -13,36 +14,45 @@ import matplotlib.pyplot as plt
 
 import cv2 as cv
 
-from utils_torch import EnsurePath, search_dict, get_from_dict
-from utils.plot import *
+import utils
+from utils_torch import EnsurePath
+from utils_torch.plot import *
+#from utils_torch.plot import Getfloat_coords, Getfloat_coords_np, Getres_xy
 from utils.model import *
-from utils.plot import get_float_coords, get_float_coords_np, get_res_xy
 
-class Place_Cells(object):
-    def __init__(self, dict_, load=False, verbose=True):
-        self.dict = dict_
-        #print(self.dict.keys())
-        try:
-            self.N_num = self.dict['N_num']        
-        except Exception: # to support older version
-            self.N_num = self.dict['cell_num']
-        self.load = load
+def InitFromParam(param):
+    return PlaceCells2D(param)
 
-        self.device = self.dict['device']
-
-        self.verbose = verbose
+class PlaceCells2D(object):
+    def __init__(self, param=None):
+        self.data = EmptyPyObj()
+        if param is not None:
+            self.InitFromParam(param)
+    def InitFromParam(self, param):
+        self.param = param
+        if HasAttrs(param.XYs, "Initialize"):
+            EnsureAttrs(param.XYs.Initialize, "Method", default="FromFunctionCall")
+            if param.XYs.Initialize.Method in ["FromFunctionCall"]:
+                utils_torch.CallFunction(param.XYs.Initialize.Functions, ObjCurrent=self, ObjRoot=utils.ArgsGlobal["ObjRoot"], )
+            else:
+                raise Exception()
+    def ReceiveXYs(self, XYs):
+        param = self.param
+        data = self.data
+        data.XYs = XYs
+        SetAttrs(param, "XYs", default="*XYs")
 
     def bind_arenas(self, arenas, index=None):
         self.arenas = arenas
         if index is None:
             index = self.dict.setdefault('arena_index', 0)    
-        self.arena = self.arenas.get_arena(index)
+        self.arena = self.arenas.Getarena(index)
             
         if self.load:
             self.coords = self.dict['coords'].to(self.device)
             self.coords_np = self.coords.detach().cpu().numpy()
         else:
-            self.coords_np = self.arena.get_random_xy(self.N_num) # [N_num, (x,y)]
+            self.coords_np = self.arena.Getrandom_xy(self.N_num) # [N_num, (x,y)]
             self.coords = self.dict['coords'] = torch.from_numpy(self.coords_np).to(self.device)
             '''
             x = torch.zeros((self.N_num)).to(device)
@@ -62,7 +72,7 @@ class Place_Cells(object):
 
         #print('PlaceCells: type:%s'%self.type)
         if self.type in ['diff_gaussian', 'diff_gauss']:
-            self.get_act = self.get_act_dual_
+            self.Getact = self.Getact_dual_
             self.act_ratio = self.dict['act_ratio']
             self.act_positive = self.dict['act_positive']
             self.act_ratio_2 = self.act_ratio ** 2
@@ -73,18 +83,18 @@ class Place_Cells(object):
 
             #print('act_positive:%s'%(str(self.act_positive)))
         else:
-            self.get_act = self.get_activation = self.get_act_single
+            self.Getact = self.Getactivation = self.Getact_single
         if self.verbose:
             print('Place_Cells: type:%s act_decay:%f act_center:%f norm_local:%s separate_softmax:%s'% \
                 (self.type, self.act_decay, self.act_center, self.norm_local, self.separate_softmax))
             #input()
-    def get_act_batch(self, points): # points: [batch_size, (x,y)]
+    def Getact_batch(self, points): # points: [batch_size, (x,y)]
         points = torch.unsqueeze(points, dim=1) # [batch_size, 1, (x, y)]
-        pc_act = self.get_act(points) # [batch_size, 1, pc_num]
+        pc_act = self.Getact(points) # [batch_size, 1, pc_num]
         pc_act = torch.squeeze(pc_act, dim=1) # [batch_size, pc_num]
-        #print('get_act_batch: pc_act.size: %s'%str(pc_act.size())) # str(·) is necessary
+        #print('Getact_batch: pc_act.size: %s'%str(pc_act.size())) # str(·) is necessary
         return pc_act
-    def get_act_single(self, points): # points: [batch_size, step_num, (x,y)]
+    def Getact_single(self, points): # points: [batch_size, step_num, (x,y)]
         points = points.to(self.device)
         points_expand = torch.unsqueeze(points, dim=2) #points_expand:[batch_size, step_num, (x,y), 1]
         coords_expand = torch.unsqueeze(torch.unsqueeze(self.coords, dim=0), dim=0) #points_expand:[place_cells_num, (x,y )]
@@ -95,7 +105,7 @@ class Place_Cells(object):
         if self.norm_local:
             act /= torch.sum(act, dim=2, keepdim=True)         
         return self.act_center * act # pos:[batch_size, step_num, act]
-    def get_act_dual_(self, points):
+    def Getact_dual_(self, points):
         points = points.to(self.device)
         points_expand = torch.unsqueeze(points, dim=2)
         coords_expand = torch.unsqueeze(torch.unsqueeze(self.coords, dim=0), dim=0)
@@ -105,10 +115,10 @@ class Place_Cells(object):
         act_1 = torch.exp(- dist / (2 * self.act_decay_2 * self.act_ratio_2)) / self.act_ratio_2
         pc_act = self.act_center * (act_0 - act_1)
         pc_act = torch.squeeze(pc_act, dim=3) # [batch_size, step_num, pc_num]
-        #print('get_act_dual_: pc_act.size: %s'%str(pc_act.size()))
+        #print('Getact_dual_: pc_act.size: %s'%str(pc_act.size()))
         return pc_act.float()
 
-    def get_act_dual(self, points): # pos:[batch_size, step_num, (x,y)]
+    def Getact_dual(self, points): # pos:[batch_size, step_num, (x,y)]
         points = points.to(self.device)
         points_expand = torch.unsqueeze(points, dim=2)
         coords_expand = torch.unsqueeze(torch.unsqueeze(self.coords, dim=0), dim=0)
@@ -149,7 +159,7 @@ class Place_Cells(object):
         act_scale = self.act_center * act.float() # [batch_size, step_num, pc_num]
         return F.softmax(act_scale, dim=2)
 
-    def get_nearest_cell_pos(self, activation, k=3):
+    def Getnearest_cell_pos(self, activation, k=3):
         '''
         Decode position using centers of k maximally active place cells.
         Args: 
@@ -187,7 +197,7 @@ class Place_Cells(object):
 
         pos = pos.astype(np.float32)
         #Maybe specify dimensions here again?
-        pc_outputs = self.get_activation(pos)
+        pc_outputs = self.Getactivation(pos)
         pc_outputs = tf.reshape(pc_outputs, (-1, self.cell_num))
         C = pc_outputs@tf.transpose(pc_outputs)
         Csquare = tf.reshape(C, (res,res,res,res))
@@ -198,9 +208,9 @@ class Place_Cells(object):
         Cmean = np.roll(np.roll(Cmean, res//2, axis=0), res//2, axis=1)
         return Cmean
     
-    def get_act_map(self, arena, res=50):
+    def Getact_map(self, arena, res=50):
         width, height = self.arena.width, self.arena.height
-        res_x, res_y = get_res_xy(res, width, height)
+        res_x, res_y = Getres_xy(res, width, height)
         points_int = np.empty(shape=[res_x, res_y, 2], dtype=np.int) #coord
         for i in range(res_x):
             points_int[i, :, 1] = i # y_index
@@ -208,11 +218,11 @@ class Place_Cells(object):
             points_int[:, i, 0] = i # x_index
 
         #print(points_int)
-        points_float = get_float_coords_np( points_int.reshape(res_x * res_y, 2), self.arena.xy_range, res_x, res_y ) # [res_x * res_y, 2]
+        points_float = Getfloat_coords_np( points_int.reshape(res_x * res_y, 2), self.arena.xy_range, res_x, res_y ) # [res_x * res_y, 2]
         #print(points_float.reshape(res_x, res_y, 2))
         points_tensor = torch.unsqueeze(torch.from_numpy(points_float).to(self.device), axis=0) # [1, res_x * res_y, 2]
-        arena_mask = arena.get_mask(res_x=res_x, res_y=res_y, points_grid=points_float)
-        pc_act = self.get_act(points_tensor)
+        arena_mask = arena.Getmask(res_x=res_x, res_y=res_y, points_grid=points_float)
+        pc_act = self.Getact(points_tensor)
 
         # [1, res_x * res_y, place_cells_num] -> [res_x, res_y, place_cells_num]
         pc_act = pc_act.detach().cpu().numpy().squeeze() 
@@ -239,7 +249,7 @@ class Place_Cells(object):
         #print(arena_mask.shape)
         return pc_act, arena_mask
     def plot_place_cells_coords(self, ax=None, arena=None, save=True, save_path='./', save_name='place_cells_coords.png'):
-        arena = self.arenas.get_current_arena() if arena is None else arena
+        arena = self.arenas.Getcurrent_arena() if arena is None else arena
         if ax is None:
             plt.close('all')
             fig, ax = plt.subplots()
@@ -257,10 +267,10 @@ class Place_Cells(object):
         arena = self.arena if arena is None else arena
         
         if act_map is None:
-            act_map, arena_mask = self.get_act_map(arena=arena, res=res) # [N_num, res_x, res_y]
+            act_map, arena_mask = self.Getact_map(arena=arena, res=res) # [N_num, res_x, res_y]
         else:
             res_x, res_y = act_map.shape[1], act_map.shape[2]
-            arena_mask = arena.get_mask(res_x=res_x, res_y=res_y)
+            arena_mask = arena.Getmask(res_x=res_x, res_y=res_y)
 
         act_map = act_map[:, ::-1, :] # when plotting image, default origin is on top-left corner.
         act_max = np.max(act_map)
@@ -283,7 +293,7 @@ class Place_Cells(object):
         
         act_map_norm = ( act_map - act_min ) / (act_max - act_min) # normalize to [0, 1]
 
-        cmap_func = plt.cm.get_cmap(cmap)
+        cmap_func = plt.cm.Getcmap(cmap)
         act_map_mapped = cmap_func(act_map_norm) # [N_num, res_x, res_y, (r,g,b,a)]
         for i in range(act_map_mapped.shape[0]):
             act_map_mapped[i,:,:,:] = cv.GaussianBlur(act_map_mapped[i,:,:,:], ksize=(3,3), sigmaX=1, sigmaY=1)
@@ -339,7 +349,7 @@ class Place_Cells(object):
             plt.close()
         
 
-    def get_coords_from_act(self, output, sample_num=3): # output: [batch_size, step_num, pc_num], np.ndarray
+    def Getcoords_from_act(self, output, sample_num=3): # output: [batch_size, step_num, pc_num], np.ndarray
         sample_num = 3
         '''
         sample_num = int(self.N_num / 100)
@@ -357,3 +367,4 @@ class Place_Cells(object):
 
         return coords_max.mean(axis=2)
         
+__MainClass__ = PlaceCells2D

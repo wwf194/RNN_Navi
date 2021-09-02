@@ -3,7 +3,7 @@ import sys
 sys.path.append('./Optimizers/')
 
 import torch
-from utils import get_from_dict, set_instance_variable, search_dict
+from utils import GetFromDict, set_instance_variable, search_dict
 import model
 
 from LRSchedulers import LinearLR
@@ -13,7 +13,7 @@ class Optimizer(abc.ABC):
         #if options is not None:
         #    self.receive_options(options)
         self.dict = dict_
-        self.verbose = get_from_dict(self.dict, 'verbose', default=True, write_default=True)
+        self.verbose = GetFromDict(self.dict, 'verbose', default=True, write_default=True)
         #set_instance_variable(self, self.dict)
     def bind_model(self, model, verbose=True):
         if self.model is not None:

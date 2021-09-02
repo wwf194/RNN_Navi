@@ -11,7 +11,7 @@
         "args":[
             {
                 "name":"utils_torch",
-                "path":"!get_from_config"
+                "path":"!Getfrom_config"
             },
             {
                 "name":"utils_local",

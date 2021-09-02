@@ -25,7 +25,7 @@ class LSTM_Navi(nn.Module):
             self.lstm = nn.LSTM(input_size=self.dict["input_num"], hidden_size=self.dict["N_num"], batch_first=True)
             self.lstm.load_state_dict(self.dict["lstm_dict"])
             self.f = self.dict["f"]
-            init_method = get_name(self.dict["init_method"])
+            init_method = Getname(self.dict["init_method"])
             if init_method in ["input", "linear"]:
                 self.i_0_h = nn.Parameter(self.dict["i_0_h"])
                 self.i_0_c = nn.Parameter(self.dict["i_0_c"])
@@ -50,7 +50,7 @@ class LSTM_Navi(nn.Module):
                 self.place_cells = PlaceCells(dict_ = self.dict["place_cells"])
                 self.place_cells_num = self.dict["place_cells"]["cell_num"]
 
-            init_method = get_name(self.dict["init_method"])
+            init_method = Getname(self.dict["init_method"])
             if init_method in ["linear", "input", "mlp"]:
                 if(task in ["pc"]):
                     input_dim = self.place_cells_num
@@ -65,17 +65,17 @@ class LSTM_Navi(nn.Module):
                 self.dict["i_0_c"] = self.i_0_c
 
                 if("i_0_h" in positive_weight):
-                    self.get_i_0_x = lambda :torch.abs(self.i_0_x)
+                    self.Geti_0_x = lambda :torch.abs(self.i_0_x)
                 else:
-                    self.get_i_0_x = lambda :self.i_0_x
+                    self.Geti_0_x = lambda :self.i_0_x
                 if("i_0_c" in positive_weight):
-                    self.get_i_0_r = lambda :torch.abs(self.i_0_r)
+                    self.Geti_0_r = lambda :torch.abs(self.i_0_r)
                 else:
-                    self.get_i_0_r = lambda :self.i_0_r
+                    self.Geti_0_r = lambda :self.i_0_r
             elif init_method=="mlp":
-                self.encoder, self.dict["encoder_dict"] = build_mlp(get_arg(self.dict["init_method"]))
+                self.encoder, self.dict["encoder_dict"] = build_mlp(Getarg(self.dict["init_method"]))
                 #print(isinstance(self.dict["encoder_dict"], dict))
-                #print(get_arg(self.dict["init_method"])["layer_dicts"])
+                #print(Getarg(self.dict["init_method"])["layer_dicts"])
                 #input()
                 self.add_module("encoder", self.encoder)
             elif init_method=="fixed":
@@ -92,17 +92,17 @@ class LSTM_Navi(nn.Module):
 
         self.add_module("lstm", self.lstm)
 
-        self.get_f = lambda :self.f
+        self.Getf = lambda :self.f
         
         self.task = self.dict["task"]
         if self.task=="pc":
-            self.get_loss = self.get_loss_pc
+            self.Getloss = self.Getloss_pc
             self.loss_list = {"pc":0.0, "act":0.0, "weight":0.0}
         elif self.task=="coords":
-            self.get_loss = self.get_loss_coords
+            self.Getloss = self.Getloss_coords
             self.loss_list = {"coords":0.0, "act":0.0, "weight":0.0}
         elif self.task=="pc_coords":
-            self.get_loss = self.get_loss_pc_coords
+            self.Getloss = self.Getloss_pc_coords
             self.loss_list = {"pc":0.0, "coords":0.0, "act":0.0, "weight":0.0}
         else:
             raise Exception("Invalid task:"+str(self.task))
@@ -122,7 +122,7 @@ class LSTM_Navi(nn.Module):
             self.dict["pc_error"] = 0.0
         self.loss_count = 0
     def prepare_x_0_pc(self, x_0): #(batch_size, 2)
-        return torch.squeeze( self.place_cells.get_activation( torch.unsqueeze( x_0, 1 ) ) ).float()
+        return torch.squeeze( self.place_cells.Getactivation( torch.unsqueeze( x_0, 1 ) ) ).float()
     def prepare_x_0_coords(self, x_0):
         return x_0.float()
     def prepare_x_linear(self, x, x_0):
@@ -148,7 +148,7 @@ class LSTM_Navi(nn.Module):
         x = x.to(device)
         i_, init_state = self.prepare_x(x, x_0)
         act, (h_n, c_n) = self.lstm(i_, init_state)
-        output = torch.matmul(act, self.get_f()) #(batch_size, sequence_length, N_num) x (N_num, output_num) = (batch_size, sequence_length, output_num)
+        output = torch.matmul(act, self.Getf()) #(batch_size, sequence_length, N_num) x (N_num, output_num) = (batch_size, sequence_length, output_num)
         return output, act
         #return output_list, act_list
     def report_loss(self):
@@ -162,7 +162,7 @@ class LSTM_Navi(nn.Module):
         #print(self.loss_count)
         for key in self.loss_list.keys():
             self.loss_list[key] = 0.0
-    def get_loss_coords(self, x, y): #x:(batch_size, sequence_length, input_num), y:(batch_size, sequence_length, output_num)
+    def Getloss_coords(self, x, y): #x:(batch_size, sequence_length, input_num), y:(batch_size, sequence_length, output_num)
         output, act = self.forward(x)
         self.dict["act_avg"] = torch.mean(torch.abs(act))
         loss_coords = coords_index * F.mse_loss(output, y, reduction='mean')
@@ -174,10 +174,10 @@ class LSTM_Navi(nn.Module):
         self.loss_list["coords"] = self.loss_list["coords"] + loss_coords.item()
         self.loss_count += 1
         return loss_coords + loss_act + loss_weight
-    def get_loss_pc(self, x, y):
+    def Getloss_pc(self, x, y):
         output, act = self.forward(x)
         self.dict["act_avg"] = torch.mean(torch.abs(act))
-        pc_output = self.place_cells.get_activation(y)
+        pc_output = self.place_cells.Getactivation(y)
         self.dict["pc_error"] = ( torch.sum(torch.abs(output - pc_output)) / torch.sum(torch.abs(pc_output)) ).item() #relative place cells prediction error
         if(self.dict["pc_loss"]=="MSE"):
             loss_pc = index["pc"] * F.mse_loss(output, pc_output, reduction='mean')
@@ -203,10 +203,10 @@ class LSTM_Navi(nn.Module):
         self.loss_list["pc"] = self.loss_list["pc"] + loss_pc.item()
         self.loss_count += 1
         return loss_pc + loss_act + loss_weight
-    def get_loss_pc_coords(self, x, y):
+    def Getloss_pc_coords(self, x, y):
         output, act = self.forward(x)
         self.dict["act_avg"] = torch.mean(torch.abs(act))
-        pc_output = self.place_cells.get_activation(y)
+        pc_output = self.place_cells.Getactivation(y)
         loss_coords = index["pc"] * F.mse_loss(output[:, :, 0:2], pc_output, reduction='mean')
         loss_pc = coords_index * F.mse_loss(output[:, :, 2:-1], pc_output, reduction='mean')
         self.dict["pc_error"] = ( torch.sum(torch.abs(output[:, :, 2:-1] - pc_output)) / torch.sum(torch.abs(pc_output)) ).item() #relative place cells prediction error
@@ -225,9 +225,9 @@ class LSTM_Navi(nn.Module):
         #pickle.dump(net.dict, f)
         net = self.to(device)
         f.close()
-    def get_weight(self, name, positive=True, detach=False):
+    def Getweight(self, name, positive=True, detach=False):
         if name=="r":
             if positive:
-                return torch.abs(self.N.get_r_noself())
+                return torch.abs(self.N.Getr_noself())
             else:
-                return self.N.get_r()
+                return self.N.Getr()

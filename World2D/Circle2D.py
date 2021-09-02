@@ -11,8 +11,8 @@ class Circle2D(Environments.Arena2D):
     def __init__(self, param=None):
         super().__init__()
         if param is not None:
-            self.InitFromParams(param)
-    def InitFromParams(self, param):
+            self.InitFromParam(param)
+    def InitFromParam(self, param):
         self.param = param
         CheckAttrs(param, "Type", value="Circle2D")
         EnsureAttrs(param, "Initialize.Method", default="CenterRadius")
@@ -25,11 +25,11 @@ class Circle2D(Environments.Arena2D):
         if isinstance(self.CenterXy, list):
             self.CenterXy = np.array(self.CenterXy, dtype=np.float)
 
-        self.get_random_max = self.get_random_square = self.get_random_max_rectangle
+        self.Getrandom_max = self.Getrandom_square = self.Getrandom_max_rectangle
         
         self.avoid_border = self.avoid_border_circle
         self.out_of_region = self.out_of_region_circle
-        self.get_random_xy = self.get_random_xy_circle
+        self.Getrandom_xy = self.Getrandom_xy_circle
         
         self.plot_arena = self.plot_arena_plt
         #self.plot_arena(save_path="./anal/", save_name="arena_plot_circle.png")
@@ -53,7 +53,7 @@ class Circle2D(Environments.Arena2D):
         Vector2Center = self.CenterXy[np.newaxis, :] - Points # [point_num, (x, y)]
         Distance2Center = np.linalg.norm(Vector2Center, axis=-1) # [point_num]
         return Distance2Center
-    def get_dist_and_theta_from_center(self, xy): # xy: [point_num, 2]
+    def Getdist_and_theta_from_center(self, xy): # xy: [point_num, 2]
         vec_from_center = xy - self.CenterXy[np.newaxis, :] # [point_num, (x, y)]
         dist_from_center = np.linalg.norm(vec_from_center, ord=2, axis=-1) # [point_num]
         theta_from_center = np.arctan2(xy[:, 1], xy[:, 0])
@@ -67,7 +67,7 @@ class Circle2D(Environments.Arena2D):
     def avoid_border_circle(self, xy, theta, thres=None): # xy: [batch_size, (x, y)], theta: velocity direction.
         if thres is None or thres in ["default"]:
             thres = self.border_region_width
-        dist_from_center, theta_from_center = self.get_dist_and_theta_from_center(xy) # [batch_size]
+        dist_from_center, theta_from_center = self.Getdist_and_theta_from_center(xy) # [batch_size]
 
         #print(theta_from_center)
         theta_offset = theta - theta_from_center # [batch_size] 
@@ -133,7 +133,7 @@ class Circle2D(Environments.Arena2D):
                 ax.set_xlim(self.x0, self.x1)
                 ax.set_ylim(self.y0, self.y1)
                 ax.set_aspect(1) # so that x and y has same unit length in image.
-        points = self.get_random_xy(num=100)
+        points = self.Getrandom_xy(num=100)
         ax.scatter(points[:,0], points[:,1], marker="o", color=color, edgecolors=(0.0,0.0,0.0), label="Start Positions")
         plt.legend()
 
@@ -144,6 +144,6 @@ class Circle2D(Environments.Arena2D):
 
     def ReportInfo(self):
         param = self.param
-        utils.add_log("Circle2D: ", end="")
-        utils.add_log("CenterXy:(%.1f, %.1f)"%(param.CenterXy.X, param.CenterXy.Y))
-        utils.add_log("Radius:(%.3f)"%param.Radius)
+        utils.AddLog("Circle2D: ", end="")
+        utils.AddLog("CenterXy:(%.1f, %.1f)"%(param.CenterXy.X, param.CenterXy.Y))
+        utils.AddLog("Radius:(%.3f)"%param.Radius)
