@@ -3,11 +3,8 @@ import math
 from enum import IntEnum
 import numpy as np
 from utils_torch.attrs import EnsureAttrs
-from utils_torch.geometry import Polar2XY, XY2Polar, XY2PolarNp
+from utils_torch.geometry2D import Polar2XY, XY2Polar, XY2PolarNp
 
-def Distance2Edges(PointsNp, EdgeVerticesNp, EdgeNormsNp):
-    Points2EdgeVertices = EdgeVerticesNp[:, np.newaxis, :] - PointsNp[np.newaxis, :, :] # [1, VerticesNum, 2] - [PointNum, 1, 2] = [PointsNum, VerticesNum, 2]
-    return np.sum(Points2EdgeVertices * EdgeNormsNp[np.newaxis, :, :], axies=-1)
 
 class LatticeState(IntEnum):
     Undefined = 0,
@@ -30,7 +27,7 @@ class Direction(IntEnum):
 class SquareLattice:
     def __init__(self, param=None):
         if param is not None:
-            self.InitFromParam(param)
+            self.param = param
     def InitFromParam(self, param):
         self.param = param
         self.LatticeState = np.array()

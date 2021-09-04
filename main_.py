@@ -23,7 +23,7 @@ from inspect import getmembers, isfunction
 sys.path.append('./src/')
 import ConfigSystem
 #print(sys.path)
-from utils import build_model, build_agent, build_arenas, build_Optimizer, build_trainer, copy_folder, cal_path_rel_main, Getitems_FromDict
+from utils import build_model, build_agent, build_arenas, build_Optimizer, build_trainer, copy_folder, cal_path_rel_main, GetItemsFromDict
 from utils import scan_files, copy_files, path_to_module, remove_suffix, select_file, EnsurePath, Getdevice, import_file, join_path
 #from config import Options
 from utils_anal import compare_traj, Getinput_output
@@ -294,7 +294,7 @@ def Getparam_file(args, verbose=True):
         'param_path': param_path,
     }
 def Getparam_dict(args, verbose=True):
-    param_file, param_path = Getitems_FromDict(Getparam_file(args), ['param_file', 'param_path'])
+    param_file, param_path = GetItemsFromDict(Getparam_file(args), ['param_file', 'param_path'])
     #print(param_file.keys())
 
     '''
@@ -371,7 +371,7 @@ def copy_project_files(args, verbose=True):
     copy_files(file_list, path_from='./', path_to=path, verbose=verbose)
     
     # select and copy param files
-    param_file, param_path = Getitems_FromDict(Getparam_file(args), ['param_file', 'param_path'])
+    param_file, param_path = GetItemsFromDict(Getparam_file(args), ['param_file', 'param_path'])
     #print('param_file: %s'%param_file)
     if isinstance(param_file, list):
         param_file = list(map(lambda file:join_path(param_path, file), param_file))

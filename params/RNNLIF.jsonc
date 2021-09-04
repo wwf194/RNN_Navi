@@ -1,5 +1,5 @@
 {
-    "Type": "rnn_lif",
+    "Type": "RNNLIF",
     "Neurons":{
         "Input":{
             "Num":"^world.Input.Num"

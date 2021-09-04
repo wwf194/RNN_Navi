@@ -16,9 +16,13 @@
             ]
         },
         {
-            "Type": "Circle",
-            "Center": [0.0, 0.0],
-            "Radius": [1.0],
+            "Shapes":[
+                {
+                    "Type": "Circle",
+                    "Center": [0.0, 0.0],
+                    "Radius": 1.0,
+                }
+            ]
         }
     ],
     "Input":{

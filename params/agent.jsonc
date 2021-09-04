@@ -1,12 +1,19 @@
 {
     "Initialize":[
         {
-            "Name": "CreateAttr",
+            "Type": "BuildObj",
             "Args": {
-                "AttrName": "PlaceCells",
-                "Class": "Models.PlaceCells2D",
-                "param": "&param.PlaceCells"
-            }
+                "ParamPath": "&param.PlaceCells",
+                "MountPath": "&PlaceCells",
+                "ModulePath": "Models.PlaceCells2D"
+            },
+
+        },
+        {
+            "Type": "FunctionCall",
+            "Args": [
+                ["&PlaceCells.InitFromParam", []]
+            ]
         }
     ],
     "PlaceCells":{

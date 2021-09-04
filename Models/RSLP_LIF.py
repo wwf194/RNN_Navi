@@ -11,7 +11,7 @@ import matplotlib as mpl
 from matplotlib import pyplot as plt
 
 import utils
-from utils import set_instance_variable, contain, Getname, Getitems_FromDict, Getname_args, EnsurePath, Getnp_stat
+from utils import set_instance_variable, contain, Getname, GetItemsFromDict, Getname_args, EnsurePath, Getnp_stat
 #from utils_anal import *
 from model import Getact_func, Getmask, Getei_mask, init_weight, build_mlp, print_model_param, Gettensor_info, Gettensor_stat
 from utils_plot import norm_and_map
@@ -325,7 +325,7 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
             update_mlp(self.dict['encoder_dict'], self.encoder_layers)
     '''
     def forward(self, data): # ([batch_size, step_num, input_num], [batch_size, input_num])
-        x, x_init = Getitems_FromDict(data, ['input', 'input_init'])
+        x, x_init = GetItemsFromDict(data, ['input', 'input_init'])
         x_init = x_init.to(self.device) # [batch_size, input_init_num]
         x = x.to(self.device) # [batch_size, step_num, input_num]
 
@@ -352,10 +352,10 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
         batch_size, step_num = x.size(0), x.size(1)
         act_list = []
         output_list = []
-        s, h = Getitems_FromDict(self.cal_init_state(x_init=x_init), ['s_init', 'h_init'])
+        s, h = GetItemsFromDict(self.cal_init_state(x_init=x_init), ['s_init', 'h_init'])
         for time in range(x_size[1]):
             state = self.forward_once(s=s, h=h, i=i[:, time, :])
-            s, u, h, o = Getitems_FromDict(state, ['s', 'u', 'h', 'o'])
+            s, u, h, o = GetItemsFromDict(state, ['s', 'u', 'h', 'o'])
             act_list.append(u) # [batch_size, N_num]
             output_list.append(o) # [batch_size, output_num]
         
@@ -416,7 +416,7 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
         if ax is None:
             #fig, ax = plt.subplots(figsize = (step_num / 20 * 5, plot_N_num / 20 * 5)) # figsize: (width, height), in inches
             fig, ax = plt.subplots(nrows=1, ncols=1, figsize = (plot_N_num / 20 * 2, step_num / 20 * 2))
-        data_min, data_max, data_mean, data_std = Getitems_FromDict(Getnp_stat(data, verbose=verbose), ['min','max','mean','std'])
+        data_min, data_max, data_mean, data_std = GetItemsFromDict(Getnp_stat(data, verbose=verbose), ['min','max','mean','std'])
         #print(np.argmax(data))
         #print(unravel_index(data.argmax(), data.shape))
 
@@ -477,10 +477,10 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
         return ax
     '''
     def cal_perform_coord(self, data):
-        output_truth = Getitems_FromDict(data, ['output'])
+        output_truth = GetItemsFromDict(data, ['output'])
         # x: [batch_size, step_num, input_num]
         # y: [batch_size, step_num, output_num]
-        output, act = Getitems_FromDict(self.forward(data), ['output', 'act'])
+        output, act = GetItemsFromDict(self.forward(data), ['output', 'act'])
         self.dict['act_avg'] = torch.mean(torch.abs(act))
         loss_coords = self.main_coeff * F.mse_loss(output, y, reduction='mean')
         #loss_coords = 0.0
@@ -500,9 +500,9 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
         #self.sample_count += self
         return loss_coords + loss_act + loss_weight
     def cal_perform_pc(self, data):
-        x, x_init, output_truth = Getitems_FromDict(data, ['input', 'input_init', 'output'])
+        x, x_init, output_truth = GetItemsFromDict(data, ['input', 'input_init', 'output'])
         batch_size = x.size(0)
-        output, act = Getitems_FromDict(self.forward(data), ['output', 'act'])
+        output, act = GetItemsFromDict(self.forward(data), ['output', 'act'])
         
         self.dict['act_avg'] = torch.mean(torch.abs(act))
         
@@ -553,9 +553,9 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
         }
     def cal_perform_pc_coord(self, data):
         #x, y = self.prep_path(path)
-        y = Getitems_FromDict(data, ['output'])
+        y = GetItemsFromDict(data, ['output'])
         batch_size = y.size(0)
-        output, act = Getitems_FromDict(self.forward(data), ['output', 'act'])
+        output, act = GetItemsFromDict(self.forward(data), ['output', 'act'])
         self.dict['act_avg'] = torch.mean(torch.abs(act))
         pc_output = self.place_cells.Getact(y)
         loss_coords =self.main_coeff_pc * F.mse_loss(output[:, :, 0:2], pc_output, reduction='mean')
@@ -603,7 +603,7 @@ class RSLP_LIF(nn.Module): # recurrent single layer perceptron with leak-integra
     def Getoutput_ratio_pc(self, path, verbose):
         x, y = self.prep_path(path)
         pc_output = self.place_cells.Getact(y)
-        output, act = Getitems_FromDict(self.forward(x), ['output', 'act'])
+        output, act = GetItemsFromDict(self.forward(x), ['output', 'act'])
         pc_mean = torch.mean(pc_output).item()
         pc_pred_mean = torch.mean(output).item()
         if verbose:

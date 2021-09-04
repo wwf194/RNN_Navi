@@ -56,7 +56,11 @@ def Getrequired_file_recur(file, file_list):
             #print('file_rel_main: %s'%file_rel_main)
             Getrequired_file_recur(file_rel_main, file_list)
 
-
+def SetSaveDir():
+    import utils_torch
+    SaveDir = "./log/Experiment-%s/"%(GetTime("%Y-%m-%d-%H:%M:%S"))
+    utils_torch.EnsureDir(SaveDir)
+    ArgsGlobal.SaveDir = SaveDir
 def SetLoggerGlobal():
     ArgsGlobal.logger_global = Getlogger('log-global')
 
@@ -69,8 +73,12 @@ def Getlogger(logger_name='log'):
     console_handler.setLevel(logging.DEBUG) # 指定被处理的信息级别为最低级DEBUG，低于level级别的信息将被忽略
     if not os.path.exists("./log/"):
         os.mkdir("./log/")
+    
+    if not hasattr(ArgsGlobal, "SaveDir"):
+        SetSaveDir()
+
     # 输出到file
-    file_handler = logging.FileHandler("./log/%s-%s.txt"%(logger_name, GetTime("%Y-%m-%d-%H:%M:%S")), mode='w', encoding='utf-8')  # 不拆分日志文件，a指追加模式,w为覆盖模式
+    file_handler = logging.FileHandler(ArgsGlobal.SaveDir + "%s-%s.txt"%(logger_name, GetTime("%Y-%m-%d-%H:%M:%S")), mode='w', encoding='utf-8')  # 不拆分日志文件，a指追加模式,w为覆盖模式
     file_handler.setLevel(logging.DEBUG)            
     logger = logging.getLogger("LoggerMain")
     logger.setLevel(logging.DEBUG)

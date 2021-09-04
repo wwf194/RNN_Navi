@@ -1,66 +1,75 @@
 [
     {
-        "name":"LoadParameterFile",
-        "args":[
+        "Type":"LoadJsonFile",
+        "Args":[
             {
-                "path":"./params/rnn_lif_simple.jsonc",
-                "name":"model",
+                "FilePath":"./params/RNNLIF.jsonc",
+                "MountPath":"&^param.model",
             },
             {
-                "path":"./params/arena_square.jsonc",
-                "name":"world",
+                "FilePath":"./params/arena_square.jsonc",
+                "MountPath":"&^param.world"
             },
             {
-                "path":"./params/agent.jsonc",
-                "name":"agent"
+                "FilePath":"./params/agent.jsonc",
+                "MountPath":"&^param.agent"
             }
         ]
     },
     {
-        "name":"ParseParameter",
-        "args":{}
+        "Type":"ParseParamStatic",
     },
     {
-        "name":"BuildObject",
-        "args":[
+        "Type":"BuildObject",
+        "Args":[
             {
-                "name": "model",
-                "ModulePath": "Models.rnn_lif",
-                "ParamName": "model",
+                "ParamPath": "&^param.model",
+                "ModulePath": "Models.RNNLIF",
+                "MountPath": "&^object.model",
             },
             {
-                "name": "world",
+                "ParamPath": "&^param.world",
                 "ModulePath": "World2D.Arenas2D",
-                "ParamName": "world",
+                "MountPath": "&^object.world",
             },
             {
-                "name": "agent",
+                "ParamPath": "&^param.agent",
                 "ModulePath": "Agents.Agent",
-                "ParamName": "agent"
+                "MountPath": "&^object.agent"
             }
         ]
     },
+
     {
-        "name": "Train",
-        "args": {
-            "type": "SupervisedLearning",
-            "method": "GradientDescend",
-            "mode": "EpochBatch",
-            "epoch.Num": 200,
-            "batch.Num": "$1000 * 2$",
-            "batch.size": "200",
+        "Type": "FunctionCall",
+        "Args":[
+            ["&^world.InitFromParam", []],
+            ["&^agent.InitFromParam", []],
+            ["&^agent.PlotPlaceCells", []]
+        ]
+    },
+    {
+        "Type": "Train",
+        "Args": {
+            "Type": "SupervisedLearning",
+            "Method": "GradientDescend",
+            "Mode": "EpochBatch",
+            "Epoch.Num": 200,
+            "Batch.Num": "$1000 * 2$",
+            "Batch.Size": "200",
             "TrajectoryConfig": {
-                "NumPerBatch": "$args.batch.size",
+                "NumPerBatch": "$Args.batch.size",
                 "stepPerBatch": 50,
             },
-            "batch.internal":[
+            "Batch.Internal":[
                 "TrajectoryConfig |--> &agent.generateRandomTrajectory |--> Trajectory",
                 "Trjectory |--> &agent.generateModelInput |--> ModelInput",
                 "Trajectory |--> &agent.generateModelOutput |--> ModelOutputTarget",
-                "[ModelInput, ModelOutputTraget] |--> &model.train |--> ModelOutput",
+                "[ModelInput, ModelOutputTraget] |--> &Model.train |--> ModelOutput",
             ]
         }
     },
+
 ]
 
 

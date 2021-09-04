@@ -1,11 +1,15 @@
-
-import json
-from typing import List
-import json5
 import re
+import json
+import json5
+from typing import List
 
+import utils
 from utils.python import CheckIsLegalPyName
+#from utils import AddWarning
 # from utils_torch.utils import ListAttrs # leads to recurrent reference.
+
+def EmptyPyObj():
+    return PyObj()
 
 class PyObj(object):
     def __init__(self, param=None):
@@ -29,7 +33,7 @@ class PyObj(object):
                 ListParsed.append(Item)
         return ListParsed
     def FromDict(self, dict_):
-        self.__dict__ = {}
+        #self.__dict__ = {}
         for key, value in dict_.items():
             if "." in key:
                 keys = key.split(".")
@@ -38,7 +42,7 @@ class PyObj(object):
                 for index, key in enumerate(keys):
                     if index == len(keys) - 1:
                         if hasattr(obj, key):
-                            utils_torch.AddWarning("PyObj: Overwriting key: %s. Original Value: %s, New Value: %s"\
+                            utils.AddWarning("PyObj: Overwriting key: %s. Original Value: %s, New Value: %s"\
                                 %(key, getattr(obj, key), value))
                         setattr(obj, key, value)
                     if hasattr(obj, key):

@@ -18,7 +18,7 @@ from matplotlib.lines import Line2D
 import cv2 as cv
 
 # import utils
-# from utils_torch import GetFromDict, Getitems_FromDict, search_dict, Getname_args, EnsurePath, contain, remove_suffix, Getax
+# from utils_torch import GetFromDict, GetItemsFromDict, search_dict, Getname_args, EnsurePath, contain, remove_suffix, Getax
 # from utils_torch.plot import Getres_xy, PlotPolyLineFromVerticesPlt, Getint_coords_np, norm_and_map
 # import utils.train
 # from utils.train import set_train_info
@@ -36,12 +36,22 @@ def InitFromParam(param):
 class Agent(object):
     def __init__(self, param=None):
         if param is not None:
-            self.InitFromParam(param)        
-    def InitFromParam(self, param):
-        self.param = param
+            self.param = param        
+    def InitFromParam(self, param=None):
+        if param is not None:
+            self.param = param
+        else:
+            param = self.param
+        utils.AddLog("Agent: Initializing.")
         EnsureAttrs(param, "Initialize", default=[])
         for Task in param.Initialize:
-            utils_torch.ImplementInitializeTask(Task, self, utils.ArgsGlobal["ObjRoot"])
+            utils_torch.ImplementInitializeTask(Task, ObjCurrent=self, ObjRoot=utils.ArgsGlobal.object)
+        utils.AddLog("Agent: Initialized.")
+    def PlotPlaceCells(self):
+        param = self.param
+        ax = utils.ArgsGlobal.object.world.Arenas[0].PlotArena(Save=False)        
+        self.PlaceCells.PlotXYs(ax, Save=True)
+
     def report_perform(self, prefix='', verbose=True):
         report = prefix
         for key in self.perform_list.keys():
@@ -64,7 +74,7 @@ class Agent(object):
         return # to be implemented
 
     def prep_data(self, path):
-        dxy, xy_init, xy = Getitems_FromDict(self.prep_path(path), ['input', 'input_init', 'output'])
+        dxy, xy_init, xy = GetItemsFromDict(self.prep_path(path), ['input', 'input_init', 'output'])
         #print('Agent.prep_data: xy_init.shape: %s'%str(xy_init.size()))
         if self.task in ['pc']:
             data = {
@@ -88,9 +98,9 @@ class Agent(object):
         else:
             dict_['save_path'] = save_path
         EnsurePath(save_path)
-        save, save_interval, save_before_train, save_after_train = Getitems_FromDict(dict_,
+        save, save_interval, save_before_train, save_after_train = GetItemsFromDict(dict_,
             ['save', 'save_interval', 'save_before_train', 'save_after_train'])
-        anal, anal_interval, anal_before_train, anal_after_train = Getitems_FromDict(dict_,
+        anal, anal_interval, anal_before_train, anal_after_train = GetItemsFromDict(dict_,
             ['anal', 'anal_interval', 'anal_before_train', 'anal_after_train'])
 
         batch_num = dict_['batch_num']
@@ -135,7 +145,7 @@ class Agent(object):
                 #optimizer.train(data)
                 # expansion of optimizer.train(data)
                 optimizer.optimizer.zero_grad()
-                loss = Getitems_FromDict(data, ['loss'])
+                loss = GetItemsFromDict(data, ['loss'])
                 #loss = results['loss']
                 #self.model.Getweight_info()
                 loss.backward()
@@ -183,8 +193,8 @@ class Agent(object):
         data.update(self.model.forward(data))
         return data
     def cal_perform(self, data):
-        output_truth = Getitems_FromDict(data, ['output'])
-        output, act = Getitems_FromDict(self.forward(data), ['output', 'act'])
+        output_truth = GetItemsFromDict(data, ['output'])
+        output, act = GetItemsFromDict(self.forward(data), ['output', 'act'])
         data.update({
             'output': output_truth,
             'output_pred': output,
@@ -196,16 +206,16 @@ class Agent(object):
     def cal_loss_main_mse(self, data):
         return
     def cal_loss_main_cel(self, data):
-        output_pred, output_truth = Getitems_FromDict(data, ['output_pred', 'output_truth'])
+        output_pred, output_truth = GetItemsFromDict(data, ['output_pred', 'output_truth'])
         loss_main = - self.main_coeff * torch.mean( F.log_softmax(output_pred, dim=2) * output_truth)
         return loss_main
     def cal_perform_(self, data):
-        input_, output_truth = Getitems_FromDict(data, ['input', 'output'])
+        input_, output_truth = GetItemsFromDict(data, ['input', 'output'])
         
         #output_truth = transforms.Normalize(0, 1)(output_truth)
         batch_size = input_.size(0)
-        #output, act = Getitems_FromDict(self.forward(data), ['output', 'act'])
-        output_pred, act = Getitems_FromDict(data, ['output_pred', 'act'])
+        #output, act = GetItemsFromDict(self.forward(data), ['output', 'act'])
+        output_pred, act = GetItemsFromDict(data, ['output_pred', 'act'])
         #print('output_pred_max: %s'%torch.max(torch.abs(output_pred)))
         #print('output_pred_mean: %s'%torch.mean(torch.abs(output_pred)))
         #self.model.Getweight_stat(complete=False)
@@ -234,7 +244,6 @@ class Agent(object):
             output_truth_softmax = F.softmax(8.0 * output_truth, dim=2)
             #print(output_truth_softmax[-1, -1])
             #Gettensor_stat(output_truth_softmax, name='output_truth_softmax')
-            
             output_pred_softmax = F.softmax(8.0 * output_pred, dim=2)
             #print(output_pred_softmax[-1, -1])
             #Gettensor_stat(output_pred_softmax, name='output_pred_softmax')
@@ -293,9 +302,9 @@ class Agent(object):
         return loss_weight
     def cal_perform_pc_coord(self, data):
         #x, y = self.prep_path(path)
-        y = Getitems_FromDict(data, ['output'])
+        y = GetItemsFromDict(data, ['output'])
         batch_size = y.size(0)
-        output, act = Getitems_FromDict(self.forward(data), ['output', 'act'])
+        output, act = GetItemsFromDict(self.forward(data), ['output', 'act'])
         self.dict['act_avg'] = torch.mean(torch.abs(act))
         pc_output = self.place_cells.Getact(y)
         loss_coord =self.main_coeff_pc * F.mse_loss(output[:, :, 0:2], pc_output, reduction='mean')
@@ -546,7 +555,7 @@ class Agent(object):
         data = self.prep_data(path)
         #print(data.keys())
         data = self.cal_perform(data)
-        output_pred = Getitems_FromDict(data, ['output_pred']) # act: [plot_num, step_num, N_num]
+        output_pred = GetItemsFromDict(data, ['output_pred']) # act: [plot_num, step_num, N_num]
         output_pred = output_pred.detach().cpu().numpy()
         if self.task in ['coord']:
             xy_pred = output_pred # [plot_num, step_num, (x, y)]
@@ -665,7 +674,7 @@ class Agent(object):
             with torch.no_grad():
                 model.eval()
                 path = self.walk_random(num=batch_size, arena=arena, step_num=step_num)
-                output, act = Getitems_FromDict(model.forward(self.prep_data(path)), ['output', 'act']) # act: [batch_size, step_num, N_num]
+                output, act = GetItemsFromDict(model.forward(self.prep_data(path)), ['output', 'act']) # act: [batch_size, step_num, N_num]
                 #print(act[0])
                 #input()
                 xy_float = path['xy'] # [batch_size, step_num, 2]
@@ -1075,3 +1084,5 @@ class Agent(object):
         with open(save_path + save_name, 'wb') as f:
             torch.save(self.dict, f)
         self.model.save(save_path, '%s_model'%save_name)
+
+__MainClass__ = Agent

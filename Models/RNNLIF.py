@@ -17,24 +17,30 @@ import utils_torch
 import utils
 
 def InitFromParam(param):
-    model = RNN_LIF()
+    model = RNNLIF()
     model.InitFromParam(param)
     return model
 
 def load_model(args):
     return 
 
-class RNN_LIF(nn.Module):
+class RNNLIF(nn.Module):
     # Singel-Layer Recurrent Neural Network with Leaky Integrate-and-Fire Dynamics
-    def __init__(self):
-        super(RNN_LIF, self).__init__()
-    def InitFromParam(self, Params):
-        utils.AddLog("RNN_LIF: Initializing from param...")
-        CheckAttrs(Params, "Type", value="rnn_lif")
-        self.Params = Params
+    def __init__(self, param=None):
+        super(RNNLIF, self).__init__()
+        if param is not None:
+            self.param=param
+    def InitFromParam(self, param=None):
+        if param is not None:
+            self.param = param
+        else:
+            param = self.param
+        utils.AddLog("RNNLIF: Initializing from param...")
+        CheckAttrs(param, "Type", value="RNNLIF")
+        self.param = param
         #self.json_external_dict = {}
-        Neurons = Params.Neurons
-        EnsureAttrs(Params, "Neurons", "isExciInhi", default=False)
+        Neurons = param.Neurons
+        EnsureAttrs(param, "Neurons", "isExciInhi", default=False)
         if MatchAttrs(Neurons.Recurrent, "isExciInhi", value=True):
             RemoveAttrs(Neurons.Recurrent.isExciInhi)
             SetAttrs(Neurons.Recurrent.ExciInhi, value={"Enable":True})
@@ -49,22 +55,22 @@ class RNN_LIF(nn.Module):
         self.Nodes = Nodes
         # initialize modules
         #for module in ListAttrs(param.modules):
-        for moduleName, moduleParam in ListAttrs(Params.Modules):
+        for moduleName, moduleParam in ListAttrs(param.Modules):
             Module = build_module(moduleParam)
             self.add_module(moduleName, Module)
             SetAttrs(Nodes.Modules, moduleName, Module)
 
-        for name, signalFlowParam in ListAttrs(Params.Dynamics):
+        for name, signalFlowParam in ListAttrs(param.Dynamics):
             if name in ["__Entry__"]:
                 continue
             Router = utils_torch.BuildRouter(signalFlowParam)
             setattr(Nodes.Routers, name, Router)
 
-        DefaultDynamicsEntry = "&Dynamics.%s"%ListAttrs(Params.Dynamics)[0][0]
-        EnsureAttrs(Params.Dynamics, "__Entry__", default=DefaultDynamicsEntry)
+        DefaultDynamicsEntry = "&Dynamics.%s"%ListAttrs(param.Dynamics)[0][0]
+        EnsureAttrs(param.Dynamics, "__Entry__", default=DefaultDynamicsEntry)
         utils_torch.model.ParseRouters(Nodes.Routers, [Nodes.Modules, Nodes.Routers, Nodes])
 
-        utils_torch.PyObj2JsonFile(Params, "./params/rnn_lif_temp.jsonc")
+        utils_torch.PyObj2JsonFile(param, "./params/RNNLIF_temp.jsonc")
 
     def forward(self, Input):
         Output = self.Nodes.__Entry__.forward(Input)
@@ -118,7 +124,7 @@ class RNN_LIF(nn.Module):
         if ax is None:
             #fig, ax = plt.subplots(figsize = (step_num / 20 * 5, plot_N_num / 20 * 5)) # figsize: (width, height), in inches
             fig, ax = plt.subplots(nrows=1, ncols=1, figsize = (plot_N_num / 20 * 2, step_num / 20 * 2))
-        data_min, data_max, data_mean, data_std = Getitems_FromDict(Getnp_stat(data, verbose=verbose), ['min','max','mean','std'])
+        data_min, data_max, data_mean, data_std = GetItemsFromDict(Getnp_stat(data, verbose=verbose), ['min','max','mean','std'])
         #print(np.argmax(data))
         #print(unravel_index(data.argmax(), data.shape))
 
@@ -179,10 +185,10 @@ class RNN_LIF(nn.Module):
         return ax
     '''
     def cal_perform_coord(self, data):
-        output_truth = Getitems_FromDict(data, ['output'])
+        output_truth = GetItemsFromDict(data, ['output'])
         # x: [batch_size, step_num, input_num]
         # y: [batch_size, step_num, output_num]
-        output, act = Getitems_FromDict(self.forward(data), ['output', 'act'])
+        output, act = GetItemsFromDict(self.forward(data), ['output', 'act'])
         self.dict['act_avg'] = torch.mean(torch.abs(act))
         loss_coords = self.main_coeff * F.mse_loss(output, y, reduction='mean')
         #loss_coords = 0.0
@@ -202,9 +208,9 @@ class RNN_LIF(nn.Module):
         #self.sample_count += self
         return loss_coords + loss_act + loss_weight
     def cal_perform_pc(self, data):
-        x, x_init, output_truth = Getitems_FromDict(data, ['input', 'input_init', 'output'])
+        x, x_init, output_truth = GetItemsFromDict(data, ['input', 'input_init', 'output'])
         batch_size = x.size(0)
-        output, act = Getitems_FromDict(self.forward(data), ['output', 'act'])
+        output, act = GetItemsFromDict(self.forward(data), ['output', 'act'])
         
         self.dict['act_avg'] = torch.mean(torch.abs(act))
         
@@ -255,9 +261,9 @@ class RNN_LIF(nn.Module):
         }
     def cal_perform_pc_coord(self, data):
         #x, y = self.prep_path(path)
-        y = Getitems_FromDict(data, ['output'])
+        y = GetItemsFromDict(data, ['output'])
         batch_size = y.size(0)
-        output, act = Getitems_FromDict(self.forward(data), ['output', 'act'])
+        output, act = GetItemsFromDict(self.forward(data), ['output', 'act'])
         self.dict['act_avg'] = torch.mean(torch.abs(act))
         pc_output = self.place_cells.Getact(y)
         loss_coords =self.main_coeff_pc * F.mse_loss(output[:, :, 0:2], pc_output, reduction='mean')
@@ -305,7 +311,7 @@ class RNN_LIF(nn.Module):
     def Getoutput_ratio_pc(self, path, verbose):
         x, y = self.prep_path(path)
         pc_output = self.place_cells.Getact(y)
-        output, act = Getitems_FromDict(self.forward(x), ['output', 'act'])
+        output, act = GetItemsFromDict(self.forward(x), ['output', 'act'])
         pc_mean = torch.mean(pc_output).item()
         pc_pred_mean = torch.mean(output).item()
         if verbose:
@@ -508,3 +514,5 @@ class RNN_LIF(nn.Module):
         return noise
     def Gettrain_param(self):
         return self.parameters()
+
+__MainClass__ = RNNLIF

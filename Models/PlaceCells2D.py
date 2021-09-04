@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from Models.rnn_lif import InitFromParam
+from Models.RNNLIF import InitFromParam
 import random
 
 import scipy
@@ -27,21 +27,32 @@ class PlaceCells2D(object):
     def __init__(self, param=None):
         self.data = EmptyPyObj()
         if param is not None:
-            self.InitFromParam(param)
-    def InitFromParam(self, param):
-        self.param = param
+            self.param = param
+    def InitFromParam(self, param=None):
+        if param is not None:
+            self.param = param
+        else:
+            param = self.param
         if HasAttrs(param.XYs, "Initialize"):
             EnsureAttrs(param.XYs.Initialize, "Method", default="FromFunctionCall")
             if param.XYs.Initialize.Method in ["FromFunctionCall"]:
-                utils_torch.CallFunction(param.XYs.Initialize.Functions, ObjCurrent=self, ObjRoot=utils.ArgsGlobal["ObjRoot"], )
+                utils_torch.CallFunction(param.XYs.Initialize.Functions, ObjCurrent=self, ObjRoot=utils.ArgsGlobal.object, )
             else:
                 raise Exception()
     def ReceiveXYs(self, XYs):
         param = self.param
         data = self.data
         data.XYs = XYs
-        SetAttrs(param, "XYs", default="*XYs")
-
+        SetAttrs(param, "XYs", value="&data.XYs")
+    def PlotXYs(self, ax=None, Save=False, SavePath="./PlaceCells2D-XYs.png"):
+        data = self.data
+        if ax is None:
+            plt.close("all")
+            fig, ax = plt.subplots()
+        utils_torch.plot.PlotPoints2D(ax, data.XYs)
+        if Save:
+            utils_torch.EnsureFileDir(SavePath)
+            plt.savefig(SavePath)
     def bind_arenas(self, arenas, index=None):
         self.arenas = arenas
         if index is None:

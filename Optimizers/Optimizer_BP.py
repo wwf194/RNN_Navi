@@ -1,7 +1,7 @@
 
 import torch
 
-from utils import search_dict, Getitems_FromDict
+from utils import search_dict, GetItemsFromDict
 import model
 from Optimizers.Optimizer import *
 
@@ -53,7 +53,7 @@ class Optimizer_BP(Optimizer):
         self.update_after_epoch_init()
     def train(self, data):
         self.optimizer.zero_grad()
-        loss = Getitems_FromDict(data, ['loss'])
+        loss = GetItemsFromDict(data, ['loss'])
         #loss = results['loss']
         loss.backward()
         self.optimizer.step()

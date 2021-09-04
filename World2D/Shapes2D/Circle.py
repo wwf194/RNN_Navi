@@ -5,56 +5,56 @@ import utils
 import utils_torch
 from utils_torch.attrs import CheckAttrs, EnsureAttrs, GetAttrs, SetAttrs, HasAttrs, MatchAttrs
 
-import Environments
+import World2D.Shapes2D as Shapes2D
 
-class Circle2D(Environments.Arena2D):
+class Circle(Shapes2D.Shape2D):
     def __init__(self, param=None):
         super().__init__()
         if param is not None:
-            self.InitFromParam(param)
-    def InitFromParam(self, param):
-        self.param = param
-        CheckAttrs(param, "Type", value="Circle2D")
+            self.param = param
+    def InitFromParam(self, param=None):
+        if param is not None:
+            self.param = param
+        else:
+            param = self.param
+        CheckAttrs(param, "Type", value="Circle")
         EnsureAttrs(param, "Initialize.Method", default="CenterRadius")
         if param.Initialize.Method in ["CenterRadius"]:
-            self.CenterXy = np.array(GetAttrs(param, "CenterXy"), dtype=np.float32)
-            self.Radius = GetAttrs(param.Radius)
+            if not HasAttrs(param, "Center"):
+                param.Center = GetAttrs(param.Initialize, "Center")
+            if not HasAttrs(param, "Radius"):
+                param.Radius = GetAttrs(param.Initialize, "Radius")
         else:
             raise Exception()
-
-        if isinstance(self.CenterXy, list):
-            self.CenterXy = np.array(self.CenterXy, dtype=np.float)
-
-        self.Getrandom_max = self.Getrandom_square = self.Getrandom_max_rectangle
         
-        self.avoid_border = self.avoid_border_circle
-        self.out_of_region = self.out_of_region_circle
-        self.Getrandom_xy = self.Getrandom_xy_circle
-        
-        self.plot_arena = self.plot_arena_plt
-        #self.plot_arena(save_path="./anal/", save_name="arena_plot_circle.png")
-        #self.print_info()
+        SetAttrs(param, "Center.X", GetAttrs(param.Center)[0])
+        SetAttrs(param, "Center.Y", GetAttrs(param.Center)[1])
+
+        self.Center = np.array(GetAttrs(param.Center), dtype=np.float)
+
+        self.CalculateBoundaryBox()
+
     def CalculateBoundaryBox(self):
         param = self.param
         # Calculate Boundary Box
         if not HasAttrs(param, "BoundaryBox"):
-            EdgesNp = np.array(param.Edges, dtype=np.float32) # [VertexNum, (x, y)]
-            xMin = param.CenterXy.X - param.Radius
-            xMax = param.CenterXy.X + param.Radius
-            yMin = param.CenterXy.Y - param.Radius
-            yMax = param.CenterXy.Y + param.Radius
-            SetAttrs(param, "BoundaryBox", value=[[xMin, yMin], [xMax, yMax]])
-            SetAttrs(param.BoundaryBox, "xMin", xMin)
-            SetAttrs(param.BoundaryBox, "xMax", xMax)
-            SetAttrs(param.BoundaryBox, "yMin", yMin)
-            SetAttrs(param.BoundaryBox, "yMax", yMax)
-
+            xMin = param.Center.X - param.Radius
+            xMax = param.Center.X + param.Radius
+            yMin = param.Center.Y - param.Radius
+            yMax = param.Center.Y + param.Radius
+            SetAttrs(param, "BoundaryBox", [xMin, yMin, xMax, yMax])
+            SetAttrs(param, "BoundaryBox.xMin", xMin)
+            SetAttrs(param, "BoundaryBox.xMax", xMax)
+            SetAttrs(param, "BoundaryBox.yMin", yMin)
+            SetAttrs(param, "BoundaryBox.yMax", yMax)
+            SetAttrs(param, "BoundaryBox.Width", xMax - xMin)
+            SetAttrs(param, "BoundaryBox.Height", yMax - yMin)
     def Distance2Center(self, Points):
-        Vector2Center = self.CenterXy[np.newaxis, :] - Points # [point_num, (x, y)]
+        Vector2Center = self.Center[np.newaxis, :] - Points # [point_num, (x, y)]
         Distance2Center = np.linalg.norm(Vector2Center, axis=-1) # [point_num]
         return Distance2Center
     def Getdist_and_theta_from_center(self, xy): # xy: [point_num, 2]
-        vec_from_center = xy - self.CenterXy[np.newaxis, :] # [point_num, (x, y)]
+        vec_from_center = xy - self.Center[np.newaxis, :] # [point_num, (x, y)]
         dist_from_center = np.linalg.norm(vec_from_center, ord=2, axis=-1) # [point_num]
         theta_from_center = np.arctan2(xy[:, 1], xy[:, 0])
         return dist_from_center, theta_from_center
@@ -116,7 +116,7 @@ class Circle2D(Environments.Arena2D):
         ax.set_yticks(np.linspace(self.y0, self.y1, 5))
         ax.set_aspect(1)
 
-        circle = plt.Circle(self.CenterXy, self.radius, color=(0.0, 0.0, 0.0), fill=False)        
+        circle = plt.Circle(self.Center, self.radius, color=(0.0, 0.0, 0.0), fill=False)        
         ax.add_patch(circle)
         if save:
             EnsurePath(save_path)
@@ -145,5 +145,7 @@ class Circle2D(Environments.Arena2D):
     def ReportInfo(self):
         param = self.param
         utils.AddLog("Circle2D: ", end="")
-        utils.AddLog("CenterXy:(%.1f, %.1f)"%(param.CenterXy.X, param.CenterXy.Y))
+        utils.AddLog("Center:(%.1f, %.1f)"%(param.Center.X, param.Center.Y))
         utils.AddLog("Radius:(%.3f)"%param.Radius)
+
+__MainClass__ = Circle

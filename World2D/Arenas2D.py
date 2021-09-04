@@ -30,11 +30,17 @@ class Arenas2D:
             raise Exception('Arenas: options must not be None.')
         '''
         if param is not None:
-            self.InitFromParam(param)
-    def InitFromParam(self, param):
+            self.param = param
+    def InitFromParam(self, param=None):
+        if param is not None:
+            self.param = param
+        else:
+            param = self.param
         self.Arenas = []
         for ArenaParam in param.Arenas:
-            self.Arenas.append(BuildArena(ArenaParam))
+            Arena = BuildArena(ArenaParam)
+            Arena.InitFromParam()
+            self.Arenas.append(Arena)
         self.SetCurrentArena(0)
     '''
     def PlotArenas_cv(self, save=True, save_path='./', **kw):
@@ -58,3 +64,5 @@ class Arenas2D:
         return self.Arenas[Index]
     def Getarena(self, index):
         return self.Arenas[index]
+
+__MainClass__ = Arenas2D
