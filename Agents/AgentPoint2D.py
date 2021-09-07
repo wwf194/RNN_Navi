@@ -5,6 +5,7 @@ import os
 import math
 import random
 import sys
+from utils.utils import ArgsGlobal
 import warnings
 
 import torch
@@ -51,7 +52,6 @@ class Agent(object):
         param = self.param
         ax = utils.ArgsGlobal.object.world.Arenas[0].PlotArena(Save=False)        
         self.PlaceCells.PlotXYs(ax, Save=True)
-
     def report_perform(self, prefix='', verbose=True):
         report = prefix
         for key in self.perform_list.keys():
@@ -89,6 +89,7 @@ class Agent(object):
                 'output': xy
             }
         return data
+    
     def train(self, dict_, report_in_batch=None, report_interval=None, save_path=None, save_name=None, verbose=True):
         optimizer = self.cache['optimizer'] = utils.build_Optimizer(dict_['optimizer'], params=self.model.Gettrain_param())
         epoch_start, epoch_num, epoch_end = utils_train.Getepoch_info(dict_)
@@ -104,7 +105,7 @@ class Agent(object):
             ['anal', 'anal_interval', 'anal_before_train', 'anal_after_train'])
 
         batch_num = dict_['batch_num']
-        batch_size = dict_['batch_size']
+        BatchSize = dict_['BatchSize']
         
         if report_in_batch is None:
             if not hasattr(self, 'report_in_batch'):
@@ -134,8 +135,8 @@ class Agent(object):
             # train model
             self.reset_perform()
             for batch_index in range(batch_num):
-                #self.train_once(batch_size)
-                path = self.walk_random(num=batch_size)
+                #self.train_once(BatchSize)
+                path = self.walk_random(num=BatchSize)
                 data = self.prep_data(path)
                 #print(data.keys())
                 data = self.cal_perform(data)
@@ -213,7 +214,7 @@ class Agent(object):
         input_, output_truth = GetItemsFromDict(data, ['input', 'output'])
         
         #output_truth = transforms.Normalize(0, 1)(output_truth)
-        batch_size = input_.size(0)
+        BatchSize = input_.size(0)
         #output, act = GetItemsFromDict(self.forward(data), ['output', 'act'])
         output_pred, act = GetItemsFromDict(data, ['output_pred', 'act'])
         #print('output_pred_max: %s'%torch.max(torch.abs(output_pred)))
@@ -239,7 +240,7 @@ class Agent(object):
             loss_main = self.main_coeff * F.mse_loss(output_pred, output_truth, reduction='mean')
             self.perform_list['output_error_ratio'] += ( torch.sum(torch.abs(output_pred - output_truth)) / torch.sum(torch.abs(output_truth)) ).item() # relative place cells prediction error
         elif self.main_loss in ['cel', 'CEL']:
-            # output_pred: [batch_size, step_num, output_num]
+            # output_pred: [BatchSize, StepNum, output_num]
             output_pred_log_softmax = F.log_softmax(output_pred, dim=2)
             output_truth_softmax = F.softmax(8.0 * output_truth, dim=2)
             #print(output_truth_softmax[-1, -1])
@@ -254,7 +255,7 @@ class Agent(object):
             
             #print(torch.sum(output_pred_softmax, dim=2))
             #input()
-            # [batch_size, step_num, output_num]
+            # [BatchSize, StepNum, output_num]
             loss_main = - self.main_coeff * torch.sum(torch.mean(output_pred_log_softmax * output_truth_softmax, dim=(0, 1)))
         else:
             raise Exception('Invalid main loss: %s'%str(self.main_loss))
@@ -271,7 +272,7 @@ class Agent(object):
         self.perform_list['main'] += loss_main.item()
         
         self.batch_count += 1
-        self.sample_count += batch_size
+        self.sample_count += BatchSize
         result = {
             'loss_main': loss_main,
             'loss_act': loss_act,
@@ -303,7 +304,7 @@ class Agent(object):
     def cal_perform_pc_coord(self, data):
         #x, y = self.prep_path(path)
         y = GetItemsFromDict(data, ['output'])
-        batch_size = y.size(0)
+        BatchSize = y.size(0)
         output, act = GetItemsFromDict(self.forward(data), ['output', 'act'])
         self.dict['act_avg'] = torch.mean(torch.abs(act))
         pc_output = self.place_cells.Getact(y)
@@ -321,7 +322,7 @@ class Agent(object):
         self.perform_list['pc'] += loss_main.item()
         
         self.batch_count += 1
-        self.sample_count += batch_size
+        self.sample_count += BatchSize
         return {
             'loss_main': loss_main,
             'loss_coord': loss_coord,
@@ -336,22 +337,20 @@ class Agent(object):
         self.arenas = self.options.arenas
         self.model = self.options.model if hasattr(options, 'model') else None
     '''
-    def Getinit_xy(self, init_method, arena, batch_size):
+    def Getinit_xy(self, init_method, arena, BatchSize):
         init_method, init_args = Getname_args(init_method)
-        
         if init_method in ['uniform', 'random']:
-            return arena.Getrandom_xy(batch_size)
-
+            return arena.Getrandom_xy(BatchSize)
     def prep_path(self, path): # prep data from path to feed to rnn model.
         if self.input_mode in ['v_xy']:
-            i = torch.from_numpy(path['dx_dy']).float() # [batch_size, step_num, (v_x, v_y)]
-            o = torch.from_numpy(path['xy']).float() # [batch_size, step_num, (x, y)]
+            i = torch.from_numpy(path['dx_dy']).float() # [BatchSize, StepNum, (v_x, v_y)]
+            o = torch.from_numpy(path['xy']).float() # [BatchSize, StepNum, (x, y)]
         elif self.input_mode in ['v_hd']:
-            i = torch.from_numpy(np.stack((path['theta_xy'][:,:,0], path['theta_xy'][:,:,1], path['delta_xy']), axis=-1)).float() # [batch_size, step_num, (cos, sin, v)]
-            o = torch.from_numpy(path['xy']).float() # [batch_size, step_num, (x, y)]
+            i = torch.from_numpy(np.stack((path['theta_xy'][:,:,0], path['theta_xy'][:,:,1], path['delta_xy']), axis=-1)).float() # [BatchSize, StepNum, (cos, sin, v)]
+            o = torch.from_numpy(path['xy']).float() # [BatchSize, StepNum, (x, y)]
         else:
             raise Exception('Unknown input mode:'+str(self.input_mode))
-        i_init = torch.from_numpy(path['xy_init']).float() # [batch_size, 2]
+        i_init = torch.from_numpy(path['xy_init']).float() # [BatchSize, 2]
         #i = inputs.to(self.device)
         #i_iniy = init.to(self.device)
         #o = outputs.to(self.device)
@@ -361,142 +360,76 @@ class Agent(object):
             'output': o,
         }
         # return (inputs, init), outputs
-    def walk_random(self, step_num=None, **kw): # step_num, t_total, random_init=False, arena_index=None, use_test_arenas_=None, full_info=False): #return random trajectories
-        step_num = self.step_num if step_num is None else step_num
-        batch_size = search_dict(kw, ['batch_size', 'num'], default=100)
-        #step_num = search_dict(kw, ['t_total', 'sequence_length', 'step_num'], default=self.step_num)
-        arena = search_dict(kw, ['arena'], default=self.arenas.Getcurrent_arena())
-        init_method = search_dict(kw, 'init_method', default='uniform')
-
-        items = kw.setdefault('items', None)
-        if items is None:
-            mode = kw.setdefault('mode', 'train')
+    def GenerateRandomTrajectory(self, param): # StepNum, t_total, random_init=False, arena_index=None, use_test_arenas_=None, full_info=False): #return random trajectories
+        # param = utils_torch.parse.ParsePyObjDynamic(param, ObjRoot=ArgsGlobal.object, ObjCurrent=param) # should already be done
+        # EnsureAttrs(param, "StartXY.Method", default="UniformInArena") # should already be done
+        # EnsureAttrs(param, "StartXY.MinDistance2Border", default="2.0%") # should already be done
+        if param.StartXY.Method in ["UniformInArena"]:
+            XYStart = param.Arena.GenerateRandomInternalXYs(param.Trajectory, MinDistance2Border=param.StartXYMinDistance2Border)
+        elif param.StartXY.Method in ["Given"]:
+            XYStart = GetAttrs(param.StartXY)
         else:
-            mode = 'self-defined'
-        
-        dt = 0.02  # time step increment (seconds)
-        xy = np.zeros([batch_size, step_num + 1, 2]) # [batch_num, step_num + 2, (x,y)]
-        xy[:, 0, :] = self.Getinit_xy(init_method, arena, batch_size)
-        dl = np.zeros([batch_size, step_num]) # dl = v * dt : [batch_size, step_num]
-        
-        theta = np.zeros([batch_size, step_num + 1]) # head direction: [batch_num, step_num + 1]
-        theta[:,0] = np.random.uniform(0, 2*np.pi, batch_size)
-        
-        sigma = 5.76 * 2  # stdev rotation velocity (rads/sec)
-        mu = 0  # turn angle bias 
-        d_theta = np.random.normal(mu, sigma, [batch_size, step_num]) * dt # random angular velocity.
-        
-        b = 0.13 * 2 * np.pi # forward velocity rayleigh dist scale (m/sec)
-        v_random = np.random.rayleigh(b, [batch_size, step_num]) # random velocity.
-        
-        if self.stop_prob > 0.0:
-            offset = - math.log(1.0 - self.stop_prob, math.e) * 2 * (b ** 2) # CDF of rayleigh Distribution is 1 - exp{ - x^2 / (2 * b^2) }
-            v_random = v_random - offset
-            v_random = ( 1 * (v_random > 0.0) ) * v_random
-        '''
-        count = 0
-        zero_count = 0
-        for i in range(random_vel.shape[0]):
-            for j in range(random_vel.shape[1]):
-                if(random_vel[i][j] < 0.0):
-                    random_vel[i][j] = 0.0
-                    zero_count += 1
-                count += 1
-        '''
-        '''
-        print(random_vel)
-        print('v zero prob:%.5f'%(zero_count/count))
-        input()
-        # v = np.abs(np.random.normal(0, b*np.pi/2, [batch_size])) #[batch_size]
-        '''
-        
-        for t in range(step_num):
-            v = v_random[:,t]
-            #theta_adjust = np.zeros(batch_size) #initialize theta_adjust
-            d_theta_now = d_theta[:,t]
+            raise Exception()
+        XYs = np.zeros((param.TrajectoryNum, param.StepNum + 1, 2), dtype=np.float32) # [TrajectoryNum, StepNum + 2, (x,y)]
+        Directions = np.zeros([param.TrajectoryNum, param.StepNum + 1]) # head direction: [TrajectoryNum, StepNum + 1]
+        dXYs = np.zeros((param.TrajectoryNum, param.StepNum, 2), dtype=np.float32)
 
-            is_near_wall, theta_adjust = arena.avoid_border(xy[:,t], theta[:,t])
-            v[is_near_wall] *= 0.25 #slow down batches where the agent is near wall.
+        dLs = utils_torch.math.SampleFromDistribution(GetAttrs(param.StepLength.Distribution)) # dl = v * dt : [TrajectoryNum, StepNum]
+        dDirections = utils_torch.math.SampleFromDistribution(GetAttrs(param.DirectionChange.Distribution)) # [TrajectoryNum, StepNum]
 
-            d_theta_now += theta_adjust
-            dl[:,t] = v * dt
+        # Set Initial Location
+        XYs[:, 0, :] = XYStart
+        Directions[:, 0] = np.random.uniform(-np.pi, np.pi, param.TrajectoryNum)
 
-            dxy = dl[:, t, None] * np.stack([np.cos(theta[:,t]), np.sin(theta[:,t])], axis=1) #[batch_size, 1] * [batch_size, 2] = [batch_size, 2]
+        for StepIndex in range(param.Index):
+            XY = XYs[:, StepIndex, :]
+            Direction = Directions[:, StepIndex, :]
+            dL = dLs[:, StepIndex]
+            dDirection = dDirections[:, StepIndex]
+            dXY = utils_torch.math.DirectionsLenghts2XYs(Direction, dL)
+            XYNext = XY + dXY
+            DirectionNext = Direction + dDirection
 
-            xy[:,t+1] = xy[:,t] + dxy #[batch_size, 1, 2]
-            theta[:,t+1] = theta[:,t] + d_theta_now # Rotate head direction
+            Collision = param.Arena.CheckCollision(XY, XYNext)
+            XYNext[Collision.Indices, :] = XY[Collision.Indices, :] + Collision.Lambdas * dXY * 0.95
+            DirectionNext[Collision.Indices] = utils_torch.geometry2D.FlipAroundNorms(Direction[Collision.Indices], Collision.Norms)
 
-        theta = np.mod(theta + np.pi, 2*np.pi) - np.pi # make sure head_dir in range [-pi, pi].
-        theta_delta = np.diff(theta, axis=1) # [batch_num, step_num]
+            XYs[:, StepIndex + 1, :] = XYNext
+            Directions[:, StepIndex + 1] = DirectionNext
 
-        path = {}
-        sig = False
+            dXY = XYNext - XY
+            dXYs[:, StepIndex, :] = dXY
+            dDirections = DirectionNext - Direction
 
-        path['dl'] = dl
-        path['xy'] = xy[:,1:,:] # [batch_size, step_num, 2]
-        if mode in ['train', 'full']:
-            path['theta_xy'] = np.stack( [np.cos(theta), np.sin(theta)], axis=1 )[:,:-1,:] # head direction.
-            path['theta_init'] = theta[:,0]
-            path['xy_init'] = xy[:,0,:]
-            path['dx_dy'] = np.diff(xy, axis=1) # [batch_size, step_num, 2]. position difference between current position and previous position.
-            sig = True
-        if mode in ['plot', 'full']:
-            pass
-            sig = True
-        if mode in ['self-defined']:
-            if contain(items, ['hd_delta_xy', 'theta_delta_xy']):
-                path['theta_delta_xy'] = np.stack( [ np.cos(d_theta), np.sin(d_theta) ], axis=1 )[:,:-1] #head_dir difference between current position and previous position.
-            sig = True
-        if not sig:
-            raise Exception('Agent.random_walk: invalid mode:%s'%str(mode))
+        return utils_torch.json.JsonFile2PyObj({
+            "XYs": XYs,
+            "Directions": Directions,
+            "dXYs": dXYs,
+            "dLs": dLs,
+            "dDirections": dDirections,
+        })
+    def GenerateRandomTrajectoryAndPlot(self, param, SavePath):
+        Trajectory = self.GenerateRandomTrajectory(param)
+        PlotNum = param.TrajectoryNum
 
-        return path
-
-    def plot_walk_random(self, arena=None, save=False, save_path='./', save_name='walk_random.png', plot_num=10, cmap='jet', **kw):
-        arena = self.arenas.Getcurrent_arena() if arena is None else arena
-
-        path = self.walk_random(num=plot_num, arena=arena, mode='plot', **kw)
-        
         #figure, ax = plt.subplots()
         figure, ax = plt.subplots(1, 1, figsize=(5*1.5, 5*1.0)) # figsize (width, length) in inches.
         
-        ax.set_xlim(arena.x0, arena.x1)
-        ax.set_ylim(arena.y0, arena.y1)
+        BoundaryBox = param.Arena.BoundaryBox
+        ax.set_xlim(BoundaryBox.xMin, BoundaryBox.xMax)
+        ax.set_ylim(BoundaryBox.yMin, BoundaryBox.yMax)
         ax.set_aspect(1) # so that x and y has same unit length in image.
 
-        arena.plot_arena_plt(ax, save=False)
+        param.Arena.PlotArena(ax, Save=False)
 
-        #colors = Getcolors(plot_num)
+        dLsColored = utils_torch.plot.Map2Colors(Trajectory.dLs)
 
-        dl = path['dl']
-        dl_max = np.max(dl)
-        dl_min = np.min(dl)
-        if dl_max==dl_min:
-            dl_norm = np.zeros(dl.shape, dtype=dl.dtype)
-            dl_norm[:,:,:] = 0.5
-        else:
-            dl_norm = (dl - dl_min) / (dl_max - dl_min)
-        
-        cmap_func = plt.cm.Getcmap(cmap)
-        dl_mapped = cmap_func(dl_norm) # [batch_size, ], res_x, res_y, (r,g,b,a)]        
-
-        '''
-        color = {
-            'method':'start-end',
-            'start':(0.0,0.0,1.0),
-            'end':(0.0,1.0,0.0),
-        }
-        start = ax.plot([],[], c=color['start'], label='start')
-        end = ax.plot([],[], c=color['end'], label='end')
-        ax.legend(loc='upper right')
-        '''
-
-        for i in range(plot_num):
+        for i in range(PlotNum):
             color = {
                 'method':'given',
                 'data':dl_mapped[i]
             }
-            PlotPolyLineFromVerticesPlt(ax, path['xy'][i,:,:], color=color, width=2)
+            utils_torch.plot.PlotPolyLineFromVerticesPlt(ax, path['xy'][i,:,:], color=color, width=2)
         
         ax_ = ax.inset_axes([1.05, 0.0, 0.12, 0.8])
         norm = mpl.colors.Normalize(vmin=dl_min, vmax=dl_max)
@@ -512,7 +445,6 @@ class Agent(object):
             )
         cbar.set_label('Step length')
 
-
         color_truth = (0.0, 1.0, 0.0)
         color_edge = (0.0, 0.0, 0.0)
         ax.scatter(path['xy'][:,0,0], path['xy'][:,0,1], marker='^', color=color_truth, edgecolors=color_edge, label='Start positions')
@@ -523,7 +455,7 @@ class Agent(object):
         #start = ax.plot([1.0,2.0],[1.0,2.0], c=color['start'], label='start')
         #end = ax.plot([1.0,2.0],[1.0,2.0], c=color['end'], label='end')
 
-        ax.set_title('%d random paths'%plot_num)
+        ax.set_title('%d random paths'%PlotNum)
         
         plt.tight_layout()
 
@@ -540,9 +472,9 @@ class Agent(object):
             path = self.walk_random(num=plot_num, arena=arena, mode='full', **kw)
         else:
             #print(path.keys())
-            batch_size = path['xy'].shape[0]
-            if batch_size > plot_num:
-                plot_index = random.sample(range(batch_size), plot_num)
+            BatchSize = path['xy'].shape[0]
+            if BatchSize > plot_num:
+                plot_index = random.sample(range(BatchSize), plot_num)
                 for key in path.keys():
                     path[key] = path[key][plot_index]
             else:
@@ -555,12 +487,12 @@ class Agent(object):
         data = self.prep_data(path)
         #print(data.keys())
         data = self.cal_perform(data)
-        output_pred = GetItemsFromDict(data, ['output_pred']) # act: [plot_num, step_num, N_num]
+        output_pred = GetItemsFromDict(data, ['output_pred']) # act: [plot_num, StepNum, N_num]
         output_pred = output_pred.detach().cpu().numpy()
         if self.task in ['coord']:
-            xy_pred = output_pred # [plot_num, step_num, (x, y)]
+            xy_pred = output_pred # [plot_num, StepNum, (x, y)]
         elif self.task in ['pc']:
-            xy_pred = self.place_cells.Getcoords_from_act(output_pred) # [plot_num, step_num, sample_num, (x, y)]
+            xy_pred = self.place_cells.Getcoords_from_act(output_pred) # [plot_num, StepNum, sample_num, (x, y)]
             #print(xy_pred.shape)
             
             #print(xy_pred.shape)
@@ -585,11 +517,11 @@ class Agent(object):
             dl_norm = (dl - dl_min) / (dl_max - dl_min)
         
         cmap_func = plt.cm.Getcmap(cmap)
-        dl_mapped = cmap_func(dl_norm) # [batch_size, res_x, res_y, (r,g,b,a)]
+        dl_mapped = cmap_func(dl_norm) # [BatchSize, res_x, res_y, (r,g,b,a)]
         '''
         #dl_mapped = norm_and_map(dl, cmap=cmap, return_min_max=True)
-        dl_pred = np.diff(xy_pred, axis=2) # [batch_size, step_num, (x, y)]
-        dl_pred = np.linalg.norm(dl_pred, ord=2, axis=2) # [batch_size, step_num]
+        dl_pred = np.diff(xy_pred, axis=2) # [BatchSize, StepNum, (x, y)]
+        dl_pred = np.linalg.norm(dl_pred, ord=2, axis=2) # [BatchSize, StepNum]
         
         dl_cat_mapped, dl_min, dl_max = norm_and_map(np.concatenate([dl, dl_pred], axis=0), cmap=cmap, return_min_max=True)
         
@@ -656,38 +588,38 @@ class Agent(object):
             EnsurePath(save_path)
             plt.savefig(save_path + save_name)
         return ax
-    def cal_act_map(self, model, arena, res=50, batch_size=200, batch_num=20, step_num=None):
+    def cal_act_map(self, model, arena, res=50, BatchSize=200, batch_num=20, StepNum=None):
         # Compute spatial firing fields
         N_num = model.dict['N_num']
-        step_num = self.step_num if step_num is None else step_num
+        StepNum = self.StepNum if StepNum is None else StepNum
 
         res_x, res_y = Getres_xy(res, arena.width, arena.height)
 
         point_act = np.zeros([N_num, res_x, res_y])
         point_count  = np.zeros([res_x, res_y])
 
-        #print('Agent.act_act_map: batch_num:%d batch_size:%d step_num:%d'%(batch_num, batch_size, step_num))
+        #print('Agent.act_act_map: batch_num:%d BatchSize:%d StepNum:%d'%(batch_num, BatchSize, StepNum))
         out_count = 0
-        point_num = batch_num * batch_size * step_num
+        point_num = batch_num * BatchSize * StepNum
         for index in range(batch_num):
             #print('batch_num:%d/%d'%(index, batch_num))
             with torch.no_grad():
                 model.eval()
-                path = self.walk_random(num=batch_size, arena=arena, step_num=step_num)
-                output, act = GetItemsFromDict(model.forward(self.prep_data(path)), ['output', 'act']) # act: [batch_size, step_num, N_num]
+                path = self.walk_random(num=BatchSize, arena=arena, StepNum=StepNum)
+                output, act = GetItemsFromDict(model.forward(self.prep_data(path)), ['output', 'act']) # act: [BatchSize, StepNum, N_num]
                 #print(act[0])
                 #input()
-                xy_float = path['xy'] # [batch_size, step_num, 2]
+                xy_float = path['xy'] # [BatchSize, StepNum, 2]
                 act = list(map(lambda x:x.detach().cpu(), act))
 
             #print(xy_float.shape)
-            xy_int = Getint_coords_np(xy_float.reshape(batch_size * step_num, 2), arena.xy_range, res_x, res_y) # [batch_size, step_num, 2]
+            xy_int = Getint_coords_np(xy_float.reshape(BatchSize * StepNum, 2), arena.xy_range, res_x, res_y) # [BatchSize, StepNum, 2]
             #print(xy_int.shape)
-            xy_int = xy_int.reshape(batch_size, step_num, 2) # [batch_size, step_num, 2]
+            xy_int = xy_int.reshape(BatchSize, StepNum, 2) # [BatchSize, StepNum, 2]
 
             
-            for i in range(batch_size): # batch_index
-                for j in range(step_num): # time_step
+            for i in range(BatchSize): # batch_index
+                for j in range(StepNum): # time_step
                     x_int = xy_int[i, j][0]
                     y_int = xy_int[i, j][1]
                     #for k in range(N_num): #N_index
@@ -726,7 +658,7 @@ class Agent(object):
         act_map_norm[np.argwhere(act_map_norm<0.0)] = 0.0
         return act_map_norm
     
-    def anal_act(self, save_path='./', model=None, batch_size=None, batch_num=None, arena=None, separate_ei=None, act_map_res=50):
+    def anal_act(self, save_path='./', model=None, BatchSize=None, batch_num=None, arena=None, separate_ei=None, act_map_res=50):
         model = self.model if model is None else model
         if model is None:
             raise Exception('Agent.anal_act: Error: model is None.')
@@ -737,17 +669,17 @@ class Agent(object):
         
         if batch_num is None:
             batch_num = int(batch_num / 10)
-        act_map_info = self.cal_act_map(model=model, arena=arena, res=act_map_res, batch_size=batch_size, batch_num=batch_num) # [N_num, res_x, res_y]
+        act_map_info = self.cal_act_map(model=model, arena=arena, res=act_map_res, BatchSize=BatchSize, batch_num=batch_num) # [N_num, res_x, res_y]
         
         act_map, point_count = act_map_info['act_map'], act_map_info['point_count']
 
         self.plot_sample_num(point_count, arena, save_path=save_path)
         if self.task in ['pc']:
             self.plot_place_cells_prediction(model=model, act_map_info=act_map_info, save_path=save_path)
-        self.plot_act_map(save=True, save_path=save_path, plot_num='all', model=model, batch_size=batch_size, batch_num=batch_num,  
+        self.plot_act_map(save=True, save_path=save_path, plot_num='all', model=model, BatchSize=BatchSize, batch_num=batch_num,  
             arena=arena, separate_ei=separate_ei, act_map_info=act_map_info)
 
-    def plot_act_map(self, save=True, save_path='./', save_name='act_map.png', plot_num=None, model=None, act_map_info=None, batch_size=None, batch_num=None,
+    def plot_act_map(self, save=True, save_path='./', save_name='act_map.png', plot_num=None, model=None, act_map_info=None, BatchSize=None, batch_num=None,
             arena=None, res=50, col_num=15, num_per_page=100, separate_ei=None, cmap='jet', sample_method='grid_score', map_method='individual'):
 
         model = self.model if model is None else model
@@ -760,10 +692,10 @@ class Agent(object):
             separate_ei = model.separate_ei
 
         if act_map_info is None:
-            #batch_size = trainer.batch_size
+            #BatchSize = trainer.BatchSize
             if batch_num is None:
                 batch_num = int(batch_num / 100)
-            act_map_info = self.cal_act_map(model=model, trainer=trainer, arena=arena, res=res, batch_size=batch_size, batch_num=batch_num) 
+            act_map_info = self.cal_act_map(model=model, trainer=trainer, arena=arena, res=res, BatchSize=BatchSize, batch_num=batch_num) 
                 
         act_map, point_count = act_map_info['act_map'], act_map_info['point_count'] # [N_num, res_x, res_y]
 
@@ -1031,9 +963,9 @@ class Agent(object):
             arena = self.arenas.Getcurrent_arena()
 
         if act_map_info is None:
-            batch_size = trainer.batch_size
+            BatchSize = trainer.BatchSize
             batch_num = int(trainer.batch_num / 100)
-            act_map_info = self.cal_act_map(model=model, trainer=trainer, arena=arena, res=res, batch_size=batch_size, batch_num=batch_num) # 
+            act_map_info = self.cal_act_map(model=model, trainer=trainer, arena=arena, res=res, BatchSize=BatchSize, batch_num=batch_num) # 
 
         act_map, point_count = act_map_info['act_map'], act_map_info['point_count'] # act_map: [N_num, res_x, res_y]
         res_x, res_y = act_map.shape[1], act_map.shape[2]
@@ -1075,12 +1007,12 @@ class Agent(object):
         print('Agent: Plotting act map.')
         self.anal_act(save_path=save_path,
                             model=self.model,
-                            batch_size=dict_['batch_size'], batch_num=dict_['batch_num'],
+                            BatchSize=dict_['BatchSize'], batch_num=dict_['batch_num'],
                             arena=self.arenas.current_arena(),
                             separate_ei=self.model.separate_ei
                         )
     def save(self, save_path, save_name):
-        EnsurePath(save_path)
+        utils_torch.EnsurePath(save_path)
         with open(save_path + save_name, 'wb') as f:
             torch.save(self.dict, f)
         self.model.save(save_path, '%s_model'%save_name)

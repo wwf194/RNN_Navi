@@ -69,6 +69,8 @@ def ProcessTasks():
             BuildObject(Task.Args)
         elif Task.Type in ["FunctionCall"]:
             utils_torch.CallFunctions(Task.Args, ObjRoot=ArgsGlobal.object)
+        elif Task.Type in ["Train"]:
+            
         else:
             utils.AddWarning("Unnknown Task.Type: %s"%Task.Type)
 
@@ -181,7 +183,7 @@ def train_supervised_learning(Args):
 
 def CleanLog():
     import utils_torch
-    utils_torch.files.RemoveAllFiles("./log/")
+    utils_torch.files.RemoveAllFilesDirs("./log/")
 
 if __name__=="__main__":
     main()

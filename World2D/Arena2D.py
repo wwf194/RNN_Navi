@@ -7,6 +7,7 @@ import matplotlib as mpl
 from matplotlib import pyplot as plt
 from utils_torch.attrs import *
 import World2D
+from utils_torch.utils import ToNpArray
 
 class Arena2D():
     def __init__(self, param=None):
@@ -88,10 +89,21 @@ class Arena2D():
         PointNum = Points.shape[0]
         Lambda = np.zeros((PointNum), dtype=np.float32)
         Lambdas = []
+        Norms = []
         for Shape in self.Shapes:
-            Lambdas.append(Shape.HasCollision(Points, Steps))
-        Lambdas = np.stack(Lambdas, axis=1) # [List: ShapeNum][np: PointNum] --> [np: PointNum, ShapeNum]
-        return np.min(Lambdas, axis=1) # [PointNum, ShapeNum] --> [PointNum]
+            Collision = Shape.CheckCollision(Points, Steps)
+            Lambdas.append(Collision.Lambdas)
+            Norms.append(Collision.Norms)
+        LambdasOfAllShapes = np.stack(Lambdas, axis=1) # [List: ShapeNum][np: PointNum] --> [np: PointNum, ShapeNum]
+        Lambdas = np.min(LambdasOfAllShapes, axis=1) # [PointNum, ShapeNum] --> [PointNum]
+        CollisionPointIndices = np.argwhere(Lambdas<1.0) # [CollisionPointNum, ShapeNum]
+        CollisionShapeIndices = np.argmin(LambdasOfAllShapes[CollisionPointIndices, :], axis=1)
+        Norms = ToNpArray(Norms) # [PointNum, ShapeNum, 2]
+        return utils_torch.json.JsonObj2PyObj({
+            "Indices": CollisionPointIndices,
+            "Lambdas": Lambdas[CollisionPointIndices], # [CollisionPointNum]
+            "Norms": Norms[CollisionPointIndices, CollisionShapeIndices, 2] # [CollisionPointNum, 2]
+        })
     #@abc.abstractmethod
     def Getrandom_xy(self): # must be implemented by child class.
         return

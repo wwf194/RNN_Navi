@@ -56,13 +56,13 @@ class Arenas2D:
     def Plotrandom_xy(self, res=50, save=True, save_path='./', **kw):
         for index, arena in enumerate(self.Arenas):
             arena.Plotrandom_xy_plt(save=save, save_path=save_path, save_name='arena_%d_random_xy.png'%(index), **kw)
-    def SetCurrentArena(self, index):
-        self.ArenaCurrent = self.Arenas[index]
+    def SetCurrentArena(self, Index):
+        self.ArenaCurrent = self.Arenas[Index]
     def GetCurrentArena(self):
         return self.ArenaCurrent
     def GetArenaByIndex(self, Index):
         return self.Arenas[Index]
-    def Getarena(self, index):
+    def GetArena(self, index):
         return self.Arenas[index]
 
 __MainClass__ = Arenas2D

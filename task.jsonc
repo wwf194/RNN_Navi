@@ -25,7 +25,7 @@
             {
                 "ParamPath": "&^param.model",
                 "ModulePath": "Models.RNNLIF",
-                "MountPath": "&^object.model",
+                "MountPath": "&^object.agent.brain",
             },
             {
                 "ParamPath": "&^param.world",
@@ -34,18 +34,18 @@
             },
             {
                 "ParamPath": "&^param.agent",
-                "ModulePath": "Agents.Agent",
+                "ModulePath": "Agents.AgentPoint2D",
                 "MountPath": "&^object.agent"
             }
         ]
     },
-
     {
         "Type": "FunctionCall",
         "Args":[
             ["&^world.InitFromParam", []],
             ["&^agent.InitFromParam", []],
-            ["&^agent.PlotPlaceCells", []]
+            ["&^agent.PlotPlaceCells", []],
+            ["&^agent.GenerateRandomTrajectoris", ["Num=50"]]
         ]
     },
     {
@@ -58,18 +58,18 @@
             "Batch.Num": "$1000 * 2$",
             "Batch.Size": "200",
             "TrajectoryConfig": {
-                "NumPerBatch": "$Args.batch.size",
-                "stepPerBatch": 50,
+                "Num": "$Args.batch.size",
+                "StepPerBatch": 50,
+                "Arena": "&^world.GetArenaByIndex(0)"
             },
             "Batch.Internal":[
-                "TrajectoryConfig |--> &agent.generateRandomTrajectory |--> Trajectory",
-                "Trjectory |--> &agent.generateModelInput |--> ModelInput",
-                "Trajectory |--> &agent.generateModelOutput |--> ModelOutputTarget",
-                "[ModelInput, ModelOutputTraget] |--> &Model.train |--> ModelOutput",
+                "&TrajectoryConfig |--> &agent.GenerateRandomTrajectory |--> Trajectory",
+                "Trajectory |--> &agent.GenerateModelInput |--> ModelInput",
+                "Trajectory |--> &agent.GenerateModelOutput |--> ModelOutputTarget",
+                "[ModelInput, ModelOutputTraget] |--> &Model.Train |--> ModelOutput",
             ]
         }
     },
-
 ]
 
 
