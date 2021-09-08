@@ -36,7 +36,7 @@ class PlaceCells2D(object):
         if HasAttrs(param.XYs, "Initialize"):
             EnsureAttrs(param.XYs.Initialize, "Method", default="FromFunctionCall")
             if param.XYs.Initialize.Method in ["FromFunctionCall"]:
-                utils_torch.CallFunction(param.XYs.Initialize.Functions, ObjCurrent=self, ObjRoot=utils.ArgsGlobal.object, )
+                utils_torch.CallFunction(param.XYs.Initialize.Functions, ObjCurrent=self, ObjRoot=utils.ArgsGlobal.object)
             else:
                 raise Exception()
     def ReceiveXYs(self, XYs):
@@ -44,12 +44,12 @@ class PlaceCells2D(object):
         data = self.data
         data.XYs = XYs
         SetAttrs(param, "XYs", value="&data.XYs")
-    def PlotXYs(self, ax=None, Save=False, SavePath="./PlaceCells2D-XYs.png"):
+    def PlotPointsAndMarkXYs(self, ax=None, Save=False, SavePath="./PlaceCells2D-XYs.png"):
         data = self.data
         if ax is None:
             plt.close("all")
             fig, ax = plt.subplots()
-        utils_torch.plot.PlotPoints2D(ax, data.XYs)
+        utils_torch.plot.PlotPoints(ax, data.XYs)
         if Save:
             utils_torch.EnsureFileDir(SavePath)
             plt.savefig(SavePath)

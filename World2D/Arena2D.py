@@ -34,7 +34,7 @@ class Arena2D():
         BoundaryBoxes = []
         for Shape in self.Shapes:
             BoundaryBoxes.append(GetAttrs(Shape.param.BoundaryBox))
-        BoundaryBoxes = np.array(BoundaryBoxes, dtype=np.float32) # [ShapeNum, (xMin, yMin, xMax, yMax)]
+        BoundaryBoxes = utils_torch.ToNpArray(BoundaryBoxes) # [ShapeNum, (xMin, yMin, xMax, yMax)]
         if len(BoundaryBoxes.shape)==1:
             BoundaryBoxes = BoundaryBoxes[np.newaxis, :]
         
@@ -61,7 +61,7 @@ class Arena2D():
             plt.close("all")
             fig, ax = plt.subplots()
         for Shape in self.Shapes:
-            Shape.PlotShape(ax, Save=False)
+            Shape.PlotShape(ax, Save=False, SetXYRange=False)
         if Save:
             plt.savefig(SavePath)
         return ax
@@ -92,23 +92,26 @@ class Arena2D():
         Norms = np.zeros((PointNum, ShapeNum, 2), dtype=np.float32)
         for ShapeIndex, Shape in enumerate(self.Shapes):
             Collision = Shape.CheckCollision(XY, dXY)
-            LambdasOfAllShapes[Collision.Indices, ShapeIndex] = Collision.Lambdas
-            Norms[Collision.Indices, ShapeIndex, :] = Collision.Norms
+            if Collision.Num > 0:
+                LambdasOfAllShapes[Collision.Indices, ShapeIndex] = Collision.Lambdas
+                Norms[Collision.Indices, ShapeIndex, :] = Collision.Norms
         #LambdasOfAllShapes = np.stack(Lambdas, axis=1) # [List: ShapeNum][np: PointNum] --> [np: PointNum, ShapeNum]
         Lambdas = np.min(LambdasOfAllShapes, axis=1) # [PointNum, ShapeNum] --> [PointNum]
         CollisionPointIndices = np.argwhere(Lambdas<1.0).squeeze() # [CollisionPointNum]
-        CollisionShapeIndices = np.argmin(LambdasOfAllShapes[CollisionPointIndices, :], axis=1)
+        LambdasOfCollisionShapes = LambdasOfAllShapes[CollisionPointIndices, :]
+        if len(LambdasOfCollisionShapes.shape)==1:
+            LambdasOfCollisionShapes = LambdasOfCollisionShapes[np.newaxis, :]
+        CollisionShapeIndices = np.argmin(LambdasOfCollisionShapes, axis=1)
 
-        self.ReportCollision(XY[CollisionPointIndices], dXY[CollisionPointIndices], Collision.XY)
+        self.ReportCollision(XY[CollisionPointIndices], dXY[CollisionPointIndices])
 
         return utils_torch.json.JsonObj2PyObj({
             "Indices": CollisionPointIndices,
-            "Lambdas": Lambdas[CollisionPointIndices], # [CollisionPointNum]
+            "Lambdas": np.atleast_1d(Lambdas[CollisionPointIndices]), # [CollisionPointNum]
             "Norms": Norms[CollisionPointIndices, CollisionShapeIndices, :] # [CollisionPointNum, 2]
         })
-    def ReportCollision(XY, dXY, XYCollision):
-        
-
+    def ReportCollision(XY, dXY, XYCollision=None):
+        return
     #@abc.abstractmethod
     def Getrandom_xy(self): # must be implemented by child class.
         return

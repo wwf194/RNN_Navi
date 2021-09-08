@@ -12,6 +12,18 @@
                         "Rotation": 0.0,
                     },
                     "Vertices.Num": 6
+                },
+                {
+                    "Type": "Polygon",
+                    "Subtype": "RegularPolygon",
+                    "Initialize.Method": "CenterRadiusTheta",
+                    "Initialize": {
+                        "Center": [0.0, 0.0],
+                        "Radius": 0.7,
+                        "Rotation": 0.0,
+                    },
+                    "Vertices.Num": 6,
+                    "Internal": "Outside",
                 }
             ]
         },

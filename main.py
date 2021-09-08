@@ -22,8 +22,11 @@ parser.add_argument("task", nargs="?", default="ProcessTasks")
 Args = parser.parse_args()
 
 def main():
+
     if Args.task in ["CleanLog", "CleanLog", "cleanlog"]:
         CleanLog()
+    elif Args.task in ["CleanFigure"]:
+        CleanFigures()
     elif Args.task in ["ProcessTasks"]:
         try: # catch all unhandled exceptions
             ProcessTasks()
@@ -41,21 +44,20 @@ def ScanConfigFile():
     utils_torch.attrs.SetAttrs(ArgsGlobal, "Config", Config)
 ScanConfigFile()
 
+
+
 import utils
 from utils import AddLog, AddWarning, ArgsGlobal
 utils.SetLoggerGlobal()
 utils.SetSaveDir()
 logger = utils.GetLoggerGlobal()
 
-
 import utils_torch
 from utils_torch.attrs import *
-
+utils_torch.SetLogger(utils.GetLoggerGlobal()) # Pass logger to library utils_torch
 #print(utils_torch.ListAllMethodsOfModule("utils_torch.json"))
 
 def ProcessTasks():
-    import utils_torch
-    utils_torch.SetLogger(utils.GetLoggerGlobal()) # Pass logger to library utils_torch
     Tasks = utils.json.JsonFile2PyObj('./task.jsonc')
     for Task in Tasks:
         utils_torch.EnsureAttrs(Task, "Args", default={})
@@ -186,6 +188,10 @@ def train_supervised_learning(Args):
 def CleanLog():
     import utils_torch
     utils_torch.files.RemoveAllFilesDirs("./log/")
+
+def CleanFigures():
+    import utils_torch
+    utils_torch.files.RemoveMatchedFiles("./", r".*\.png")
 
 if __name__=="__main__":
     main()

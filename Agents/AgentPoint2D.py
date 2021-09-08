@@ -51,7 +51,7 @@ class Agent(object):
     def PlotPlaceCells(self):
         param = self.param
         ax = utils.ArgsGlobal.object.world.Arenas[0].PlotArena(Save=False)        
-        self.PlaceCells.PlotXYs(ax, Save=True)
+        self.PlaceCells.PlotPointsAndMarkXYs(ax, Save=True)
     def report_perform(self, prefix='', verbose=True):
         report = prefix
         for key in self.perform_list.keys():
@@ -382,6 +382,7 @@ class Agent(object):
         Directions[:, 0] = np.random.uniform(-np.pi, np.pi, param.TrajectoryNum)
 
         for StepIndex in range(param.StepNum):
+            utils.AddLog("Step: %d"%StepIndex)
             XY = XYs[:, StepIndex, :] # [PointNum, 2]
             Direction = Directions[:, StepIndex]
             dL = dLs[:, StepIndex]
@@ -390,7 +391,7 @@ class Agent(object):
             XYNext = XY + dXY
             DirectionNext = Direction + dDirection
 
-            Collision = param.Arena.CheckCollision(XY, XYNext)
+            Collision = param.Arena.CheckCollision(XY, XYNext - XY)
             XYNext[Collision.Indices, :] = XY[Collision.Indices, :] + Collision.Lambdas[:, np.newaxis] * dXY[Collision.Indices, :] * 0.95
             DirectionNext[Collision.Indices] = utils_torch.geometry2D.FlipAroundNormsAngle(Direction[Collision.Indices], 
                 utils_torch.geometry2D.Vectors2DirectionsNp(Collision.Norms))
@@ -428,11 +429,13 @@ class Agent(object):
             trajectory = Trajectory.XYs[Index] # [StepNum, (x, y)]
             StepNum = trajectory.shape[0] - 1
             for StepIndex in range(StepNum):
-                utils_torch.plot.PlotLinePlt(ax, trajectory[StepIndex, :], trajectory[StepIndex+1, :],
+                utils_torch.plot.PlotArrowFromVertexPairsPlt(ax, trajectory[StepIndex, :], trajectory[StepIndex+1, :],
                     #Color=dLsColored[Index, StepIndex, :]
-                    Color=(0.0, 0.0, 0.0)
+                    Color=(0.0, 0.0, 0.0),
+                    SizeScale=0.1
                 )
-        
+            utils_torch.plot.PlotPoints(ax, param.Arena.Shapes[0].cache.CollisionPoints)
+            utils_torch.plot.PlotLines(ax, param.Arena.Shapes[0].cache.CollisionLines, Width=0.1, Color=(0.0, 0.0, 1.0))
         norm = mpl.colors.Normalize(vmin=dLsStatistics.Min, vmax=dLsStatistics.Max)
         ax_ = ax.inset_axes([1.05, 0.0, 0.12, 0.8])
         cbar = ax.figure.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=utils_torch.plot.ParseColorMapPlt(ColorMap)), 
