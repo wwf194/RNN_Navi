@@ -26,6 +26,8 @@ class Polygon(Shape2D):
             self.param = param
         else:
             param = self.param
+        
+        self.data = utils_torch.json.EmptyPyObj()
         # Check Shape Type
         if GetAttrs(param, "Type") in ["Polygon", "Rectangle", "Triangle"]:
             SetAttrs(param.Type, "Polygon")
@@ -46,7 +48,7 @@ class Polygon(Shape2D):
         else:
             raise Exception()
         
-        self.VerticesNp = np.array(GetAttrs(param.Vertices), dtype=np.float32)
+        self.data.VerticesNp = np.array(GetAttrs(param.Vertices), dtype=np.float32)
         self.CalculateEdgesInfo()
         self.CalculateBoundaryBox()
         #self.PlotShape(SavePath="./Polygon.png")
@@ -87,14 +89,15 @@ class Polygon(Shape2D):
         # VerticesNp = np.concatenate((VerticesNp, VerticesNp[0][np.newaxis, :]), axis=0)
     def CalculateEdgesInfo(self):
         param = self.param
+        data = self.data
         SetAttrs(param, "Edges.Num", len(param.Edges))
         SetAttrs(param.Edges, "Vector", utils_torch.geometry2D.VertexPairs2Vectors(GetAttrs(param.Edges)))
         SetAttrs(param.Edges, "Norm", utils_torch.geometry2D.Vectors2Norms(GetAttrs(param.Edges.Vector)))
         SetAttrs(param.Edges, "Norm.Direction", utils_torch.geometry2D.Vectors2Directions(GetAttrs(param.Edges.Norm)))
-        self.EdgesNp = np.array(GetAttrs(param.Edges), dtype=np.float32)
-        self.EdgesVectorNp = np.array(GetAttrs(param.Edges.Vector), dtype=np.float32)
-        self.EdgesNormNp = np.array(GetAttrs(param.Edges.Norm), dtype=np.float32)
-        self.EdgesNormDirectionNp = np.array(GetAttrs(param.Edges.Norm.Direction), dtype=np.float32)
+        data.EdgesNp = np.array(GetAttrs(param.Edges), dtype=np.float32)
+        data.EdgesVectorNp = np.array(GetAttrs(param.Edges.Vector), dtype=np.float32)
+        data.EdgesNormNp = np.array(GetAttrs(param.Edges.Norm), dtype=np.float32)
+        data.EdgesNormDirectionNp = np.array(GetAttrs(param.Edges.Norm.Direction), dtype=np.float32)
     def CalculateBoundaryBox(self):
         param = self.param
         # Calculate Boundary Box
@@ -121,20 +124,34 @@ class Polygon(Shape2D):
     def Vector2NearstBorder(self, Points):
         return
     def Distance2Edges(self, PointsNp):
-        return utils_torch.geometry2D.Distance2Edges(PointsNp, self.VerticesNp, self.EdgesNormNp)
+        data = self.data
+        return utils_torch.geometry2D.Distance2Edges(PointsNp, data.VerticesNp, data.EdgesNormNp)
     def isMovingOutside(self, Points, NextPoints):
         return self.isInside(Points) * self.isOutside(NextPoints)
-    def CheckCollision(self, Points, Steps, PointsNext):
-        PointNum = Points.shape[0]
-        Lambdas = []
-        for Index in range(self.Edges.Num):
-            Lambdas.append(utils_torch.geometry2D.InterceptRatio(self.EdgesNp[np.newaxis, Index, 0], self.EdgesNp[np.newaxis, Index, 1], Points, PointsNext))
-        Lambdas = np.stack(Lambdas, axis=1) # [List: EdgeNum][np: PointNum] --> [np: PointNum, ShapeNum]
-        return np.min(Lambdas, axis=1) # [PointNum, ShapeNum] --> [PointNum]
+    def CheckCollision(self, XY, dXY):
+        param = self.param
+        data = self.data
+        XYNext = XY + dXY
+        PointNum = XY.shape[0]
+        LambdasOfAllEdges = np.ones((PointNum, param.Edges.Num), dtype=np.float32)
+        for Index in range(param.Edges.Num):
+            LambdasOfAllEdges[:, Index] = utils_torch.geometry2D.InterceptRatio(XY, XYNext, data.EdgesNp[np.newaxis, Index, 0], data.EdgesNp[np.newaxis, Index, 1])        
+        Lambdas = np.min(LambdasOfAllEdges, axis=1) # [PointNum, ShapeNum] --> [PointNum]
+        CollisionPointIndices = np.argwhere(Lambdas<1.0) # [CollisionPointNum, 1] --> [CollisionPointNum]
+        CollisionPointNum = CollisionPointIndices.shape[0]
+        CollisionPointIndices = CollisionPointIndices.reshape(CollisionPointNum)
+        CollisionEdgeIndices = np.argmin(LambdasOfAllEdges[CollisionPointIndices, :], axis=1)
+        return utils_torch.json.JsonObj2PyObj({
+            "Indices": CollisionPointIndices,
+            "Lambdas": Lambdas[CollisionPointIndices], # [CollisionPointNum]
+            "Norms": np.stack([data.EdgesNormNp[Index] for Index in CollisionEdgeIndices], axis=0) # [CollisionPointNum, Norms]
+        })
+
     def PlotEdgesPlt(self, ax): # img: [H, W, C], np.uint8.
         utils_torch.plot.PlotLines(ax, self.EdgesNp)
     def PlotShape(self, ax=None, Save=True, SavePath="./"):
         param = self.param
+        data = self.data
         if ax is None:
             plt.close("all")
             fig, ax = plt.subplots()
@@ -142,7 +159,7 @@ class Polygon(Shape2D):
         utils_torch.plot.PlotXYs(ax, GetAttrs(param.Vertices))
         utils_torch.plot.PlotDirectionsOnEdges(ax, GetAttrs(param.Edges), GetAttrs(param.Edges.Norm), Color="Red")
         #utils_torch.plot.PlotArrows(ax, utils_torch.geometry2D.Edges2MidPoints(GetAttrs(param.Edges)), GetAttrs(param.Edges.Norm), Color="Red")
-        utils_torch.plot.PlotXYs(ax, utils_torch.geometry2D.Edges2MidPointsNp(self.EdgesNp) + self.EdgesNormNp, GetAttrs(param.Edges.Norm))
+        utils_torch.plot.PlotXYs(ax, utils_torch.geometry2D.Edges2MidPointsNp(data.EdgesNp) + data.EdgesNormNp, GetAttrs(param.Edges.Norm))
         
         ax.set_xlim(param.BoundaryBox.xMin, param.BoundaryBox.xMax)
         ax.set_ylim(param.BoundaryBox.yMin, param.BoundaryBox.yMax)

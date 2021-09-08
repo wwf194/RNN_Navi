@@ -11,8 +11,7 @@ import matplotlib as mpl
 from matplotlib import pyplot as plt
 
 from utils_torch.attrs import *
-from utils_torch.json import JsonObj2JsonStr
-from utils_torch.model import ParseRouters, build_module
+from utils_torch.model import BuildModule
 import utils_torch
 import utils
 
@@ -56,20 +55,19 @@ class RNNLIF(nn.Module):
         # initialize modules
         #for module in ListAttrs(param.modules):
         for moduleName, moduleParam in ListAttrs(param.Modules):
-            Module = build_module(moduleParam)
+            Module = BuildModule(moduleParam)
             self.add_module(moduleName, Module)
             SetAttrs(Nodes.Modules, moduleName, Module)
 
-        for name, signalFlowParam in ListAttrs(param.Dynamics):
-            if name in ["__Entry__"]:
+        for Name, RouterParam in ListAttrs(param.Dynamics):
+            if Name in ["__Entry__"]:
                 continue
-            Router = utils_torch.BuildRouter(signalFlowParam)
-            setattr(Nodes.Routers, name, Router)
+            Router = utils_torch.BuildRouter(RouterParam)
+            setattr(Nodes.Routers, Name, Router)
 
         DefaultDynamicsEntry = "&Dynamics.%s"%ListAttrs(param.Dynamics)[0][0]
         EnsureAttrs(param.Dynamics, "__Entry__", default=DefaultDynamicsEntry)
-        utils_torch.model.ParseRouters(Nodes.Routers, [Nodes.Modules, Nodes.Routers, Nodes])
-
+        utils_torch.parse.ParseRouters(Nodes.Routers, ObjBase=[Nodes.Modules, Nodes.Routers, Nodes])
         utils_torch.PyObj2JsonFile(param, "./params/RNNLIF_temp.jsonc")
 
     def forward(self, Input):

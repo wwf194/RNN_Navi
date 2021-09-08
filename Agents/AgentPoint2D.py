@@ -361,12 +361,12 @@ class Agent(object):
         }
         # return (inputs, init), outputs
     def GenerateRandomTrajectory(self, param): # StepNum, t_total, random_init=False, arena_index=None, use_test_arenas_=None, full_info=False): #return random trajectories
-        # param = utils_torch.parse.ParsePyObjDynamic(param, ObjRoot=ArgsGlobal.object, ObjCurrent=param) # should already be done
-        # EnsureAttrs(param, "StartXY.Method", default="UniformInArena") # should already be done
-        # EnsureAttrs(param, "StartXY.MinDistance2Border", default="2.0%") # should already be done
-        if param.StartXY.Method in ["UniformInArena"]:
-            XYStart = param.Arena.GenerateRandomInternalXYs(param.Trajectory, MinDistance2Border=param.StartXYMinDistance2Border)
-        elif param.StartXY.Method in ["Given"]:
+        #param = utils_torch.parse.ParsePyObjDynamic(param, ObjRoot=ArgsGlobal.object, ObjCurrent=param) # should already be done
+        EnsureAttrs(param, "StartXY.Method", default="UniformInArena") # should already be done
+        EnsureAttrs(param, "StartXY.MinDistance2Border", default=0.0) # should already be done
+        if param.XYStart.Method in ["UniformInArena"]:
+            XYStart = param.Arena.GenerateRandomInternalXYs(param.TrajectoryNum, MinDistance2Border=param.StartXY.MinDistance2Border)
+        elif param.XYStart.Method in ["Given"]:
             XYStart = GetAttrs(param.StartXY)
         else:
             raise Exception()
@@ -374,99 +374,97 @@ class Agent(object):
         Directions = np.zeros([param.TrajectoryNum, param.StepNum + 1]) # head direction: [TrajectoryNum, StepNum + 1]
         dXYs = np.zeros((param.TrajectoryNum, param.StepNum, 2), dtype=np.float32)
 
-        dLs = utils_torch.math.SampleFromDistribution(GetAttrs(param.StepLength.Distribution)) # dl = v * dt : [TrajectoryNum, StepNum]
-        dDirections = utils_torch.math.SampleFromDistribution(GetAttrs(param.DirectionChange.Distribution)) # [TrajectoryNum, StepNum]
+        dLs = utils_torch.math.SampleFromDistribution(GetAttrs(param.StepLength.Distribution), Shape=(param.TrajectoryNum, param.StepNum)) # dl = v * dt : [TrajectoryNum, StepNum]
+        dDirections = utils_torch.math.SampleFromDistribution(GetAttrs(param.DirectionChange.Distribution), Shape=(param.TrajectoryNum, param.StepNum)) # [TrajectoryNum, StepNum]
 
         # Set Initial Location
         XYs[:, 0, :] = XYStart
         Directions[:, 0] = np.random.uniform(-np.pi, np.pi, param.TrajectoryNum)
 
-        for StepIndex in range(param.Index):
-            XY = XYs[:, StepIndex, :]
-            Direction = Directions[:, StepIndex, :]
+        for StepIndex in range(param.StepNum):
+            XY = XYs[:, StepIndex, :] # [PointNum, 2]
+            Direction = Directions[:, StepIndex]
             dL = dLs[:, StepIndex]
             dDirection = dDirections[:, StepIndex]
-            dXY = utils_torch.math.DirectionsLenghts2XYs(Direction, dL)
+            dXY = utils_torch.geometry2D.DirectionsLengths2XYs(Direction, dL)
             XYNext = XY + dXY
             DirectionNext = Direction + dDirection
 
             Collision = param.Arena.CheckCollision(XY, XYNext)
-            XYNext[Collision.Indices, :] = XY[Collision.Indices, :] + Collision.Lambdas * dXY * 0.95
-            DirectionNext[Collision.Indices] = utils_torch.geometry2D.FlipAroundNorms(Direction[Collision.Indices], Collision.Norms)
+            XYNext[Collision.Indices, :] = XY[Collision.Indices, :] + Collision.Lambdas[:, np.newaxis] * dXY[Collision.Indices, :] * 0.95
+            DirectionNext[Collision.Indices] = utils_torch.geometry2D.FlipAroundNormsAngle(Direction[Collision.Indices], 
+                utils_torch.geometry2D.Vectors2DirectionsNp(Collision.Norms))
 
             XYs[:, StepIndex + 1, :] = XYNext
             Directions[:, StepIndex + 1] = DirectionNext
 
             dXY = XYNext - XY
             dXYs[:, StepIndex, :] = dXY
-            dDirections = DirectionNext - Direction
+            dDirections[:, StepIndex] = DirectionNext - Direction
 
-        return utils_torch.json.JsonFile2PyObj({
+        return utils_torch.json.Dict2PyObj({
             "XYs": XYs,
             "Directions": Directions,
             "dXYs": dXYs,
             "dLs": dLs,
             "dDirections": dDirections,
         })
-    def GenerateRandomTrajectoryAndPlot(self, param, SavePath):
+    def GenerateRandomTrajectoryAndPlot(self, param, Save=False, SavePath=True):
         Trajectory = self.GenerateRandomTrajectory(param)
         PlotNum = param.TrajectoryNum
-
         #figure, ax = plt.subplots()
         figure, ax = plt.subplots(1, 1, figsize=(5*1.5, 5*1.0)) # figsize (width, length) in inches.
         
-        BoundaryBox = param.Arena.BoundaryBox
+        BoundaryBox = param.Arena.param.BoundaryBox
         ax.set_xlim(BoundaryBox.xMin, BoundaryBox.xMax)
         ax.set_ylim(BoundaryBox.yMin, BoundaryBox.yMax)
         ax.set_aspect(1) # so that x and y has same unit length in image.
-
         param.Arena.PlotArena(ax, Save=False)
 
-        dLsColored = utils_torch.plot.Map2Colors(Trajectory.dLs)
-
-        for i in range(PlotNum):
-            color = {
-                'method':'given',
-                'data':dl_mapped[i]
-            }
-            utils_torch.plot.PlotPolyLineFromVerticesPlt(ax, path['xy'][i,:,:], color=color, width=2)
+        ColorMap = "jet"
+        dLsColored = utils_torch.plot.Map2Colors(Trajectory.dLs, ColorMap="jet", Method="MinMax", Alpha=False)
+        dLsStatistics = utils_torch.math.NpStatistics(Trajectory.dLs)
+        for Index in range(PlotNum):
+            trajectory = Trajectory.XYs[Index] # [StepNum, (x, y)]
+            StepNum = trajectory.shape[0] - 1
+            for StepIndex in range(StepNum):
+                utils_torch.plot.PlotLinePlt(ax, trajectory[StepIndex, :], trajectory[StepIndex+1, :],
+                    #Color=dLsColored[Index, StepIndex, :]
+                    Color=(0.0, 0.0, 0.0)
+                )
         
+        norm = mpl.colors.Normalize(vmin=dLsStatistics.Min, vmax=dLsStatistics.Max)
         ax_ = ax.inset_axes([1.05, 0.0, 0.12, 0.8])
-        norm = mpl.colors.Normalize(vmin=dl_min, vmax=dl_max)
-        cbar = ax.figure.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), 
+        cbar = ax.figure.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=utils_torch.plot.ParseColorMapPlt(ColorMap)), 
             cax=ax_, # occupy the ax exclusively to draw colorbar
             #ax=ax, # steal some space from ax to draw colorbar
             #pad=.05, # ?Fraction of original axes between colorbar and new image axes
             #fraction=1.0, # ratio to zoom in or out the colorbar
-            ticks=np.linspace(dl_min, dl_max, num=5),
+            ticks=np.linspace(dLsStatistics.Min, dLsStatistics.Max, num=5),
             #aspect = 10, # ratio of colorbar height to width
             #orientation='vertical',
             #location='left' # invalid key word
             )
         cbar.set_label('Step length')
 
-        color_truth = (0.0, 1.0, 0.0)
-        color_edge = (0.0, 0.0, 0.0)
-        ax.scatter(path['xy'][:,0,0], path['xy'][:,0,1], marker='^', color=color_truth, edgecolors=color_edge, label='Start positions')
-        ax.scatter(path['xy'][:,-1,0], path['xy'][:,-1,1], marker='o', color=color_truth, edgecolors=color_edge, label='End positions')
-        ax.legend(bbox_to_anchor=(1.05, 0.7, 0.2, 0.3)) # (x, y, width, height). (x, y) is coordinate of lower left point.
-        
+        # color_truth = (0.0, 1.0, 0.0)
+        # color_edge = (0.0, 0.0, 0.0)
+        # ax.scatter(path['xy'][:,0,0], path['xy'][:,0,1], marker='^', color=color_truth, edgecolors=color_edge, label='Start positions')
+        # ax.scatter(path['xy'][:,-1,0], path['xy'][:,-1,1], marker='o', color=color_truth, edgecolors=color_edge, label='End positions')
+        # ax.legend(bbox_to_anchor=(1.05, 0.7, 0.2, 0.3)) # (x, y, width, height). (x, y) is coordinate of lower left point.
 
-        #start = ax.plot([1.0,2.0],[1.0,2.0], c=color['start'], label='start')
-        #end = ax.plot([1.0,2.0],[1.0,2.0], c=color['end'], label='end')
-
+        # #start = ax.plot([1.0,2.0],[1.0,2.0], c=color['start'], label='start')
+        # #end = ax.plot([1.0,2.0],[1.0,2.0], c=color['end'], label='end')
         ax.set_title('%d random paths'%PlotNum)
-        
-        plt.tight_layout()
-
-        if save:
-            EnsurePath(save_path)
-            plt.savefig(save_path + save_name)
-
+        #plt.tight_layout()
+        if Save:
+            utils_torch.EnsureFileDir(SavePath)
+            plt.savefig(SavePath)
+        plt.savefig("./Trajectory.svg", format="svg")
         return ax
     def plot_path(self, path=None, model=None, plot_num=2, arena=None, save=True, save_path='./', save_name='path_plot', cmap='jet', **kw):
         if arena is None:
-            arena = self.arenas.Getcurrent_arena()
+            arena = self.arenas.GetCurrentArena()
         # generate path
         if path is None:
             path = self.walk_random(num=plot_num, arena=arena, mode='full', **kw)
@@ -493,10 +491,7 @@ class Agent(object):
             xy_pred = output_pred # [plot_num, StepNum, (x, y)]
         elif self.task in ['pc']:
             xy_pred = self.place_cells.Getcoords_from_act(output_pred) # [plot_num, StepNum, sample_num, (x, y)]
-            #print(xy_pred.shape)
-            
-            #print(xy_pred.shape)
-        #print(path['xy'].shape)
+
 
         plt.close('all')
         figure, ax = plt.subplots(1, 1, figsize=(5*1.5, 5*1.0)) # figsize (width, length) in inches.
@@ -860,7 +855,7 @@ class Agent(object):
                 row_num += 1
             #print('row_num:%d col_num:%d'%(row_num, col_num))
             plt.close()
-            fig, axes = plt.subplots(nrows=row_num, ncols=col_num, figsize=(5*col_num, 5*row_num)) # figsize unit: inches
+            fig, axes = plt.subplots(nrows=row_num, ncols=col_num, figsize=(5 * col_num, 5 * row_num)) # figsize unit: inches
             for i in range(page_plot_num):
                 row_index, col_index = (i + position_base) // col_num, (i + position_base) % col_num
                 N_index = plot_index[i + index_base]
@@ -883,7 +878,7 @@ class Agent(object):
             
             for i in range(page_plot_num + position_base, row_num * col_num):
                 row_index, col_index = (i + position_base) // col_num, (i + position_base) % col_num
-                ax = Getax(axes, row_index, col_index, row_num, col_num)
+                ax = utils_torch.plot.GetAx(axes, row_index, col_index, row_num, col_num)
                 ax.axis('off')
 
             if map_method in ['universal', 'whole']:

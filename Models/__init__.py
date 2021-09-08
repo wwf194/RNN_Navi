@@ -7,11 +7,11 @@ import Models.RNNLIF
 
 from Models.PlaceCells2D import PlaceCells2D
 
-def build_module(module):
+def BuildModule(module):
     if module.type in ["LeakySingleLayer"]:
         # to be implemented
         pass
     else:
-        raise utils_torch.model.build_module(module)
+        raise utils_torch.model.BuildModule(module)
 
 

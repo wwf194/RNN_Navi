@@ -45,29 +45,47 @@
             ["&^world.InitFromParam", []],
             ["&^agent.InitFromParam", []],
             ["&^agent.PlotPlaceCells", []],
-            ["&^agent.GenerateRandomTrajectoris", ["Num=50"]]
+            //["&^agent.GenerateRandomTrajectoryAndPlot", ["param=50"]]
         ]
     },
     {
         "Type": "Train",
+        //"SubType": "Router",
         "Args": {
             "Type": "SupervisedLearning",
+            "SubType": "EpochBatch",
             "Method": "GradientDescend",
-            "Mode": "EpochBatch",
             "Epoch.Num": 200,
-            "Batch.Num": "$1000 * 2$",
-            "Batch.Size": "200",
-            "TrajectoryConfig": {
-                "Num": "$Args.batch.size",
-                "StepPerBatch": 50,
-                "Arena": "&^world.GetArenaByIndex(0)"
+            "Batch.Num": "#1000 * 2",
+            "Batch.Size": 200,
+            "TrajectoryParam": {
+                //"TrajectoryNum": "$Batch.Size",
+                "TrajectoryNum": 3,
+                "XYStart.Method": "UniformInArena",
+                "StepNum": 50,
+                "Arena": "&^world.GetArenaByIndex(0)",
+                "StepLength.Distribution":{
+                    "Type": "Reyleigh",
+                    "Mean": 0.05,
+                },
+                "DirectionChange.Distribution":{
+                    "Type": "Gaussian",
+                    "Mean": 0.0,
+                    "Std": "#3.1415926 / 180 * 5"
+                }
             },
-            "Batch.Internal":[
-                "&TrajectoryConfig |--> &agent.GenerateRandomTrajectory |--> Trajectory",
-                "Trajectory |--> &agent.GenerateModelInput |--> ModelInput",
-                "Trajectory |--> &agent.GenerateModelOutput |--> ModelOutputTarget",
-                "[ModelInput, ModelOutputTraget] |--> &Model.Train |--> ModelOutput",
-            ]
+            "Batch.Internal":{
+                "In":{
+                    "TrajectoryParam": "&TrajectoryParam",
+                },
+                "Routings": [
+                    "TrajectoryParam |--> &^agent.GenerateRandomTrajectoryAndPlot |--> task",
+                    // "&TrajectoryParam |--> &agent.GenerateRandomTrajectory |--> Trajectory",
+                    // "Trajectory |--> &agent.GenerateModelInput |--> ModelInput",
+                    // "Trajectory |--> &agent.GenerateModelOutput |--> ModelOutputTarget",
+                    // "ModelInput, ModelOutputTraget |--> &Model.Train |--> ModelOutput",
+                ],
+            }
         }
     },
 ]

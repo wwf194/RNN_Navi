@@ -67,7 +67,7 @@ class Arena2D():
         return ax
     def PlotRandomInternalPoints(self, PointNum, SavePath):
         fig, ax = plt.subplots()
-        Points = self.GenerateRandomInternalPoints(PointNum)
+        Points = self.GenerateRandomInternalXYs(PointNum)
         self.PlotBoundary(ax)
         utils_torch.plot.PlotPointsNp(Points)
         plt.savefig(SavePath)
@@ -83,27 +83,32 @@ class Arena2D():
         # @param Points: numpy.ndarray with shape [PointNum, (x, y)]
         # @param MinDistance2Border: to be implemented
         return ~self.IsInside(Points, MinDistance2Border=MinDistance2Border)
-    def CheckCollision(self, Points, Steps):
+    def CheckCollision(self, XY, dXY):
         # Planned Trajectory: Points -> Points + Vectors
         # @return: np.ndarray with shape [PointNum]. 
-        PointNum = Points.shape[0]
-        Lambda = np.zeros((PointNum), dtype=np.float32)
-        Lambdas = []
-        Norms = []
-        for Shape in self.Shapes:
-            Collision = Shape.CheckCollision(Points, Steps)
-            Lambdas.append(Collision.Lambdas)
-            Norms.append(Collision.Norms)
-        LambdasOfAllShapes = np.stack(Lambdas, axis=1) # [List: ShapeNum][np: PointNum] --> [np: PointNum, ShapeNum]
+        PointNum = XY.shape[0]
+        ShapeNum = len(self.Shapes)
+        LambdasOfAllShapes = np.ones((PointNum, ShapeNum), dtype=np.float32)
+        Norms = np.zeros((PointNum, ShapeNum, 2), dtype=np.float32)
+        for ShapeIndex, Shape in enumerate(self.Shapes):
+            Collision = Shape.CheckCollision(XY, dXY)
+            LambdasOfAllShapes[Collision.Indices, ShapeIndex] = Collision.Lambdas
+            Norms[Collision.Indices, ShapeIndex, :] = Collision.Norms
+        #LambdasOfAllShapes = np.stack(Lambdas, axis=1) # [List: ShapeNum][np: PointNum] --> [np: PointNum, ShapeNum]
         Lambdas = np.min(LambdasOfAllShapes, axis=1) # [PointNum, ShapeNum] --> [PointNum]
-        CollisionPointIndices = np.argwhere(Lambdas<1.0) # [CollisionPointNum, ShapeNum]
+        CollisionPointIndices = np.argwhere(Lambdas<1.0).squeeze() # [CollisionPointNum]
         CollisionShapeIndices = np.argmin(LambdasOfAllShapes[CollisionPointIndices, :], axis=1)
-        Norms = ToNpArray(Norms) # [PointNum, ShapeNum, 2]
+
+        self.ReportCollision(XY[CollisionPointIndices], dXY[CollisionPointIndices], Collision.XY)
+
         return utils_torch.json.JsonObj2PyObj({
             "Indices": CollisionPointIndices,
             "Lambdas": Lambdas[CollisionPointIndices], # [CollisionPointNum]
-            "Norms": Norms[CollisionPointIndices, CollisionShapeIndices, 2] # [CollisionPointNum, 2]
+            "Norms": Norms[CollisionPointIndices, CollisionShapeIndices, :] # [CollisionPointNum, 2]
         })
+    def ReportCollision(XY, dXY, XYCollision):
+        
+
     #@abc.abstractmethod
     def Getrandom_xy(self): # must be implemented by child class.
         return
@@ -111,7 +116,7 @@ class Arena2D():
         param = self.param
         Points = np.stack([np.random.uniform(param.BoundaryBox.xMin, param.BoundaryBox.xMax, Num), np.random.uniform(param.BoundaryBox.yMin, param.BoundaryBox.yMax, Num)], axis=1) #[points_num, (x, y)]
         return Points
-    def GenerateRandomInternalPoints(self, Num=100, MinDistance2Border=0.0):
+    def GenerateRandomInternalXYs(self, Num=100, MinDistance2Border=0.0):
         PointNum = 0
         PointList = []
         while(PointNum < Num):

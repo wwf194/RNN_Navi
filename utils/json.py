@@ -32,46 +32,53 @@ class PyObj(object):
             else:
                 ListParsed.append(Item)
         return ListParsed
-    def FromDict(self, dict_):
+    def FromDict(self, Dict):
         #self.__dict__ = {}
-        for key, value in dict_.items():
+        for key, value in Dict.items():
             if "." in key:
+                # For debugging.
+                # if "Batch.Internal" in key:
+                #     print("aaa")
                 keys = key.split(".")
-                CheckIsLegalPyName(key[0])
                 obj = self
                 for index, key in enumerate(keys):
+                    CheckIsLegalPyName(key)
                     if index == len(keys) - 1:
                         if hasattr(obj, key):
                             utils.AddWarning("PyObj: Overwriting key: %s. Original Value: %s, New Value: %s"\
                                 %(key, getattr(obj, key), value))
-                        setattr(obj, key, value)
-                    if hasattr(obj, key):
-                        obj = getattr(obj, key)
+                        #setattr(obj, key, value)
+                        self.ProcessKeyValue(obj, key, value)
                     else:
-                        # if index == len(keys) - 1:
-                        #     setattr(obj, key, PyObj({
-                        #         keys[index]: value
-                        #     }))
-                        # else:
-                        #     setattr(obj, key, PyObj({
-                        #         ".".join(keys[index + 1:]): value
-                        #     }))
-                        setattr(obj, key, PyObj())
-                        obj = getattr(self, key)
+                        if hasattr(obj, key):
+                            obj = getattr(obj, key)
+                        else:
+                            # if index == len(keys) - 1:
+                            #     setattr(obj, key, PyObj({
+                            #         keys[index]: value
+                            #     }))
+                            # else:
+                            #     setattr(obj, key, PyObj({
+                            #         ".".join(keys[index + 1:]): value
+                            #     }))
+                            setattr(obj, key, PyObj())
+                            obj = getattr(self, key)
             else:
                 CheckIsLegalPyName(key)
-                if type(value) is dict:
-                    if hasattr(self, key) and isinstance(getattr(self, key), PyObj):
-                        getattr(self, key).FromDict(value)
-                    else: # overwrite
-                        setattr(self, key, PyObj(value))
-                elif type(value) is list:
-                    # always overwrite
-                    setattr(self, key, self.FromList(value))
-                else:
-                    # alwayes overwrite
-                    setattr(self, key, value)
+                self.ProcessKeyValue(self, key, value)
         return self
+    def ProcessKeyValue(self, obj, key, value):
+        if type(value) is dict:
+            if hasattr(obj, key) and isinstance(getattr(obj, key), PyObj):
+                getattr(obj, key).FromDict(value)
+            else: # overwrite
+                setattr(obj, key, PyObj(value))
+        elif type(value) is list:
+            # always overwrite
+            setattr(obj, key, obj.FromList(value))
+        else:
+            # alwayes overwrite
+            setattr(obj, key, value)
     def to_dict(self):
         d = {}
         for key, value in self.__dict__.items():
@@ -86,11 +93,11 @@ class PyObj(object):
     def __getitem__(self, key):
         return self.__dict__[key]
 
-def JsonObj2PyObj(json_obj):
-    if isinstance(json_obj, list):
-        return PyObj().FromList(json_obj)
-    elif isinstance(json_obj, dict):
-        return PyObj().FromDict(json_obj)
+def JsonObj2PyObj(JsonObj):
+    if isinstance(JsonObj, list):
+        return PyObj().FromList(JsonObj)
+    elif isinstance(JsonObj, dict):
+        return PyObj().FromDict(JsonObj)
     else:
         raise Exception()
 json_obj_to_object = JsonObj2PyObj

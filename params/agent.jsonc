@@ -23,7 +23,7 @@
                 "Method": "FromFunctionCall",
                 "Functions": [
                     [
-                        "&^world.GetArenaByIndex(0).GenerateRandomInternalPoints",
+                        "&^world.GetArenaByIndex(0).GenerateRandomInternalXYs",
                         ["$PlaceCells.Num"]
                     ],
                     [

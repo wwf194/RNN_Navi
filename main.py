@@ -21,7 +21,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("task", nargs="?", default="ProcessTasks")
 Args = parser.parse_args()
 
-
 def main():
     if Args.task in ["CleanLog", "CleanLog", "cleanlog"]:
         CleanLog()
@@ -30,6 +29,7 @@ def main():
             ProcessTasks()
         except Exception:
             logger.error(traceback.format_exc())
+            #raise Exception()
     else:
         raise Exception()
 
@@ -70,7 +70,7 @@ def ProcessTasks():
         elif Task.Type in ["FunctionCall"]:
             utils_torch.CallFunctions(Task.Args, ObjRoot=ArgsGlobal.object)
         elif Task.Type in ["Train"]:
-            
+            utils_torch.train.Train(Task.Args, ObjRoot=ArgsGlobal.object)
         else:
             utils.AddWarning("Unnknown Task.Type: %s"%Task.Type)
 
@@ -167,7 +167,9 @@ def _AddLibraryPath(Args):
 def ParseParamStatic(Args):
     import utils_torch
     utils_torch.json.PyObj2JsonFile(ArgsGlobal.param, ArgsGlobal.SaveDir + "LoadedParam")
-    ArgsGlobal.param = utils_torch.parse.ParseParamPyObj(utils.ArgsGlobal.param)
+
+    for param in utils_torch.ListValues(ArgsGlobal.param):
+        utils_torch.parse.ParsePyObjStatic(param, ObjRoot=utils.ArgsGlobal.param, ObjCurrent=param) 
 
     utils_torch.json.PyObj2JsonFile(ArgsGlobal.param.agent, "./agent_parsed.jsonc")
     utils_torch.json.PyObj2JsonFile(ArgsGlobal.param.model, "./model_parsed.jsonc")
