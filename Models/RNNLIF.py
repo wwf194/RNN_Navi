@@ -69,7 +69,9 @@ class RNNLIF(nn.Module):
         EnsureAttrs(param.Dynamics, "__Entry__", default=DefaultDynamicsEntry)
         utils_torch.parse.ParseRouters(Nodes.Routers, ObjBase=[Nodes.Modules, Nodes.Routers, Nodes])
         utils_torch.PyObj2JsonFile(param, "./params/RNNLIF_temp.jsonc")
-
+    def Train(self, Input, OutputTarget):
+        Output = self.forward(Input)
+        return
     def forward(self, Input):
         Output = self.Nodes.__Entry__.forward(Input)
         return Output

@@ -1,94 +1,98 @@
-[
-    {
-        "Type":"LoadJsonFile",
-        "Args":[
-            {
-                "FilePath":"./params/RNNLIF.jsonc",
-                "MountPath":"&^param.model",
-            },
-            {
-                "FilePath":"./params/arena_square.jsonc",
-                "MountPath":"&^param.world"
-            },
-            {
-                "FilePath":"./params/agent.jsonc",
-                "MountPath":"&^param.agent"
-            }
-        ]
-    },
-    {
-        "Type":"ParseParamStatic",
-    },
-    {
-        "Type":"BuildObject",
-        "Args":[
-            {
-                "ParamPath": "&^param.model",
-                "ModulePath": "Models.RNNLIF",
-                "MountPath": "&^object.agent.brain",
-            },
-            {
-                "ParamPath": "&^param.world",
-                "ModulePath": "World2D.Arenas2D",
-                "MountPath": "&^object.world",
-            },
-            {
-                "ParamPath": "&^param.agent",
-                "ModulePath": "Agents.AgentPoint2D",
-                "MountPath": "&^object.agent"
-            }
-        ]
-    },
-    {
-        "Type": "FunctionCall",
-        "Args":[
-            ["&^world.InitFromParam", []],
-            ["&^agent.InitFromParam", []],
-            ["&^agent.PlotPlaceCells", []],
-            //["&^agent.GenerateRandomTrajectoryAndPlot", ["param=50"]]
-        ]
-    },
-    {
-        "Type": "Train",
-        //"SubType": "Router",
-        "Args": {
-            "Type": "SupervisedLearning",
-            "SubType": "EpochBatch",
-            "Method": "GradientDescend",
-            "Epoch.Num": 200,
-            "Batch.Num": "#1000 * 2",
-            "Batch.Size": 200,
-            "TrajectoryParam": {
-                //"TrajectoryNum": "$Batch.Size",
-                "TrajectoryNum": 3,
-                "XYStart.Method": "UniformInArena",
-                "StepNum": 50,
-                "Arena": "&^world.GetArenaByIndex(0)",
-                "StepLength.Distribution":{
-                    "Type": "Reyleigh",
-                    "Mean": 0.05,
+{
+    "SavePath": "&^SaveDir",
+    "Tasks": [
+        {
+            "Type":"LoadJsonFile",
+            "Args":[
+                {
+                    "FilePath":"./params/RNNLIF.jsonc",
+                    "MountPath":"&^param.model",
                 },
-                "DirectionChange.Distribution":{
-                    "Type": "Gaussian",
-                    "Mean": 0.0,
-                    "Std": "#3.1415926 / 180 * 5"
+                {
+                    "FilePath":"./params/arena_square.jsonc",
+                    "MountPath":"&^param.world"
+                },
+                {
+                    "FilePath":"./params/agent.jsonc",
+                    "MountPath":"&^param.agent"
+                }
+            ]
+        },
+        {
+            "Type":"ParseParamStatic",
+        },
+        {
+            "Type":"BuildObject",
+            "Args":[
+                // {
+                //     "ParamPath": "&^param.model",
+                //     "ModulePath": "Models.RNNLIF",
+                //     "MountPath": "&^object.agent.brain",
+                // },
+                {
+                    "ParamPath": "&^param.world",
+                    "ModulePath": "World2D.Arenas2D",
+                    "MountPath": "&^object.world",
+                },
+                {
+                    "ParamPath": "&^param.agent",
+                    "ModulePath": "Agents.AgentPoint2D",
+                    "MountPath": "&^object.agent"
+                }
+            ]
+        },
+        {
+            "Type": "FunctionCall",
+            "Args":[
+                ["&^object.world.InitFromParam", []],
+                ["&^object.agent.InitFromParam", []],
+                ["&^object.agent.PlotPlaceCells", []],
+                //["&^agent.GenerateRandomTrajectoryAndPlot", ["param=50"]]
+            ]
+        },
+        {
+            "Type": "Train",
+            //"SubType": "Router",
+            "Args": {
+                "Type": "SupervisedLearning",
+                "SubType": "EpochBatch",
+                "Method": "GradientDescend",
+                "Epoch.Num": 200,
+                "Batch.Num": "#1000 * 2",
+                "Batch.Size": 200,
+                "TrajectoryParam": {
+                    //"TrajectoryNum": "$Batch.Size",
+                    "TrajectoryNum": 3,
+                    "XYStart.Method": "UniformInArena",
+                    "StepNum": 50,
+                    "Arena": "&^object.world.GetArenaByIndex(0)",
+                    "StepLength.Distribution":{
+                        "Type": "Reyleigh",
+                        "Mean": 0.05,
+                    },
+                    "DirectionChange.Distribution":{
+                        "Type": "Gaussian",
+                        "Mean": 0.0,
+                        "Std": "#3.1415926 / 180 * 5"      
+                    }         
+                },
+                "Batch.Internal":{
+                    "In":{
+                        "TrajectoryParam": "&TrajectoryParam",
+                    },
+                    "Routings": [
+                        [
+                            "&^object.agent.GenerateRandomTrajectoryAndPlot",
+                            ["&TrajectoryParam", "SavePath=$^SaveDir + 'RandomTrajectory.svg/'"],
+                            []
+                        ],
+                        "TrajectoryParam |--> &^object.agent.GenerateRandomTrajectory |--> Trajectory",
+                        "Trajectory |--> &^object.agent.GenerateModelInput |--> ModelInput",
+                        "Trajectory |--> &^object.agent.GenerateModelOutput |--> ModelOutputTarget",
+                        "ModelInput, ModelOutputTarget |--> &^object.agent.model.Train |--> ModelOutput",
+                    ],
                 }
             },
-            "Batch.Internal":{
-                "In":{
-                    "TrajectoryParam": "&TrajectoryParam",
-                },
-                "Routings": [
-                    "TrajectoryParam |--> &^agent.GenerateRandomTrajectoryAndPlot |--> task",
-                    // "&TrajectoryParam |--> &agent.GenerateRandomTrajectory |--> Trajectory",
-                    // "Trajectory |--> &agent.GenerateModelInput |--> ModelInput",
-                    // "Trajectory |--> &agent.GenerateModelOutput |--> ModelOutputTarget",
-                    // "ModelInput, ModelOutputTraget |--> &Model.Train |--> ModelOutput",
-                ],
-            }
         }
-    },
-]
-
-
-
+    ]
+}

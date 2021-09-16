@@ -199,7 +199,7 @@ class Polygon(Shape2D):
                 plt.close()
     def PlotEdgesPlt(self, ax): # img: [H, W, C], np.uint8.
         utils_torch.plot.PlotLines(ax, self.EdgesNp)
-    def PlotShape(self, ax=None, Save=True, SavePath="./", SetXYRange=True):
+    def PlotShape(self, ax=None, PlotNorm=False, Save=True, SavePath="./", SetXYRange=True):
         param = self.param
         data = self.data
         if ax is None:
@@ -207,7 +207,9 @@ class Polygon(Shape2D):
             fig, ax = plt.subplots()
         utils_torch.plot.PlotPolyLine(ax, GetAttrs(param.Vertices))
         utils_torch.plot.PlotPointsAndMarkXYs(ax, GetAttrs(param.Vertices))
-        utils_torch.plot.PlotDirectionsOnEdges(ax, GetAttrs(param.Edges), GetAttrs(param.Edges.Norm), Color="Red")
+        
+        if PlotNorm:
+            utils_torch.plot.PlotDirectionsOnEdges(ax, GetAttrs(param.Edges), GetAttrs(param.Edges.Norm), Color="Red")
         #utils_torch.plot.PlotArrows(ax, utils_torch.geometry2D.Edges2MidPoints(GetAttrs(param.Edges)), GetAttrs(param.Edges.Norm), Color="Red")
         utils_torch.plot.PlotPointsAndMarkXYs(ax, utils_torch.geometry2D.Edges2MidPointsNp(data.EdgesNp) + data.EdgesNormNp, GetAttrs(param.Edges.Norm))
         
@@ -217,11 +219,11 @@ class Polygon(Shape2D):
             ax.set_xticks(np.linspace(param.BoundaryBox.xMin, param.BoundaryBox.xMax, 5))
             ax.set_yticks(np.linspace(param.BoundaryBox.yMin, param.BoundaryBox.yMax, 5))
             ax.set_aspect(1)
-        
+
         if Save:
             EnsureFileDir(SavePath)
             plt.savefig(SavePath, format="svg")
-        return ax
+    
     def plot_random_xy_cv(self, img=None, save=True, save_path='./', save_name='arena_random_xy.png', num=100, color=(0,255,0), plot_arena=True, **kw):
         if img is None:
             res = search_dict(kw, ['res, resolution'], default=100)

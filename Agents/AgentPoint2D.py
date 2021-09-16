@@ -46,7 +46,7 @@ class Agent(object):
         utils.AddLog("Agent: Initializing.")
         EnsureAttrs(param, "Initialize", default=[])
         for Task in param.Initialize:
-            utils_torch.ImplementInitializeTask(Task, ObjCurrent=self, ObjRoot=utils.ArgsGlobal.object)
+            utils_torch.ImplementInitializeTask(Task, ObjCurrent=self, ObjRoot=utils.ArgsGlobal)
         utils.AddLog("Agent: Initialized.")
     def PlotPlaceCells(self):
         param = self.param
@@ -465,6 +465,10 @@ class Agent(object):
             plt.savefig(SavePath)
         plt.savefig("./Trajectory.svg", format="svg")
         return ax
+    def GenerateModelInput(self, Trajectory):
+        return
+    def GenerateModelOutput(self, Trajectory):
+        return
     def plot_path(self, path=None, model=None, plot_num=2, arena=None, save=True, save_path='./', save_name='path_plot', cmap='jet', **kw):
         if arena is None:
             arena = self.arenas.GetCurrentArena()

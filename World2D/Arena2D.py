@@ -53,6 +53,7 @@ class Arena2D():
         SetAttrs(param, "BoundaryBox.yMin", GetAttrs(param.BoundaryBox)[1])
         SetAttrs(param, "BoundaryBox.xMax", GetAttrs(param.BoundaryBox)[2])
         SetAttrs(param, "BoundaryBox.yMax", GetAttrs(param.BoundaryBox)[3])
+        
         BoundaryBox = param.BoundaryBox
         SetAttrs(param, "BoundaryBox.Width", BoundaryBox.xMax - BoundaryBox.xMin)
         SetAttrs(param, "BoundaryBox.Height", BoundaryBox.yMax - BoundaryBox.yMin)

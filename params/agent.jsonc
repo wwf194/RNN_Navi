@@ -2,36 +2,43 @@
     "Initialize":[
         {
             "Type": "BuildObj",
-            "Args": {
-                "ParamPath": "&param.PlaceCells",
-                "MountPath": "&PlaceCells",
-                "ModulePath": "Models.PlaceCells2D"
-            },
-
+            "Args": [
+                {
+                    "ParamPath": "&param.PlaceCells",
+                    "MountPath": "&PlaceCells",
+                    "ModulePath": "Models.PlaceCells2D"
+                },
+                {
+                    "ParamPath": "&param.model",
+                    "MountPath": "&model",
+                    "ModulePath": "Models.RNNLIF"                    
+                }
+            ]
         },
         {
             "Type": "FunctionCall",
             "Args": [
                 ["&PlaceCells.InitFromParam", []]
             ]
-        }
+        },
     ],
     "PlaceCells":{
-        "Num": "^model.Neurons.Num // 4",
+        "Num": "$^param.model.Neurons.Num // 4",
         "XYs":{
             "Initialize": {
                 "Method": "FromFunctionCall",
                 "Functions": [
                     [
-                        "&^world.GetArenaByIndex(0).GenerateRandomInternalXYs",
+                        "&^object.world.GetArenaByIndex(0).GenerateRandomInternalXYs",
                         ["$PlaceCells.Num"]
                     ],
                     [
-                        "&^agent.PlaceCells.ReceiveXYs",
+                        "&^object.agent.PlaceCells.ReceiveXYs",
                         ["__PreviousFunctionOutput__"]
                     ]
                 ]
             }
         }
-    }
+    },
+    "model":"$^param.model"
 }

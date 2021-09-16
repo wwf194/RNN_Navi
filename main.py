@@ -9,12 +9,8 @@
 import os
 import sys
 import argparse
-import json
 from typing import List
 from utils.utils import ArgsGlobal
-import json5
-import warnings
-import logging
 import traceback
 
 parser = argparse.ArgumentParser()
@@ -22,17 +18,17 @@ parser.add_argument("task", nargs="?", default="ProcessTasks")
 Args = parser.parse_args()
 
 def main():
-
     if Args.task in ["CleanLog", "CleanLog", "cleanlog"]:
         CleanLog()
     elif Args.task in ["CleanFigure"]:
         CleanFigures()
     elif Args.task in ["ProcessTasks"]:
-        try: # catch all unhandled exceptions
-            ProcessTasks()
-        except Exception:
-            logger.error(traceback.format_exc())
-            #raise Exception()
+        ProcessTasks()
+        # try: # catch all unhandled exceptions
+        #     ProcessTasks()
+        # except Exception:
+        #     logger.error(traceback.format_exc())
+        #     raise Exception()
     else:
         raise Exception()
 
@@ -43,8 +39,6 @@ def ScanConfigFile():
     import utils_torch
     utils_torch.attrs.SetAttrs(ArgsGlobal, "Config", Config)
 ScanConfigFile()
-
-
 
 import utils
 from utils import AddLog, AddWarning, ArgsGlobal
@@ -57,9 +51,17 @@ from utils_torch.attrs import *
 utils_torch.SetLogger(utils.GetLoggerGlobal()) # Pass logger to library utils_torch
 #print(utils_torch.ListAllMethodsOfModule("utils_torch.json"))
 
-def ProcessTasks():
-    Tasks = utils.json.JsonFile2PyObj('./task.jsonc')
-    for Task in Tasks:
+def ProcessTasks():    
+    TaskPyObj = utils_torch.json.JsonFile2PyObj('./task.jsonc')
+    if isinstance(TaskPyObj, list):
+        TaskList = TaskPyObj
+    elif isinstance(TaskPyObj, utils_torch.json.PyObj):
+        TaskPyObj = utils_torch.parse.ParsePyObjStatic(TaskPyObj, ObjCurrent=TaskPyObj, ObjRoot=utils.ArgsGlobal)
+        TaskPyObj = utils_torch.parse.ParsePyObjDynamic(TaskPyObj, ObjCurrent=TaskPyObj, ObjRoot=utils.ArgsGlobal)
+        TaskList = TaskPyObj.Tasks
+    else:
+        raise Exception()
+    for Index, Task in enumerate(TaskList):
         utils_torch.EnsureAttrs(Task, "Args", default={})
         if Task.Type in ["AddLibraryPath"]:
             AddLibraryPath(Task.Args)
@@ -70,9 +72,9 @@ def ProcessTasks():
         elif Task.Type in ["BuildObject"]:
             BuildObject(Task.Args)
         elif Task.Type in ["FunctionCall"]:
-            utils_torch.CallFunctions(Task.Args, ObjRoot=ArgsGlobal.object)
+            utils_torch.CallFunctions(Task.Args, ObjRoot=ArgsGlobal)
         elif Task.Type in ["Train"]:
-            utils_torch.train.Train(Task.Args, ObjRoot=ArgsGlobal.object)
+            utils_torch.train.Train(Task.Args, ObjRoot=ArgsGlobal)
         else:
             utils.AddWarning("Unnknown Task.Type: %s"%Task.Type)
 
@@ -169,9 +171,8 @@ def _AddLibraryPath(Args):
 def ParseParamStatic(Args):
     import utils_torch
     utils_torch.json.PyObj2JsonFile(ArgsGlobal.param, ArgsGlobal.SaveDir + "LoadedParam")
-
-    for param in utils_torch.ListValues(ArgsGlobal.param):
-        utils_torch.parse.ParsePyObjStatic(param, ObjRoot=utils.ArgsGlobal.param, ObjCurrent=param) 
+    for attr, param in utils_torch.ListAttrsAndValues(ArgsGlobal.param):
+        setattr(ArgsGlobal.param, attr, utils_torch.parse.ParsePyObjStatic(param, ObjCurrent=param, ObjRoot=utils.ArgsGlobal))
 
     utils_torch.json.PyObj2JsonFile(ArgsGlobal.param.agent, "./agent_parsed.jsonc")
     utils_torch.json.PyObj2JsonFile(ArgsGlobal.param.model, "./model_parsed.jsonc")
@@ -187,7 +188,7 @@ def train_supervised_learning(Args):
 
 def CleanLog():
     import utils_torch
-    utils_torch.files.RemoveAllFilesDirs("./log/")
+    utils_torch.files.RemoveAllFilesAndDirs("./log/")
 
 def CleanFigures():
     import utils_torch

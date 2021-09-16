@@ -36,7 +36,7 @@ class PlaceCells2D(object):
         if HasAttrs(param.XYs, "Initialize"):
             EnsureAttrs(param.XYs.Initialize, "Method", default="FromFunctionCall")
             if param.XYs.Initialize.Method in ["FromFunctionCall"]:
-                utils_torch.CallFunction(param.XYs.Initialize.Functions, ObjCurrent=self, ObjRoot=utils.ArgsGlobal.object)
+                utils_torch.CallFunctions(param.XYs.Initialize.Functions, ObjCurrent=self, ObjRoot=utils.ArgsGlobal)
             else:
                 raise Exception()
     def ReceiveXYs(self, XYs):
