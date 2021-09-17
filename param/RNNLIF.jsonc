@@ -83,10 +83,18 @@
             }
         },
         "OutputReceiver":{
-            "Type":"SerialReceiver"
+            "Type":"SerialReceiver",
+            "ExtractMethod.Initialize":{
+                "Method": "eval",
+                "Args": "lambda List, Index:np.take(List, Index, axis=1)"
+            }
         },
         "InputSender":{
-            "Type":"SerialSender"
+            "Type":"SerialSender",
+            "ExtractMethod.Initialize":{
+                "Method": "eval",
+                "Args": "lambda List, Index:np.take(List, Index, axis=1)"
+            }
         },
     },
     "Dynamics":{
@@ -113,5 +121,4 @@
         },
         "__Entry__":"&Dynamics.Run"
     },
-    
 }

@@ -5,15 +5,15 @@
             "Type":"LoadJsonFile",
             "Args":[
                 {
-                    "FilePath":"./params/RNNLIF.jsonc",
+                    "FilePath":"./param/RNNLIF.jsonc",
                     "MountPath":"&^param.model",
                 },
                 {
-                    "FilePath":"./params/arena_square.jsonc",
+                    "FilePath":"./param/arena_square.jsonc",
                     "MountPath":"&^param.world"
                 },
                 {
-                    "FilePath":"./params/agent.jsonc",
+                    "FilePath":"./param/agent.jsonc",
                     "MountPath":"&^param.agent"
                 }
             ]
@@ -24,11 +24,6 @@
         {
             "Type":"BuildObject",
             "Args":[
-                // {
-                //     "ParamPath": "&^param.model",
-                //     "ModulePath": "Models.RNNLIF",
-                //     "MountPath": "&^object.agent.brain",
-                // },
                 {
                     "ParamPath": "&^param.world",
                     "ModulePath": "World2D.Arenas2D",
@@ -44,9 +39,9 @@
         {
             "Type": "FunctionCall",
             "Args":[
-                ["&^object.world.InitFromParam", []],
-                ["&^object.agent.InitFromParam", []],
-                ["&^object.agent.PlotPlaceCells", []],
+                "&^object.world.InitFromParam",
+                "&^object.agent.InitFromParam",
+                "&^object.agent.PlotPlaceCells",
                 //["&^agent.GenerateRandomTrajectoryAndPlot", ["param=50"]]
             ]
         },
@@ -74,21 +69,22 @@
                         "Type": "Gaussian",
                         "Mean": 0.0,
                         "Std": "#3.1415926 / 180 * 5"      
-                    }         
+                    }
                 },
                 "Batch.Internal":{
                     "In":{
                         "TrajectoryParam": "&TrajectoryParam",
                     },
+                    "Out":{
+                    },
                     "Routings": [
-                        [
-                            "&^object.agent.GenerateRandomTrajectoryAndPlot",
-                            ["&TrajectoryParam", "SavePath=$^SaveDir + 'RandomTrajectory.svg/'"],
-                            []
-                        ],
+                        // [
+                        //     "&^object.agent.GenerateRandomTrajectoryAndPlot",
+                        //     ["&TrajectoryParam", "SavePath=$^SaveDir + 'RandomTrajectory.svg/'"],
+                        // ],
                         "TrajectoryParam |--> &^object.agent.GenerateRandomTrajectory |--> Trajectory",
-                        "Trajectory |--> &^object.agent.GenerateModelInput |--> ModelInput",
-                        "Trajectory |--> &^object.agent.GenerateModelOutput |--> ModelOutputTarget",
+                        "Trajectory |--> &^object.agent.Trajectory2ModelInput |--> ModelInput",
+                        "Trajectory |--> &^object.agent.Trajectory2ModelOutput |--> ModelOutputTarget",
                         "ModelInput, ModelOutputTarget |--> &^object.agent.model.Train |--> ModelOutput",
                     ],
                 }

@@ -48,10 +48,23 @@ class Agent(object):
         for Task in param.Initialize:
             utils_torch.ImplementInitializeTask(Task, ObjCurrent=self, ObjRoot=utils.ArgsGlobal)
         utils.AddLog("Agent: Initialized.")
-    def PlotPlaceCells(self):
+    def SetTrajectory2ModelInputMethod(self):
         param = self.param
-        ax = utils.ArgsGlobal.object.world.Arenas[0].PlotArena(Save=False)        
-        self.PlaceCells.PlotPointsAndMarkXYs(ax, Save=True)
+        EnsureAttrs(param, "model.Input.Type", default="dXY")
+        if param.model.Input.Type in ["dXY"]:
+            self.Trajectory2ModelInput = self.Trajectory2ModelInputdXY
+        elif param.model.Input.Type in ["VTheta"]:
+            self.Trajectory2ModelInput = self.Trajectory2ModelInputVTheta
+        else:
+            raise Exception()
+    def SetTrajectory2ModelOutputMethod(self):
+        param = self.param
+        self.Trajectory2ModelOutput = self.Trajectory2ModelOutputPlaceCells
+        return
+    def PlotPlaceCells(self, Save=True, SavePath=utils.ArgsGlobal.SaveDir + "agent-PlaceCells-XYs.svg"):
+        param = self.param
+        ax = utils.ArgsGlobal.object.world.Arenas[0].PlotArena(Save=False)
+        self.PlaceCells.PlotXYs(ax, Save=Save, SavePath=SavePath)
     def report_perform(self, prefix='', verbose=True):
         report = prefix
         for key in self.perform_list.keys():
@@ -465,10 +478,26 @@ class Agent(object):
             plt.savefig(SavePath)
         plt.savefig("./Trajectory.svg", format="svg")
         return ax
-    def GenerateModelInput(self, Trajectory):
-        return
-    def GenerateModelOutput(self, Trajectory):
-        return
+    def Trajectory2ModelInputdXY(self, Trajectory):
+        return [
+          Trajectory.XYs[0], # inputInit
+          Trajectory.dXYs, # inputSeries
+          Trajectory.XYs.shape[1] - 1 # time
+        ]
+    def Trajectory2ModelInputdLDirection(self, Trajectory):
+        dLDirection = np.stack(
+            [Trajectory.dLs, np.cos(Trajectory.Directions)[:, :-1], np.sin(Trajectory.Directions)[:, :-1]],
+            axis=2
+        ) # [BatchSize, ]
+        return [
+          Trajectory.XYs[0], # inputInit
+          dLDirection, # inputSeries
+          Trajectory.XYs.shape[1] - 1 # time
+        ]
+    def Trajectory2ModelOutputPlaceCells(self, Trajectory):
+        return [
+            self.PlaceCells.XYs2Activity(Trajectory.XYs[:, 1:])
+        ]
     def plot_path(self, path=None, model=None, plot_num=2, arena=None, save=True, save_path='./', save_name='path_plot', cmap='jet', **kw):
         if arena is None:
             arena = self.arenas.GetCurrentArena()

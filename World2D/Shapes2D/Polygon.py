@@ -206,12 +206,12 @@ class Polygon(Shape2D):
             plt.close("all")
             fig, ax = plt.subplots()
         utils_torch.plot.PlotPolyLine(ax, GetAttrs(param.Vertices))
-        utils_torch.plot.PlotPointsAndMarkXYs(ax, GetAttrs(param.Vertices))
+        utils_torch.plot.PlotXYs(ax, GetAttrs(param.Vertices))
         
         if PlotNorm:
             utils_torch.plot.PlotDirectionsOnEdges(ax, GetAttrs(param.Edges), GetAttrs(param.Edges.Norm), Color="Red")
         #utils_torch.plot.PlotArrows(ax, utils_torch.geometry2D.Edges2MidPoints(GetAttrs(param.Edges)), GetAttrs(param.Edges.Norm), Color="Red")
-        utils_torch.plot.PlotPointsAndMarkXYs(ax, utils_torch.geometry2D.Edges2MidPointsNp(data.EdgesNp) + data.EdgesNormNp, GetAttrs(param.Edges.Norm))
+        utils_torch.plot.PlotXYs(ax, utils_torch.geometry2D.Edges2MidPointsNp(data.EdgesNp) + data.EdgesNormNp, GetAttrs(param.Edges.Norm))
         
         if SetXYRange:
             ax.set_xlim(param.BoundaryBox.xMin, param.BoundaryBox.xMax)

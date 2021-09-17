@@ -17,6 +17,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("task", nargs="?", default="ProcessTasks")
 Args = parser.parse_args()
 
+
+
 def main():
     if Args.task in ["CleanLog", "CleanLog", "cleanlog"]:
         CleanLog()
@@ -69,6 +71,7 @@ def ProcessTasks():
             LoadJsonFile(Task.Args)
         elif Task.Type in ["ParseParamStatic", "ParseParam"]:
             ParseParamStatic(Task.Args)
+            utils_torch.json.PyObj2JsonFile(ArgsGlobal.param, ArgsGlobal.SaveDir + "LoadedParam")
         elif Task.Type in ["BuildObject"]:
             BuildObject(Task.Args)
         elif Task.Type in ["FunctionCall"]:
@@ -170,12 +173,9 @@ def _AddLibraryPath(Args):
 
 def ParseParamStatic(Args):
     import utils_torch
-    utils_torch.json.PyObj2JsonFile(ArgsGlobal.param, ArgsGlobal.SaveDir + "LoadedParam")
     for attr, param in utils_torch.ListAttrsAndValues(ArgsGlobal.param):
         setattr(ArgsGlobal.param, attr, utils_torch.parse.ParsePyObjStatic(param, ObjCurrent=param, ObjRoot=utils.ArgsGlobal))
-
-    utils_torch.json.PyObj2JsonFile(ArgsGlobal.param.agent, "./agent_parsed.jsonc")
-    utils_torch.json.PyObj2JsonFile(ArgsGlobal.param.model, "./model_parsed.jsonc")
+    utils_torch.json.PyObj2JsonFile(ArgsGlobal.param, "agent_parsed.jsonc")
 
 def train(Args):
     if Args.type in ["SupervisedLearning"]:

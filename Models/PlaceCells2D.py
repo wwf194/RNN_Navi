@@ -44,7 +44,7 @@ class PlaceCells2D(object):
         data = self.data
         data.XYs = XYs
         SetAttrs(param, "XYs", value="&data.XYs")
-    def PlotPointsAndMarkXYs(self, ax=None, Save=False, SavePath="./PlaceCells2D-XYs.png"):
+    def PlotXYs(self, ax=None, Save=False, SavePath=utils.ArgsGlobal.SaveDir + "PlaceCells2D-XYs.png"):
         data = self.data
         if ax is None:
             plt.close("all")

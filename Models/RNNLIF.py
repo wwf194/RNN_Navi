@@ -48,34 +48,35 @@ class RNNLIF(nn.Module):
                 SetAttrs(Neurons.Recurrent, "Excitatory.Num", value=int(Neurons.Recurrent.Num * Neurons.Recurrent.Excitatory.Ratio))
                 SetAttrs(Neurons.Recurrent, "Inhibitory.Num", value=(Neurons.Num - Neurons.excitatory.Num))
 
-        Nodes = utils_torch.EmptyPyObj()
-        Nodes.Modules = utils_torch.EmptyPyObj()
-        Nodes.Routers = utils_torch.EmptyPyObj()
+        Nodes = utils_torch.json.EmptyPyObj()
+        Nodes.Modules = utils_torch.json.EmptyPyObj()
+        Nodes.Routers = utils_torch.json.EmptyPyObj()
         self.Nodes = Nodes
+
         # initialize modules
         #for module in ListAttrs(param.modules):
-        for moduleName, moduleParam in ListAttrs(param.Modules):
-            Module = BuildModule(moduleParam)
-            self.add_module(moduleName, Module)
-            SetAttrs(Nodes.Modules, moduleName, Module)
+        for name, param in ListAttrsAndValues(self.param.Modules):
+            Module = BuildModule(param)
+            self.add_module(name, Module)
+            SetAttrs(Nodes.Modules, name, Module)
 
-        for Name, RouterParam in ListAttrs(param.Dynamics):
-            if Name in ["__Entry__"]:
+        for name, param in ListAttrsAndValues(self.param.Dynamics):
+            if name in ["__Entry__"]:
                 continue
-            Router = utils_torch.BuildRouter(RouterParam)
-            setattr(Nodes.Routers, Name, Router)
+            setattr(Nodes.Routers, name, param)
+        for router in ListValues(Nodes.Routers):
+            utils_torch.parse.ParseRouter(router, InPlace=True, ObjRefList=[Nodes.Modules, Nodes.Routers, Nodes])
 
-        DefaultDynamicsEntry = "&Dynamics.%s"%ListAttrs(param.Dynamics)[0][0]
-        EnsureAttrs(param.Dynamics, "__Entry__", default=DefaultDynamicsEntry)
-        utils_torch.parse.ParseRouters(Nodes.Routers, ObjBase=[Nodes.Modules, Nodes.Routers, Nodes])
-        utils_torch.PyObj2JsonFile(param, "./params/RNNLIF_temp.jsonc")
+        DefaultDynamicsEntry = "&Dynamics.%s"%ListAttrsAndValues(self.param.Dynamics)[0][0]
+        EnsureAttrs(self.param.Dynamics, "__Entry__", default=DefaultDynamicsEntry)
+        #utils_torch.parse.ParseRouters(Nodes.Routers, ObjRefList=[Nodes.Modules, Nodes.Routers, Nodes])
+
     def Train(self, Input, OutputTarget):
         Output = self.forward(Input)
         return
     def forward(self, Input):
         Output = self.Nodes.__Entry__.forward(Input)
         return Output
-
     def forward_once(self, s=None, h=None, i=None):
         batch_size = i.size(0)
         '''

@@ -18,7 +18,10 @@
         {
             "Type": "FunctionCall",
             "Args": [
-                ["&PlaceCells.InitFromParam", []]
+                "&PlaceCells.InitFromParam",
+                "&model.InitFromParam",
+                "&SetTrajectory2ModelInputMethod",
+                "&SetTrajectory2ModelOutputMethod",
             ]
         },
     ],

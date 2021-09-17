@@ -274,7 +274,7 @@ def Getparam_file(args, verbose=True):
         elif len(config_files)==0:
             raise Exception('Missing config file in %s.'%param_path)
         else:
-            raise Exception('Multiple config files found in %s. Please specify one:\n  %s'%(param_path, config_files))
+            raise Exception('Multi config files found in %s. Please specify one:\n  %s'%(param_path, config_files))
     else:
         config_file = select_file(args.config, config_files, default_file='config_rnn_ei_pc', 
             match_prefix='config_', match_suffix='.py', file_type='config')
