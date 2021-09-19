@@ -39,7 +39,7 @@ class Polygon(Shape2D):
         else:
             raise Exception()
         EnsureAttrs(param, "Subtype", default="RegularPolygon")
-        EnsureAttrs(param, "Initialize.Method", default="FromVertices")
+        
         EnsureAttrs(param, "Internal", default="Inside")
         if param.Internal in ["Inside"]:
             self.IsInside = self.IsInsideShape
@@ -51,7 +51,8 @@ class Polygon(Shape2D):
         if HasAttrs(param, "Initialize.Center"):
             SetAttrs(param.Initialize, "Center.X", GetAttrs(param.Initialize.Center)[0])
             SetAttrs(param.Initialize, "Center.Y", GetAttrs(param.Initialize.Center)[1])
-        
+
+        EnsureAttrs(param, "Initialize.Method", default="FromVertices")
         if param.Initialize.Method in ["FromVertices", "FromVertex"]:
             self.CalculatEdgesFromVertices()
         elif param.Initialize.Method in ["CenterRadiusTheta"]:
@@ -113,19 +114,21 @@ class Polygon(Shape2D):
     def CalculateBoundaryBox(self):
         param = self.param
         # Calculate Boundary Box
-        if not HasAttrs(param, "BoundaryBox"):
-            VerticesNp = np.array(GetAttrs(param.Vertices), dtype=np.float32) # [VertexNum, (x, y)]
-            xMin = np.min(VerticesNp[:, 0])
-            xMax = np.max(VerticesNp[:, 0])
-            yMin = np.min(VerticesNp[:, 1])
-            yMax = np.max(VerticesNp[:, 1])
-            SetAttrs(param, "BoundaryBox", value=[xMin, yMin, xMax, yMax])
-            SetAttrs(param, "BoundaryBox.xMin", xMin)
-            SetAttrs(param, "BoundaryBox.xMax", xMax)
-            SetAttrs(param, "BoundaryBox.yMin", yMin)
-            SetAttrs(param, "BoundaryBox.yMax", yMax)
-            SetAttrs(param, "BoundaryBox.Width", xMax - xMin)
-            SetAttrs(param, "BoundaryBox.Height", yMax - yMin)
+       
+        VerticesNp = np.array(GetAttrs(param.Vertices), dtype=np.float32) # [VertexNum, (x, y)]
+        XMin = np.min(VerticesNp[:, 0])
+        YMax = np.max(VerticesNp[:, 0])
+        YMin = np.min(VerticesNp[:, 1])
+        YMax = np.max(VerticesNp[:, 1])
+        SetAttrs(param, "BoundaryBox", value=[XMin, YMin, YMax, YMax])
+        SetAttrs(param, "BoundaryBox.XMin", XMin)
+        SetAttrs(param, "BoundaryBox.YMax", YMax)
+        SetAttrs(param, "BoundaryBox.YMin", YMin)
+        SetAttrs(param, "BoundaryBox.YMax", YMax)
+        SetAttrs(param, "BoundaryBox.Width", YMax - XMin)
+        SetAttrs(param, "BoundaryBox.Height", YMax - YMin)
+        SetAttrs(param, "BoundaryBox.Size", max(param.BoundaryBox.Width, param.BoundaryBox.Height))
+    
     def PrintInfo(self):
         utils.AddLog('Arena_Polygon: edge_num:%d'%(self.edge_num))
         print('center_coord:(%.1f, %.1f)'%(self.center_coord[0], self.center_coord[1]))
@@ -214,10 +217,10 @@ class Polygon(Shape2D):
         utils_torch.plot.PlotXYs(ax, utils_torch.geometry2D.Edges2MidPointsNp(data.EdgesNp) + data.EdgesNormNp, GetAttrs(param.Edges.Norm))
         
         if SetXYRange:
-            ax.set_xlim(param.BoundaryBox.xMin, param.BoundaryBox.xMax)
-            ax.set_ylim(param.BoundaryBox.yMin, param.BoundaryBox.yMax)
-            ax.set_xticks(np.linspace(param.BoundaryBox.xMin, param.BoundaryBox.xMax, 5))
-            ax.set_yticks(np.linspace(param.BoundaryBox.yMin, param.BoundaryBox.yMax, 5))
+            ax.set_xlim(param.BoundaryBox.XMin, param.BoundaryBox.YMax)
+            ax.set_ylim(param.BoundaryBox.YMin, param.BoundaryBox.YMax)
+            ax.set_xticks(np.linspace(param.BoundaryBox.XMin, param.BoundaryBox.YMax, 5))
+            ax.set_yticks(np.linspace(param.BoundaryBox.YMin, param.BoundaryBox.YMax, 5))
             ax.set_aspect(1)
 
         if Save:

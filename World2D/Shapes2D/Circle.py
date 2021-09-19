@@ -38,17 +38,18 @@ class Circle(Shapes2D.Shape2D):
         param = self.param
         # Calculate Boundary Box
         if not HasAttrs(param, "BoundaryBox"):
-            xMin = param.Center.X - param.Radius
-            xMax = param.Center.X + param.Radius
-            yMin = param.Center.Y - param.Radius
-            yMax = param.Center.Y + param.Radius
-            SetAttrs(param, "BoundaryBox", [xMin, yMin, xMax, yMax])
-            SetAttrs(param, "BoundaryBox.xMin", xMin)
-            SetAttrs(param, "BoundaryBox.xMax", xMax)
-            SetAttrs(param, "BoundaryBox.yMin", yMin)
-            SetAttrs(param, "BoundaryBox.yMax", yMax)
-            SetAttrs(param, "BoundaryBox.Width", xMax - xMin)
-            SetAttrs(param, "BoundaryBox.Height", yMax - yMin)
+            XMin = param.Center.X - param.Radius
+            YMax = param.Center.X + param.Radius
+            YMin = param.Center.Y - param.Radius
+            YMax = param.Center.Y + param.Radius
+            SetAttrs(param, "BoundaryBox", [XMin, YMin, YMax, YMax])
+            SetAttrs(param, "BoundaryBox.XMin", XMin)
+            SetAttrs(param, "BoundaryBox.YMax", YMax)
+            SetAttrs(param, "BoundaryBox.YMin", YMin)
+            SetAttrs(param, "BoundaryBox.YMax", YMax)
+            SetAttrs(param, "BoundaryBox.Width", YMax - XMin)
+            SetAttrs(param, "BoundaryBox.Height", YMax - YMin)
+            SetAttrs(param, "BoundaryBox.Size", max(param.BoundaryBox.Width, param.BoundaryBox.Height))
     def Distance2Center(self, Points):
         Vector2Center = self.Center[np.newaxis, :] - Points # [point_num, (x, y)]
         Distance2Center = np.linalg.norm(Vector2Center, axis=-1) # [point_num]

@@ -10,14 +10,14 @@ import os
 import sys
 import argparse
 from typing import List
+
+from numpy import e
 from utils.utils import ArgsGlobal
 import traceback
 
 parser = argparse.ArgumentParser()
 parser.add_argument("task", nargs="?", default="ProcessTasks")
 Args = parser.parse_args()
-
-
 
 def main():
     if Args.task in ["CleanLog", "CleanLog", "cleanlog"]:
@@ -69,9 +69,8 @@ def ProcessTasks():
             AddLibraryPath(Task.Args)
         elif Task.Type in ["LoadJsonFile"]:
             LoadJsonFile(Task.Args)
-        elif Task.Type in ["ParseParamStatic", "ParseParam"]:
-            ParseParamStatic(Task.Args)
-            utils_torch.json.PyObj2JsonFile(ArgsGlobal.param, ArgsGlobal.SaveDir + "LoadedParam")
+        elif Task.Type in ["ParseParam"]:
+            ParseParam(Task.Args)
         elif Task.Type in ["BuildObject"]:
             BuildObject(Task.Args)
         elif Task.Type in ["FunctionCall"]:
@@ -171,12 +170,22 @@ def _AddLibraryPath(Args):
     else:
         AddWarning('add_lib: invalid lib_path: ', lib_path)
 
+def ParseParam(Args):
+    ParseParamStatic(Args)
+    utils_torch.json.PyObj2JsonFile(ArgsGlobal.param, utils_torch.RenameFileIfPathExists("param_parsed_static.jsonc"))
+    ParseParamDynamic(Args)
+    utils_torch.json.PyObj2JsonFile(ArgsGlobal.param, utils_torch.RenameFileIfPathExists("param_parsed_dynamic.jsonc"))
+    return
 def ParseParamStatic(Args):
     import utils_torch
     for attr, param in utils_torch.ListAttrsAndValues(ArgsGlobal.param):
-        setattr(ArgsGlobal.param, attr, utils_torch.parse.ParsePyObjStatic(param, ObjCurrent=param, ObjRoot=utils.ArgsGlobal))
-    utils_torch.json.PyObj2JsonFile(ArgsGlobal.param, "agent_parsed.jsonc")
-
+        utils_torch.parse.ParsePyObjStatic(param, ObjCurrent=param, ObjRoot=utils.ArgsGlobal, InPlace=True)
+    return
+def ParseParamDynamic(Args):
+    import utils_torch
+    for attr, param in utils_torch.ListAttrsAndValues(ArgsGlobal.param):
+        utils_torch.parse.ParsePyObjDynamic(param, ObjCurrent=param, ObjRoot=utils.ArgsGlobal, InPlace=True)
+    return
 def train(Args):
     if Args.type in ["SupervisedLearning"]:
         train_supervised_learning(Args)

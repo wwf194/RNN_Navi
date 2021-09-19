@@ -1,6 +1,4 @@
-import World2D
-
-
+import numpy as np
 
 class Shape2D:
     def __init__(self, param=None):
@@ -10,3 +8,7 @@ class Shape2D:
             self.param = param
         else:
             param = self.param
+    def GetInsideMask(self, BoundaryBox, ResolutionX, ResolutionY):
+        mask = np.zeros(ResolutionX, ResolutionY)
+
+

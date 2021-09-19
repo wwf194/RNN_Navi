@@ -33,17 +33,52 @@ class PlaceCells2D(object):
             self.param = param
         else:
             param = self.param
+        self.CalculateXYs()
+        self.SetXYs2ActivityMethod()
+    def CalculateXYs(self):
+        param = self.param
         if HasAttrs(param.XYs, "Initialize"):
-            EnsureAttrs(param.XYs.Initialize, "Method", default="FromFunctionCall")
-            if param.XYs.Initialize.Method in ["FromFunctionCall"]:
-                utils_torch.CallFunctions(param.XYs.Initialize.Functions, ObjCurrent=self, ObjRoot=utils.ArgsGlobal)
+            EnsureAttrs(param.XYs.Initialize, "Method", default="FunctionCall")
+            if param.XYs.Initialize.Method in ["FunctionCall"]:
+                utils_torch.CallFunctions(param.XYs.Initialize.Args, ObjCurrent=self, ObjRoot=utils.ArgsGlobal)
             else:
                 raise Exception()
-    def ReceiveXYs(self, XYs):
+    def SetXYs(self, XYs):
         param = self.param
         data = self.data
-        data.XYs = XYs
+        data.XYsNp = data.XYs = XYs
         SetAttrs(param, "XYs", value="&data.XYs")
+    def SetXYs2ActivityMethod(self):
+        param = self.param
+        data = self.data
+        Functions = []
+        methods = param.XYs2Activity.Initialize
+        for method in methods:
+            if method.Type in ["XYs2dLs"]:
+                Function = lambda XYs:utils_torch.geometry2D.XYsPair2Distance(XYs, data.XYsNp)
+            elif method.Type in ["DiffGaussian"]:
+                GaussianCurve1 = utils_torch.math.GetGaussianCurveMethod(method.Amp1, method.Mean1, method.Std1)
+                GaussianCurve2 = utils_torch.math.GetGaussianCurveMethod(method.Amp2, method.Mean2, method.Std2)
+                Function = lambda dLs:GaussianCurve1(dLs) - GaussianCurve2(dLs)
+            elif method.Type in ["Gaussian"]:
+                GaussianCurve = utils_torch.math.GetGaussianCurveMethod(method.Amp, method.Mean, method.Std)
+                Function = lambda dLs:GaussianCurve(dLs)
+            elif method.Type in ["Norm2Mean0Std1"]:
+                Function = lambda Activity:utils_torch.math.Norm2GivenMeanStd(Activity, 0.0, 1.0)
+            elif method.Type in ["Norm2Sum1"]:
+                Function = utils_torch.math.Norm2Sum1
+            elif method.Type in ["Norm2Min0"]:
+                Function = utils_torch.math.Norm2Min0
+            else:
+                raise Exception(method)
+            Functions.append(Function)
+        self.XYs2Activity = utils_torch.StackFunction(*Functions)
+
+    def XYs2ActivityDefault(self, XYs):
+        # @param XYs: np.ndarray [PointNum, (x, y)]
+        # @return Activity: np.ndarray [PointNum, PlaceCells.Num]
+        raise Exception()
+        return
     def PlotXYs(self, ax=None, Save=False, SavePath=utils.ArgsGlobal.SaveDir + "PlaceCells2D-XYs.png"):
         data = self.data
         if ax is None:
@@ -83,7 +118,7 @@ class PlaceCells2D(object):
 
         #print('PlaceCells: type:%s'%self.type)
         if self.type in ['diff_gaussian', 'diff_gauss']:
-            self.Getact = self.Getact_dual_
+            self.GetAct = self.GetAct_dual_
             self.act_ratio = self.dict['act_ratio']
             self.act_positive = self.dict['act_positive']
             self.act_ratio_2 = self.act_ratio ** 2
@@ -94,18 +129,18 @@ class PlaceCells2D(object):
 
             #print('act_positive:%s'%(str(self.act_positive)))
         else:
-            self.Getact = self.Getactivation = self.Getact_single
+            self.GetAct = self.GetActivation = self.GetAct_single
         if self.verbose:
             print('Place_Cells: type:%s act_decay:%f act_center:%f norm_local:%s separate_softmax:%s'% \
                 (self.type, self.act_decay, self.act_center, self.norm_local, self.separate_softmax))
-            #input()
-    def Getact_batch(self, points): # points: [batch_size, (x,y)]
+
+    def GetAct_batch(self, points): # points: [batch_size, (x,y)]
         points = torch.unsqueeze(points, dim=1) # [batch_size, 1, (x, y)]
-        pc_act = self.Getact(points) # [batch_size, 1, pc_num]
+        pc_act = self.GetAct(points) # [batch_size, 1, pc_num]
         pc_act = torch.squeeze(pc_act, dim=1) # [batch_size, pc_num]
-        #print('Getact_batch: pc_act.size: %s'%str(pc_act.size())) # str(·) is necessary
+        #print('GetAct_batch: pc_act.size: %s'%str(pc_act.size())) # str(·) is necessary
         return pc_act
-    def Getact_single(self, points): # points: [batch_size, step_num, (x,y)]
+    def GetAct_single(self, points): # points: [batch_size, step_num, (x,y)]
         points = points.to(self.device)
         points_expand = torch.unsqueeze(points, dim=2) #points_expand:[batch_size, step_num, (x,y), 1]
         coords_expand = torch.unsqueeze(torch.unsqueeze(self.coords, dim=0), dim=0) #points_expand:[place_cells_num, (x,y )]
@@ -116,7 +151,7 @@ class PlaceCells2D(object):
         if self.norm_local:
             act /= torch.sum(act, dim=2, keepdim=True)         
         return self.act_center * act # pos:[batch_size, step_num, act]
-    def Getact_dual_(self, points):
+    def GetAct_dual_(self, points):
         points = points.to(self.device)
         points_expand = torch.unsqueeze(points, dim=2)
         coords_expand = torch.unsqueeze(torch.unsqueeze(self.coords, dim=0), dim=0)
@@ -126,10 +161,10 @@ class PlaceCells2D(object):
         act_1 = torch.exp(- dist / (2 * self.act_decay_2 * self.act_ratio_2)) / self.act_ratio_2
         pc_act = self.act_center * (act_0 - act_1)
         pc_act = torch.squeeze(pc_act, dim=3) # [batch_size, step_num, pc_num]
-        #print('Getact_dual_: pc_act.size: %s'%str(pc_act.size()))
+        #print('GetAct_dual_: pc_act.size: %s'%str(pc_act.size()))
         return pc_act.float()
 
-    def Getact_dual(self, points): # pos:[batch_size, step_num, (x,y)]
+    def GetAct_dual(self, points): # pos:[batch_size, step_num, (x,y)]
         points = points.to(self.device)
         points_expand = torch.unsqueeze(points, dim=2)
         coords_expand = torch.unsqueeze(torch.unsqueeze(self.coords, dim=0), dim=0)
@@ -208,7 +243,7 @@ class PlaceCells2D(object):
 
         pos = pos.astype(np.float32)
         #Maybe specify dimensions here again?
-        pc_outputs = self.Getactivation(pos)
+        pc_outputs = self.GetActivation(pos)
         pc_outputs = tf.reshape(pc_outputs, (-1, self.cell_num))
         C = pc_outputs@tf.transpose(pc_outputs)
         Csquare = tf.reshape(C, (res,res,res,res))
@@ -219,7 +254,7 @@ class PlaceCells2D(object):
         Cmean = np.roll(np.roll(Cmean, res//2, axis=0), res//2, axis=1)
         return Cmean
     
-    def Getact_map(self, arena, res=50):
+    def GetAct_map(self, arena, res=50):
         width, height = self.arena.width, self.arena.height
         res_x, res_y = Getres_xy(res, width, height)
         points_int = np.empty(shape=[res_x, res_y, 2], dtype=np.int) #coord
@@ -233,7 +268,7 @@ class PlaceCells2D(object):
         #print(points_float.reshape(res_x, res_y, 2))
         points_tensor = torch.unsqueeze(torch.from_numpy(points_float).to(self.device), axis=0) # [1, res_x * res_y, 2]
         arena_mask = arena.Getmask(res_x=res_x, res_y=res_y, points_grid=points_float)
-        pc_act = self.Getact(points_tensor)
+        pc_act = self.GetAct(points_tensor)
 
         # [1, res_x * res_y, place_cells_num] -> [res_x, res_y, place_cells_num]
         pc_act = pc_act.detach().cpu().numpy().squeeze() 
@@ -278,7 +313,7 @@ class PlaceCells2D(object):
         arena = self.arena if arena is None else arena
         
         if act_map is None:
-            act_map, arena_mask = self.Getact_map(arena=arena, res=res) # [N_num, res_x, res_y]
+            act_map, arena_mask = self.GetAct_map(arena=arena, res=res) # [N_num, res_x, res_y]
         else:
             res_x, res_y = act_map.shape[1], act_map.shape[2]
             arena_mask = arena.Getmask(res_x=res_x, res_y=res_y)

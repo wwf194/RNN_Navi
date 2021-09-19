@@ -4,13 +4,13 @@
             "Type": "BuildObj",
             "Args": [
                 {
-                    "ParamPath": "&param.PlaceCells",
-                    "MountPath": "&PlaceCells",
+                    "ParamPath": "&PlaceCells",
+                    "MountPath": "&*PlaceCells",
                     "ModulePath": "Models.PlaceCells2D"
                 },
                 {
-                    "ParamPath": "&param.model",
-                    "MountPath": "&model",
+                    "ParamPath": "&model",
+                    "MountPath": "&*model",
                     "ModulePath": "Models.RNNLIF"                    
                 }
             ]
@@ -18,30 +18,52 @@
         {
             "Type": "FunctionCall",
             "Args": [
-                "&PlaceCells.InitFromParam",
-                "&model.InitFromParam",
-                "&SetTrajectory2ModelInputMethod",
-                "&SetTrajectory2ModelOutputMethod",
+                "&*SetModelInputOutput",
+                "&*ParseParam",
+                "&*model.InitFromParam",
+                "&*PlaceCells.InitFromParam",
             ]
         },
     ],
     "PlaceCells":{
-        "Num": "$^param.model.Neurons.Num // 4",
+        "__AndBase__": true, 
+        "Num": "&^param.agent.model.Neurons.Num // 4",
         "XYs":{
             "Initialize": {
-                "Method": "FromFunctionCall",
-                "Functions": [
+                "Method": "FunctionCall",
+                "Args": [
                     [
-                        "&^object.world.GetArenaByIndex(0).GenerateRandomInternalXYs",
-                        ["$PlaceCells.Num"]
+                        "&^object.world.Arenas[0].GenerateRandomInternalXYs",
+                        ["&Num"]
                     ],
                     [
-                        "&^object.agent.PlaceCells.ReceiveXYs",
+                        "&^object.agent.PlaceCells.SetXYs",
                         ["__PreviousFunctionOutput__"]
                     ]
                 ]
             }
+        },
+        "Activity.Max": 1.0,
+        "XYs2Activity":{
+            "Initialize":[
+                {
+                    "Type":"XYs2dLs"
+                },
+                {
+                    "Type": "DiffGaussian",
+                    "Amp1": "&Activity.Max",
+                    "Mean1": 0.0, 
+                    "Std1": "&^param.world.Arenas[0].BoundaryBox.Size * 0.07",
+                    "Amp2": "&~Amp1 * 0.5",
+                    "Mean2": 0.0,
+                    "Std2": "&~Std1 * 2.0"
+                },
+            ]
         }
     },
-    "model":"$^param.model"
+    "model":"$^param.model",
+    "model.__AndBase__":true,
+    "model.Input.Type": "dLDirection",
+    "model.InputInit.Type": "PlaceCellsActivity",
+    "__AndBase__": true
 }

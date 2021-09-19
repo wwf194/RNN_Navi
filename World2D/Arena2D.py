@@ -34,7 +34,7 @@ class Arena2D():
         BoundaryBoxes = []
         for Shape in self.Shapes:
             BoundaryBoxes.append(GetAttrs(Shape.param.BoundaryBox))
-        BoundaryBoxes = utils_torch.ToNpArray(BoundaryBoxes) # [ShapeNum, (xMin, yMin, xMax, yMax)]
+        BoundaryBoxes = utils_torch.ToNpArray(BoundaryBoxes) # [ShapeNum, (XMin, YMin, YMax, YMax)]
         if len(BoundaryBoxes.shape)==1:
             BoundaryBoxes = BoundaryBoxes[np.newaxis, :]
         
@@ -49,14 +49,15 @@ class Arena2D():
         else:
             SetAttrs(param, "BoundaryBox", BoundaryBox)
 
-        SetAttrs(param, "BoundaryBox.xMin", GetAttrs(param.BoundaryBox)[0])
-        SetAttrs(param, "BoundaryBox.yMin", GetAttrs(param.BoundaryBox)[1])
-        SetAttrs(param, "BoundaryBox.xMax", GetAttrs(param.BoundaryBox)[2])
-        SetAttrs(param, "BoundaryBox.yMax", GetAttrs(param.BoundaryBox)[3])
+        SetAttrs(param, "BoundaryBox.XMin", GetAttrs(param.BoundaryBox)[0])
+        SetAttrs(param, "BoundaryBox.YMin", GetAttrs(param.BoundaryBox)[1])
+        SetAttrs(param, "BoundaryBox.YMax", GetAttrs(param.BoundaryBox)[2])
+        SetAttrs(param, "BoundaryBox.YMax", GetAttrs(param.BoundaryBox)[3])
         
         BoundaryBox = param.BoundaryBox
-        SetAttrs(param, "BoundaryBox.Width", BoundaryBox.xMax - BoundaryBox.xMin)
-        SetAttrs(param, "BoundaryBox.Height", BoundaryBox.yMax - BoundaryBox.yMin)
+        SetAttrs(param, "BoundaryBox.Width", BoundaryBox.YMax - BoundaryBox.XMin)
+        SetAttrs(param, "BoundaryBox.Height", BoundaryBox.YMax - BoundaryBox.YMin)
+        SetAttrs(param, "BoundaryBox.Size", max(BoundaryBox.Width, BoundaryBox.Height))
     def PlotArena(self, ax=None, Save=True, SavePath="./Arena2D-Plot.png"):
         if ax is None:
             plt.close("all")
@@ -113,12 +114,16 @@ class Arena2D():
         })
     def ReportCollision(XY, dXY, XYCollision=None):
         return
+    def GetInsideMask(self, BoundaryBox, ResolutionX, ResolutionY):
+        mask = np.zeros(ResolutionX, ResolutionY)
+        XYs = GetGrids
+
     #@abc.abstractmethod
     def Getrandom_xy(self): # must be implemented by child class.
         return
     def GenerateRandomPointsInBoundaryBox(self, Num):
         param = self.param
-        Points = np.stack([np.random.uniform(param.BoundaryBox.xMin, param.BoundaryBox.xMax, Num), np.random.uniform(param.BoundaryBox.yMin, param.BoundaryBox.yMax, Num)], axis=1) #[points_num, (x, y)]
+        Points = np.stack([np.random.uniform(param.BoundaryBox.XMin, param.BoundaryBox.YMax, Num), np.random.uniform(param.BoundaryBox.YMin, param.BoundaryBox.YMax, Num)], axis=1) #[points_num, (x, y)]
         return Points
     def GenerateRandomInternalXYs(self, Num=100, MinDistance2Border=0.0):
         PointNum = 0

@@ -43,18 +43,41 @@ class Agent(object):
             self.param = param
         else:
             param = self.param
+        param.__object__ = self
         utils.AddLog("Agent: Initializing.")
+
         EnsureAttrs(param, "Initialize", default=[])
         for Task in param.Initialize:
-            utils_torch.ImplementInitializeTask(Task, ObjCurrent=self, ObjRoot=utils.ArgsGlobal)
+            utils_torch.ImplementInitializeTask(Task, ObjCurrent=self.param, ObjRoot=utils.ArgsGlobal)
         utils.AddLog("Agent: Initialized.")
+    
+    def SetModelInputOutput(self):
+        self.SetTrajectory2ModelInputMethod()
+        self.SetTrajectory2ModelOutputMethod()
+        self.SetModelInputNum()
+    def SetModelInputNum(self):
+        param = self.param
+        EnsureAttrs(param, "Task", default="PredictPlaceCellsActivity")
+        if param.Task in ["PredictPlaceCellsActivity"]:
+            SetAttrs(param, "model.InputInit.Num", value=self.param.PlaceCells.Num)
+        elif param.Task in ["PredictXYs"]:
+            SetAttrs(param, "model.InputInit.Num", value=2)
+        else:
+            raise Exception()
+        return
+    def ParseParam(self):
+        utils_torch.parse.ParsePyObjStatic(self.param, ObjCurrent=self.param, ObjRoot=utils.ArgsGlobal, InPlace=True)
+        utils_torch.parse.ParsePyObjDynamic(self.param, ObjCurrent=self.param, ObjRoot=utils.ArgsGlobal, InPlace=True)
+        return
     def SetTrajectory2ModelInputMethod(self):
         param = self.param
         EnsureAttrs(param, "model.Input.Type", default="dXY")
         if param.model.Input.Type in ["dXY"]:
+            SetAttrs(param, "model.Input.Num", value=2)
             self.Trajectory2ModelInput = self.Trajectory2ModelInputdXY
-        elif param.model.Input.Type in ["VTheta"]:
-            self.Trajectory2ModelInput = self.Trajectory2ModelInputVTheta
+        elif param.model.Input.Type in ["dLDirection"]:
+            SetAttrs(param, "model.Input.Num", value=3)
+            self.Trajectory2ModelInput = self.Trajectory2ModelInputdLDirection
         else:
             raise Exception()
     def SetTrajectory2ModelOutputMethod(self):
@@ -375,12 +398,12 @@ class Agent(object):
         # return (inputs, init), outputs
     def GenerateRandomTrajectory(self, param): # StepNum, t_total, random_init=False, arena_index=None, use_test_arenas_=None, full_info=False): #return random trajectories
         #param = utils_torch.parse.ParsePyObjDynamic(param, ObjRoot=ArgsGlobal.object, ObjCurrent=param) # should already be done
-        EnsureAttrs(param, "StartXY.Method", default="UniformInArena") # should already be done
-        EnsureAttrs(param, "StartXY.MinDistance2Border", default=0.0) # should already be done
+        EnsureAttrs(param, "XYStart.Method", default="UniformInArena") # should already be done
+        EnsureAttrs(param, "XYStart.MinDistance2Border", default=0.0) # should already be done
         if param.XYStart.Method in ["UniformInArena"]:
-            XYStart = param.Arena.GenerateRandomInternalXYs(param.TrajectoryNum, MinDistance2Border=param.StartXY.MinDistance2Border)
+            XYStart = param.Arena.GenerateRandomInternalXYs(param.TrajectoryNum, MinDistance2Border=param.XYStart.MinDistance2Border)
         elif param.XYStart.Method in ["Given"]:
-            XYStart = GetAttrs(param.StartXY)
+            XYStart = GetAttrs(param.XYStart)
         else:
             raise Exception()
         XYs = np.zeros((param.TrajectoryNum, param.StepNum + 1, 2), dtype=np.float32) # [TrajectoryNum, StepNum + 2, (x,y)]
@@ -430,8 +453,8 @@ class Agent(object):
         figure, ax = plt.subplots(1, 1, figsize=(5*1.5, 5*1.0)) # figsize (width, length) in inches.
         
         BoundaryBox = param.Arena.param.BoundaryBox
-        ax.set_xlim(BoundaryBox.xMin, BoundaryBox.xMax)
-        ax.set_ylim(BoundaryBox.yMin, BoundaryBox.yMax)
+        ax.set_xlim(BoundaryBox.XMin, BoundaryBox.YMax)
+        ax.set_ylim(BoundaryBox.YMin, BoundaryBox.YMax)
         ax.set_aspect(1) # so that x and y has same unit length in image.
         param.Arena.PlotArena(ax, Save=False)
 
@@ -495,8 +518,10 @@ class Agent(object):
           Trajectory.XYs.shape[1] - 1 # time
         ]
     def Trajectory2ModelOutputPlaceCells(self, Trajectory):
+        XYs = Trajectory.XYs[:, 1:, :]
+        shape = XYs.shape
         return [
-            self.PlaceCells.XYs2Activity(Trajectory.XYs[:, 1:])
+            self.PlaceCells.XYs2Activity(XYs.reshape(shape[0] * shape[1], 2)).reshape(shape[0], shape[1], -1) # [BatchSize, StepNum, PlaceCellsNum]
         ]
     def plot_path(self, path=None, model=None, plot_num=2, arena=None, save=True, save_path='./', save_name='path_plot', cmap='jet', **kw):
         if arena is None:

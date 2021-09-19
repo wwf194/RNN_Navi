@@ -48,34 +48,38 @@ class RNNLIF(nn.Module):
                 SetAttrs(Neurons.Recurrent, "Excitatory.Num", value=int(Neurons.Recurrent.Num * Neurons.Recurrent.Excitatory.Ratio))
                 SetAttrs(Neurons.Recurrent, "Inhibitory.Num", value=(Neurons.Num - Neurons.excitatory.Num))
 
-        Nodes = utils_torch.json.EmptyPyObj()
-        Nodes.Modules = utils_torch.json.EmptyPyObj()
-        Nodes.Routers = utils_torch.json.EmptyPyObj()
-        self.Nodes = Nodes
+        data = utils_torch.json.EmptyPyObj()
+        data.Modules = utils_torch.json.EmptyPyObj()
+        data.Routers = utils_torch.json.EmptyPyObj()
+        self.data = data
 
         # initialize modules
         #for module in ListAttrs(param.modules):
         for name, param in ListAttrsAndValues(self.param.Modules):
             Module = BuildModule(param)
             self.add_module(name, Module)
-            SetAttrs(Nodes.Modules, name, Module)
+            SetAttrs(data.Modules, name, Module)
 
         for name, param in ListAttrsAndValues(self.param.Dynamics):
             if name in ["__Entry__"]:
                 continue
-            setattr(Nodes.Routers, name, param)
-        for router in ListValues(Nodes.Routers):
-            utils_torch.parse.ParseRouter(router, InPlace=True, ObjRefList=[Nodes.Modules, Nodes.Routers, Nodes])
+            setattr(data.Routers, name, param)
+        for router in ListValues(data.Routers):
+            utils_torch.parse.ParseRouter(router, InPlace=True, ObjRefList=[data.Modules, data.Routers, data])
 
         DefaultDynamicsEntry = "&Dynamics.%s"%ListAttrsAndValues(self.param.Dynamics)[0][0]
         EnsureAttrs(self.param.Dynamics, "__Entry__", default=DefaultDynamicsEntry)
-        #utils_torch.parse.ParseRouters(Nodes.Routers, ObjRefList=[Nodes.Modules, Nodes.Routers, Nodes])
+        #utils_torch.parse.ParseRouters(data.Routers, ObjRefList=[data.Modules, data.Routers, data])
+
+        EnsureAttrs(self.param, "Inintialize", default=[])
+        for Instruction in self.param.Initialize:
+            utils_torch.ImplementInitializeTask(Instruction, ObjCurrent=self.data, ObjRoot=utils.ArgsGlobal)
 
     def Train(self, Input, OutputTarget):
         Output = self.forward(Input)
         return
     def forward(self, Input):
-        Output = self.Nodes.__Entry__.forward(Input)
+        Output = self.data.__Entry__.forward(Input)
         return Output
     def forward_once(self, s=None, h=None, i=None):
         batch_size = i.size(0)

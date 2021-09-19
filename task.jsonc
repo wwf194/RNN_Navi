@@ -19,7 +19,7 @@
             ]
         },
         {
-            "Type":"ParseParamStatic",
+            "Type":"ParseParam",
         },
         {
             "Type":"BuildObject",
@@ -37,6 +37,9 @@
             ]
         },
         {
+            "Type":"ParseParam",
+        },
+        {
             "Type": "FunctionCall",
             "Args":[
                 "&^object.world.InitFromParam",
@@ -44,6 +47,9 @@
                 "&^object.agent.PlotPlaceCells",
                 //["&^agent.GenerateRandomTrajectoryAndPlot", ["param=50"]]
             ]
+        },
+        {
+            "Type":"ParseParam",
         },
         {
             "Type": "Train",
@@ -72,11 +78,8 @@
                     }
                 },
                 "Batch.Internal":{
-                    "In":{
-                        "TrajectoryParam": "&TrajectoryParam",
-                    },
-                    "Out":{
-                    },
+                    "In":["TrajectoryParam"],
+                    "Out":[],
                     "Routings": [
                         // [
                         //     "&^object.agent.GenerateRandomTrajectoryAndPlot",
@@ -87,7 +90,8 @@
                         "Trajectory |--> &^object.agent.Trajectory2ModelOutput |--> ModelOutputTarget",
                         "ModelInput, ModelOutputTarget |--> &^object.agent.model.Train |--> ModelOutput",
                     ],
-                }
+                },
+                "Batch.Input": ["&TrajectoryParam"]
             },
         }
     ]
