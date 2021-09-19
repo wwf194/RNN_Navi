@@ -26,14 +26,11 @@ class Circle(Shapes2D.Shape2D):
                 param.Radius = GetAttrs(param.Initialize, "Radius")
         else:
             raise Exception()
-        
         SetAttrs(param, "Center.X", GetAttrs(param.Center)[0])
         SetAttrs(param, "Center.Y", GetAttrs(param.Center)[1])
-
         self.Center = np.array(GetAttrs(param.Center), dtype=np.float)
 
         self.CalculateBoundaryBox()
-
     def CalculateBoundaryBox(self):
         param = self.param
         # Calculate Boundary Box
@@ -59,11 +56,11 @@ class Circle(Shapes2D.Shape2D):
         dist_from_center = np.linalg.norm(vec_from_center, ord=2, axis=-1) # [point_num]
         theta_from_center = np.arctan2(xy[:, 1], xy[:, 0])
         return dist_from_center, theta_from_center
-    def isOutside(self, Points): # Points:[PointNum, (x, y)]. This method is only valid for convex polygon.
-        return self.Distance2Center(Points) > (self.Radius)
+    def IsOutside(self, XYs, MinDistance2Border=0.0): # Points:[PointNum, (x, y)]. This method is only valid for convex polygon.
+        return self.Distance2Center(XYs) > (self.param.Radius + MinDistance2Border)
+    def IsInside(self, XYs, MinDistance2Border=0.0):
+        return self.Distance2Center(XYs) + MinDistance2Border < self.param.Radius
     def Vector2NearstBorder(self, Points):
-        
-        
         return        
     def avoid_border_circle(self, xy, theta, thres=None): # xy: [batch_size, (x, y)], theta: velocity direction.
         if thres is None or thres in ["default"]:

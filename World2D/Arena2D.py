@@ -1,14 +1,14 @@
 import numpy as np
 import random
 import torch
-import utils_torch
 
 import matplotlib as mpl
 from matplotlib import pyplot as plt
-from utils_torch.attrs import *
-import World2D
-from utils_torch.utils import ToNpArray
 
+import utils
+import World2D
+import utils_torch
+from utils_torch.attrs import *
 class Arena2D():
     def __init__(self, param=None):
         self.param = param
@@ -29,6 +29,8 @@ class Arena2D():
             Shape.InitFromParam()
             self.Shapes.append(Shape)
         self.CalculateBoundaryBox()
+
+        self.PlotInsideMask(Save=True, SavePath="./Arenas2D-InsideMask.svg")
     def CalculateBoundaryBox(self):
         param = self.param
         BoundaryBoxes = []
@@ -114,10 +116,24 @@ class Arena2D():
         })
     def ReportCollision(XY, dXY, XYCollision=None):
         return
-    def GetInsideMask(self, BoundaryBox, ResolutionX, ResolutionY):
-        mask = np.zeros(ResolutionX, ResolutionY)
-        XYs = GetGrids
-
+    def PlotInsideMask(self, ax=None, Save=False, SavePath=utils.ArgsGlobal.SaveDir + "Arena2D-InsideMask.svg"):
+        if ax is None:
+            fig, ax = plt.subplots()
+        mask = self.GetInsideMask(ResolutionX=50, ResolutionY=50)
+        utils_torch.plot.PlotMatrix(ax, mask)
+        if Save:
+            plt.savefig(SavePath, format="svg")
+    def GetInsideMask(self, BoundaryBox=None, ResolutionX=None, ResolutionY=None):
+        param = self.param
+        if BoundaryBox is None:
+            BoundaryBox = param.BoundaryBox
+        mask = np.zeros((ResolutionX, ResolutionY), dtype=np.bool8)
+        XYs = utils_torch.geometry2D.LatticeXYs(BoundaryBox, ResolutionX, ResolutionY, Flatten=True) # [ResolutionX * ResolutionY, (x, y)]
+        isInside = self.IsInside(XYs)
+        isInsideIndex = np.argwhere(isInside)
+        isInsideIndex = np.stack([isInsideIndex // ResolutionY, isInsideIndex % ResolutionY], axis=1)
+        mask[isInsideIndex] = 1
+        return mask
     #@abc.abstractmethod
     def Getrandom_xy(self): # must be implemented by child class.
         return

@@ -8,7 +8,6 @@ class Shape2D:
             self.param = param
         else:
             param = self.param
-    def GetInsideMask(self, BoundaryBox, ResolutionX, ResolutionY):
-        mask = np.zeros(ResolutionX, ResolutionY)
+
 
 
