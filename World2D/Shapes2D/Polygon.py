@@ -117,25 +117,25 @@ class Polygon(Shape2D):
        
         VerticesNp = np.array(GetAttrs(param.Vertices), dtype=np.float32) # [VertexNum, (x, y)]
         XMin = np.min(VerticesNp[:, 0])
-        YMax = np.max(VerticesNp[:, 0])
+        XMax = np.max(VerticesNp[:, 0])
         YMin = np.min(VerticesNp[:, 1])
         YMax = np.max(VerticesNp[:, 1])
-        SetAttrs(param, "BoundaryBox", value=[XMin, YMin, YMax, YMax])
+        SetAttrs(param, "BoundaryBox", value=[XMin, YMin, XMax, YMax])
         SetAttrs(param, "BoundaryBox.XMin", XMin)
-        SetAttrs(param, "BoundaryBox.YMax", YMax)
+        SetAttrs(param, "BoundaryBox.YMax", XMax)
         SetAttrs(param, "BoundaryBox.YMin", YMin)
         SetAttrs(param, "BoundaryBox.YMax", YMax)
-        SetAttrs(param, "BoundaryBox.Width", YMax - XMin)
+        SetAttrs(param, "BoundaryBox.Width", XMax - XMin)
         SetAttrs(param, "BoundaryBox.Height", YMax - YMin)
         SetAttrs(param, "BoundaryBox.Size", max(param.BoundaryBox.Width, param.BoundaryBox.Height))
     
     def PrintInfo(self):
-        utils.AddLog('Arena_Polygon: edge_num:%d'%(self.edge_num))
-        print('center_coord:(%.1f, %.1f)'%(self.center_coord[0], self.center_coord[1]))
-        print('vertices:', end='')
+        utils.AddLog('ArenaPolygon: edge_num:%d'%(self.edge_num))
+        utils.AddLog('center_coord:(%.1f, %.1f)'%(self.center_coord[0], self.center_coord[1]))
+        utils.AddLog('vertices:', end='')
         for index in range(self.edge_num):
-            print('(%.1f, %.1f)'%(self.vertices[index][0], self.vertices[index][1]), end='')
-        print('\n')
+            utils.AddLog('(%.1f, %.1f)'%(self.vertices[index][0], self.vertices[index][1]), end='')
+        utils.AddLog('\n')
     def Vector2NearstBorder(self, Points):
         return
     def Distance2Edges(self, PointsNp):
@@ -213,13 +213,13 @@ class Polygon(Shape2D):
         
         if PlotNorm:
             utils_torch.plot.PlotDirectionsOnEdges(ax, GetAttrs(param.Edges), GetAttrs(param.Edges.Norm), Color="Red")
-        #utils_torch.plot.PlotArrows(ax, utils_torch.geometry2D.Edges2MidPoints(GetAttrs(param.Edges)), GetAttrs(param.Edges.Norm), Color="Red")
-        utils_torch.plot.PlotXYs(ax, utils_torch.geometry2D.Edges2MidPointsNp(data.EdgesNp) + data.EdgesNormNp, GetAttrs(param.Edges.Norm))
-        
+            #utils_torch.plot.PlotArrows(ax, utils_torch.geometry2D.Edges2MidPoints(GetAttrs(param.Edges)), GetAttrs(param.Edges.Norm), Color="Red")
+            utils_torch.plot.PlotXYs(ax, utils_torch.geometry2D.Edges2MidPointsNp(data.EdgesNp) + data.EdgesNormNp, GetAttrs(param.Edges.Norm))
+            
         if SetXYRange:
-            ax.set_xlim(param.BoundaryBox.XMin, param.BoundaryBox.YMax)
+            ax.set_xlim(param.BoundaryBox.XMin, param.BoundaryBox.XMax)
             ax.set_ylim(param.BoundaryBox.YMin, param.BoundaryBox.YMax)
-            ax.set_xticks(np.linspace(param.BoundaryBox.XMin, param.BoundaryBox.YMax, 5))
+            ax.set_xticks(np.linspace(param.BoundaryBox.XMin, param.BoundaryBox.XMax, 5))
             ax.set_yticks(np.linspace(param.BoundaryBox.YMin, param.BoundaryBox.YMax, 5))
             ax.set_aspect(1)
 

@@ -49,8 +49,11 @@ class Agent(object):
         EnsureAttrs(param, "Initialize", default=[])
         for Task in param.Initialize:
             utils_torch.ImplementInitializeTask(Task, ObjCurrent=self.param, ObjRoot=utils.ArgsGlobal)
+
         utils.AddLog("Agent: Initialized.")
-    
+
+        self.PlotPlaceCells(Save=True, SavePath="./PlaceCellsActivity.png")
+        self.PlotPlaceCellsXY(Save=True, SavePath="./PlaceCellsXY.png")
     def SetModelInputOutput(self):
         self.SetTrajectory2ModelInputMethod()
         self.SetTrajectory2ModelOutputMethod()
@@ -84,10 +87,35 @@ class Agent(object):
         param = self.param
         self.Trajectory2ModelOutput = self.Trajectory2ModelOutputPlaceCells
         return
-    def PlotPlaceCells(self, Save=True, SavePath=utils.ArgsGlobal.SaveDir + "agent-PlaceCells-XYs.svg"):
+    def PlotPlaceCellsXY(self, Save=True, SavePath=utils.ArgsGlobal.SaveDir + "agent-PlaceCells-XYs.svg"):
         param = self.param
         ax = utils.ArgsGlobal.object.world.Arenas[0].PlotArena(Save=False)
         self.PlaceCells.PlotXYs(ax, Save=Save, SavePath=SavePath)
+    def PlotPlaceCells(self, PlotNum=3, Resolution=50, Arena=None, Save=True, SavePath=utils.ArgsGlobal.SaveDir + "agent-PlaceCells-XYs.svg"):
+        param = self.param
+        if PlotNum > param.PlaceCells.Num:
+            CellIndices = range(param.PlaceCells.Num)
+        else:
+            CellIndices = utils_torch.RandomSelect(range(param.PlaceCells.Num), PlotNum)
+        if Arena is None:
+            Arena = utils.ArgsGlobal.object.world.Arenas[0]
+        BoundaryBox = Arena.param.BoundaryBox
+        fig, axes = utils_torch.plot.CreateFigurePlt(PlotNum, RowNum="auto", ColNum="auto")
+        ResolutionX, ResolutionY = utils_torch.plot.ParseResolution(BoundaryBox.Width, BoundaryBox.Height, Resolution)
+        XYs = utils_torch.geometry2D.LatticeXYs(BoundaryBox, ResolutionX, ResolutionY, Flatten=True)
+        Activity = self.PlaceCells.XYs2Activity(XYs) # [PointNum, PlaceCellsNum, (Activity)]
+        Activity = Activity[:, CellIndices]
+
+        for Index, CellIndex in enumerate(CellIndices):
+            ax = utils_torch.plot.GetAx(axes, Index)
+            Arena.PlotArena(ax, Save=False)
+            utils_torch.plot.PlotMatrix(ax, Activity[:, Index].reshape(ResolutionX, ResolutionY), XYRange=BoundaryBox)
+            utils_torch.plot.SetAxRangeFromBoundaryBox(ax, BoundaryBox)
+            CellXY = self.PlaceCells.data.XYs[CellIndex]
+            utils_torch.plot.PlotPoint(ax, CellXY, Color="Red", Type="Triangle")
+            ax.set_title("PlaceCells Index:%d XY:(%.2f, %.2f)"%(CellIndex, CellXY[0], CellXY[1]))
+        if Save:
+            plt.savefig(SavePath)
     def report_perform(self, prefix='', verbose=True):
         report = prefix
         for key in self.perform_list.keys():
@@ -108,24 +136,6 @@ class Agent(object):
             self.perform_list[key] = 0.0
     def Getperform(self):
         return # to be implemented
-
-    def prep_data(self, path):
-        dxy, xy_init, xy = GetItemsFromDict(self.prep_path(path), ['input', 'input_init', 'output'])
-        #print('Agent.prep_data: xy_init.shape: %s'%str(xy_init.size()))
-        if self.task in ['pc']:
-            data = {
-                'input': dxy,
-                'input_init': self.place_cells.Getact_batch(xy_init),
-                'output': self.place_cells.Getact(xy),
-            }
-        elif self.task in ['coord']:
-            data = {
-                'input': dxy,
-                'input_init': xy_init,
-                'output': xy
-            }
-        return data
-    
     def train(self, dict_, report_in_batch=None, report_interval=None, save_path=None, save_name=None, verbose=True):
         optimizer = self.cache['optimizer'] = utils.build_Optimizer(dict_['optimizer'], params=self.model.Gettrain_param())
         epoch_start, epoch_num, epoch_end = utils_train.Getepoch_info(dict_)
@@ -453,7 +463,7 @@ class Agent(object):
         figure, ax = plt.subplots(1, 1, figsize=(5*1.5, 5*1.0)) # figsize (width, length) in inches.
         
         BoundaryBox = param.Arena.param.BoundaryBox
-        ax.set_xlim(BoundaryBox.XMin, BoundaryBox.YMax)
+        ax.set_xlim(BoundaryBox.XMin, BoundaryBox.XMax)
         ax.set_ylim(BoundaryBox.YMin, BoundaryBox.YMax)
         ax.set_aspect(1) # so that x and y has same unit length in image.
         param.Arena.PlotArena(ax, Save=False)
@@ -517,11 +527,13 @@ class Agent(object):
           dLDirection, # inputSeries
           Trajectory.XYs.shape[1] - 1 # time
         ]
-    def Trajectory2ModelOutputPlaceCells(self, Trajectory):
+    def Trajectory2PlaceCellsActivity(self, Trajectory):
         XYs = Trajectory.XYs[:, 1:, :]
         shape = XYs.shape
+        return self.PlaceCells.XYs2Activity(XYs.reshape(shape[0] * shape[1], 2)).reshape(shape[0], shape[1], -1) # [BatchSize, StepNum, PlaceCellsNum]
+    def Trajectory2ModelOutputPlaceCells(self, Trajectory):
         return [
-            self.PlaceCells.XYs2Activity(XYs.reshape(shape[0] * shape[1], 2)).reshape(shape[0], shape[1], -1) # [BatchSize, StepNum, PlaceCellsNum]
+            self.Trajectory2PlaceCellsActivity(Trajectory)
         ]
     def plot_path(self, path=None, model=None, plot_num=2, arena=None, save=True, save_path='./', save_name='path_plot', cmap='jet', **kw):
         if arena is None:

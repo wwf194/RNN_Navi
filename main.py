@@ -172,9 +172,9 @@ def _AddLibraryPath(Args):
 
 def ParseParam(Args):
     ParseParamStatic(Args)
-    utils_torch.json.PyObj2JsonFile(ArgsGlobal.param, utils_torch.RenameFileIfPathExists("param_parsed_static.jsonc"))
+    utils_torch.json.PyObj2JsonFile(ArgsGlobal.param, utils_torch.RenameFileIfPathExists(utils.ArgsGlobal.SaveDir + "param_parsed_static.jsonc"))
     ParseParamDynamic(Args)
-    utils_torch.json.PyObj2JsonFile(ArgsGlobal.param, utils_torch.RenameFileIfPathExists("param_parsed_dynamic.jsonc"))
+    utils_torch.json.PyObj2JsonFile(ArgsGlobal.param, utils_torch.RenameFileIfPathExists(utils.ArgsGlobal.SaveDir + "param_parsed_dynamic.jsonc"))
     return
 def ParseParamStatic(Args):
     import utils_torch

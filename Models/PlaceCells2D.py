@@ -88,6 +88,7 @@ class PlaceCells2D(object):
         if Save:
             utils_torch.EnsureFileDir(SavePath)
             plt.savefig(SavePath)
+        return ax
     def bind_arenas(self, arenas, index=None):
         self.arenas = arenas
         if index is None:

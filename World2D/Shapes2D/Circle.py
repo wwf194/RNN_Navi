@@ -36,15 +36,15 @@ class Circle(Shapes2D.Shape2D):
         # Calculate Boundary Box
         if not HasAttrs(param, "BoundaryBox"):
             XMin = param.Center.X - param.Radius
-            YMax = param.Center.X + param.Radius
+            XMax = param.Center.X + param.Radius
             YMin = param.Center.Y - param.Radius
             YMax = param.Center.Y + param.Radius
-            SetAttrs(param, "BoundaryBox", [XMin, YMin, YMax, YMax])
+            SetAttrs(param, "BoundaryBox", [XMin, YMin, XMax, YMax])
             SetAttrs(param, "BoundaryBox.XMin", XMin)
-            SetAttrs(param, "BoundaryBox.YMax", YMax)
+            SetAttrs(param, "BoundaryBox.XMax", XMax)
             SetAttrs(param, "BoundaryBox.YMin", YMin)
             SetAttrs(param, "BoundaryBox.YMax", YMax)
-            SetAttrs(param, "BoundaryBox.Width", YMax - XMin)
+            SetAttrs(param, "BoundaryBox.Width", XMax - XMin)
             SetAttrs(param, "BoundaryBox.Height", YMax - YMin)
             SetAttrs(param, "BoundaryBox.Size", max(param.BoundaryBox.Width, param.BoundaryBox.Height))
     def Distance2Center(self, Points):

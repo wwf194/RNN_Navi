@@ -6,6 +6,7 @@ import time
 import logging
 import json5
 import utils
+from inspect import getframeinfo, stack
 
 ArgsGlobal = utils.json.JsonObj2PyObj({
     "ConfigDicts":{},
@@ -86,26 +87,30 @@ def Getlogger(logger_name='log'):
     logger.addHandler(file_handler)
     return logger
 
-def AddLog(log, logger=None, time_stamp=True):
+def AddLog(log, logger=None, TimeStamp=True, File=True, LineNum=True):
+    Caller = getframeinfo(stack()[1][0])
+    if TimeStamp:
+        log = "[%s]%s"%(GetTime(), log)
+    if File:
+        log = "%s File \"%s\""%(log, Caller.filename)
+    if LineNum:
+        log = "%s, line %d"%(log, Caller.lineno)
     if logger is None:
         logger = GetLoggerGlobal()
-    if time_stamp:
-        logger.debug("[%s]%s"%(GetTime(), log))
-    else:
-        logger.debug("%s"%log)
+    logger.debug(log)
 
-def AddWarning(log, logger=None, time_stamp=True):
+def AddWarning(log, logger=None, TimeStamp=True):
     if logger is None:
         logger = GetLoggerGlobal()
-    if time_stamp:
+    if TimeStamp:
         logger.warning("[%s][WARNING]%s"%(GetTime(), log))
     else:
         logger.warning("%s"%log)
 
-def add_error(log, logger=None, time_stamp=True):
+def add_error(log, logger=None, TimeStamp=True):
     if logger is None:
         logger = GetLoggerGlobal()
-    if time_stamp:
+    if TimeStamp:
         logger.error("[%s][ERROR]%s"%(GetTime(), log))
     else:
         logger.error("%s"%log)

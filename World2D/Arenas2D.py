@@ -42,6 +42,8 @@ class Arenas2D:
             Arena.InitFromParam()
             self.Arenas.append(Arena)
         self.SetCurrentArena(0)
+        for Index, Arena in enumerate(self.Arenas):
+            Arena.PlotInsideMask(Save=True, SavePath=utils.ArgsGlobal.SaveDir + "Arenas2D-InsideMask=%d.png"%Index)
     '''
     def PlotArenas_cv(self, save=True, save_path='./', **kw):
         for index, arena in enumerate(self.Arenas):

@@ -30,13 +30,13 @@ class Arena2D():
             self.Shapes.append(Shape)
         self.CalculateBoundaryBox()
 
-        self.PlotInsideMask(Save=True, SavePath="./Arenas2D-InsideMask.svg")
+        
     def CalculateBoundaryBox(self):
         param = self.param
         BoundaryBoxes = []
         for Shape in self.Shapes:
             BoundaryBoxes.append(GetAttrs(Shape.param.BoundaryBox))
-        BoundaryBoxes = utils_torch.ToNpArray(BoundaryBoxes) # [ShapeNum, (XMin, YMin, YMax, YMax)]
+        BoundaryBoxes = utils_torch.ToNpArray(BoundaryBoxes) # [ShapeNum, (XMin, YMin, XMax, YMax)]
         if len(BoundaryBoxes.shape)==1:
             BoundaryBoxes = BoundaryBoxes[np.newaxis, :]
         
@@ -53,20 +53,24 @@ class Arena2D():
 
         SetAttrs(param, "BoundaryBox.XMin", GetAttrs(param.BoundaryBox)[0])
         SetAttrs(param, "BoundaryBox.YMin", GetAttrs(param.BoundaryBox)[1])
-        SetAttrs(param, "BoundaryBox.YMax", GetAttrs(param.BoundaryBox)[2])
+        SetAttrs(param, "BoundaryBox.XMax", GetAttrs(param.BoundaryBox)[2])
         SetAttrs(param, "BoundaryBox.YMax", GetAttrs(param.BoundaryBox)[3])
         
         BoundaryBox = param.BoundaryBox
-        SetAttrs(param, "BoundaryBox.Width", BoundaryBox.YMax - BoundaryBox.XMin)
+        SetAttrs(param, "BoundaryBox.Width", BoundaryBox.XMax - BoundaryBox.XMin)
         SetAttrs(param, "BoundaryBox.Height", BoundaryBox.YMax - BoundaryBox.YMin)
         SetAttrs(param, "BoundaryBox.Size", max(BoundaryBox.Width, BoundaryBox.Height))
     def PlotArena(self, ax=None, Save=True, SavePath="./Arena2D-Plot.png"):
+        param = self.param
         if ax is None:
             plt.close("all")
             fig, ax = plt.subplots()
         for Shape in self.Shapes:
             Shape.PlotShape(ax, Save=False, SetXYRange=False)
+        utils_torch.plot.SetHeightWidthRatio(ax, 1.0)
+        utils_torch.plot.SetAxRangeFromBoundaryBox(ax, param.BoundaryBox)
         if Save:
+            utils_torch.EnsureFileDir(SavePath)
             plt.savefig(SavePath)
         return ax
     def PlotRandomInternalPoints(self, PointNum, SavePath):
@@ -116,13 +120,14 @@ class Arena2D():
         })
     def ReportCollision(XY, dXY, XYCollision=None):
         return
-    def PlotInsideMask(self, ax=None, Save=False, SavePath=utils.ArgsGlobal.SaveDir + "Arena2D-InsideMask.svg"):
+    def PlotInsideMask(self, ax=None, Save=False, SavePath=utils.ArgsGlobal.SaveDir + "Arena2D-InsideMask.png"):
         if ax is None:
             fig, ax = plt.subplots()
         mask = self.GetInsideMask(ResolutionX=50, ResolutionY=50)
+        mask = mask.astype(np.int32)
         utils_torch.plot.PlotMatrix(ax, mask)
         if Save:
-            plt.savefig(SavePath, format="svg")
+            plt.savefig(SavePath, format="png")
     def GetInsideMask(self, BoundaryBox=None, ResolutionX=None, ResolutionY=None):
         param = self.param
         if BoundaryBox is None:
@@ -130,16 +135,16 @@ class Arena2D():
         mask = np.zeros((ResolutionX, ResolutionY), dtype=np.bool8)
         XYs = utils_torch.geometry2D.LatticeXYs(BoundaryBox, ResolutionX, ResolutionY, Flatten=True) # [ResolutionX * ResolutionY, (x, y)]
         isInside = self.IsInside(XYs)
-        isInsideIndex = np.argwhere(isInside)
-        isInsideIndex = np.stack([isInsideIndex // ResolutionY, isInsideIndex % ResolutionY], axis=1)
-        mask[isInsideIndex] = 1
+        isInsideIndex = np.argwhere(isInside)[:, 0]
+        mask[isInsideIndex // ResolutionY, isInsideIndex % ResolutionY] = 1
         return mask
     #@abc.abstractmethod
     def Getrandom_xy(self): # must be implemented by child class.
         return
     def GenerateRandomPointsInBoundaryBox(self, Num):
         param = self.param
-        Points = np.stack([np.random.uniform(param.BoundaryBox.XMin, param.BoundaryBox.YMax, Num), np.random.uniform(param.BoundaryBox.YMin, param.BoundaryBox.YMax, Num)], axis=1) #[points_num, (x, y)]
+        Points = np.stack([np.random.uniform(param.BoundaryBox.XMin, param.BoundaryBox.XMax, Num), 
+            np.random.uniform(param.BoundaryBox.YMin, param.BoundaryBox.YMax, Num)], axis=1) #[points_num, (x, y)]
         return Points
     def GenerateRandomInternalXYs(self, Num=100, MinDistance2Border=0.0):
         PointNum = 0
