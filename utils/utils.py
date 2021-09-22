@@ -8,18 +8,11 @@ import json5
 import utils
 from inspect import getframeinfo, stack
 
-ArgsGlobal = utils.json.JsonObj2PyObj({
-    "ConfigDicts":{},
-    "ParamDicts":{},
-    "ObjRoot":{}
-})
+ArgsGlobal = utils.json.EmptyPyObj()
 
-def Getdevice(args):
-    if hasattr(args, 'device'):
-        if args.device not in [None, 'None']:
-            print(args.device)
-            return args.device
-    return Getbest_gpu()
+def Init():
+    SetLoggerGlobal()
+    SetSaveDir()
 
 def Getrequired_file(file_start):
     if isinstance(file_start, str):
@@ -57,11 +50,13 @@ def Getrequired_file_recur(file, file_list):
             #print('file_rel_main: %s'%file_rel_main)
             Getrequired_file_recur(file_rel_main, file_list)
 
+
 def SetSaveDir():
     import utils_torch
     SaveDir = "./log/Experiment-%s/"%(GetTime("%Y-%m-%d-%H:%M:%S"))
     utils_torch.EnsureDir(SaveDir)
     ArgsGlobal.SaveDir = SaveDir
+
 def SetLoggerGlobal():
     ArgsGlobal.logger_global = Getlogger('log-global')
 

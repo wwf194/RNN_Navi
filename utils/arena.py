@@ -31,8 +31,8 @@ class SquareLattice:
     def InitFromParam(self, param):
         self.param = param
         self.LatticeState = np.array()
-        EnsureAttrs(param, "Initialize", default=[])
-        for Order in param.Initialize:
+        EnsureAttrs(param, "Init", default=[])
+        for Order in param.Init:
             self.ImplementOrder(Order)
     def ImplementOrder(self, Order):
         return

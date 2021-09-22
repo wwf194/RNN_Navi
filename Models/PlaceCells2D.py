@@ -37,10 +37,10 @@ class PlaceCells2D(object):
         self.SetXYs2ActivityMethod()
     def CalculateXYs(self):
         param = self.param
-        if HasAttrs(param.XYs, "Initialize"):
-            EnsureAttrs(param.XYs.Initialize, "Method", default="FunctionCall")
-            if param.XYs.Initialize.Method in ["FunctionCall"]:
-                utils_torch.CallFunctions(param.XYs.Initialize.Args, ObjCurrent=self, ObjRoot=utils.ArgsGlobal)
+        if HasAttrs(param.XYs, "Init"):
+            EnsureAttrs(param.XYs.Init, "Method", default="FunctionCall")
+            if param.XYs.Init.Method in ["FunctionCall"]:
+                utils_torch.CallFunctions(param.XYs.Init.Args, ObjCurrent=self, ObjRoot=utils.ArgsGlobal)
             else:
                 raise Exception()
     def SetXYs(self, XYs):
@@ -52,7 +52,7 @@ class PlaceCells2D(object):
         param = self.param
         data = self.data
         Functions = []
-        methods = param.XYs2Activity.Initialize
+        methods = param.XYs2Activity.Init
         for method in methods:
             if method.Type in ["XYs2dLs"]:
                 Function = lambda XYs:utils_torch.geometry2D.XYsPair2Distance(XYs, data.XYsNp)

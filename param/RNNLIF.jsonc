@@ -1,17 +1,16 @@
 {
     "Type": "RNNLIF",
-    "Initialize":[
+    "InitTasks":[
         {
             "Type": "FunctionCall",
             "Args":[
-                "&Modules.InputSender.InitFromParam",
-                "&Modules.OutputReceiver.InitFromParam"
+                //"&*InitModules"
             ]
         }
     ],
     "Neurons":{
         "Input":{
-            "Num":"&^param.agent.model.Input.Num"
+            "Num":"$^param.agent.model.Input.Num"
         },
         "Recurrent":{
             "ExciInhi":{
@@ -29,82 +28,125 @@
             "NonLinear":"ReLU"
         },
         "Output":{
-            "Num": "&Neurons.Recurrent.Num // 4"
+            "Num": "$Neurons.Recurrent.Num // 4"
         },
-        "Num": "&Neurons.Recurrent.Num"
+        "Num": "$Neurons.Recurrent.Num"
     },
     "Modules":{
         "Recurrent":{
-            "Type":"SingleLayer",
+            "Type":"RecurrentLIFLayer",
             "Subtype":"f(Wx+b)",
             "Weight":{
-                "Size":["&Neurons.Recurrent.Num", "&Neurons.Recurrent.Num"],
-                "Initialize":{
+                "Size":["$Neurons.Recurrent.Num", "$Neurons.Recurrent.Num"],
+                "Init":{
                     "Method": "kaiming",
                     "Coefficient": 1.0e-1
                 }
             },
             "Bias": true,
-            "NonLinear":"&Neurons.Recurrent.NonLinear"
+            "TimeConstance": 0.1,
+            "Modules":{
+                "NonLinear.Init":"$Neurons.Recurrent.NonLinear",
+                "HiddenStateTransform":{
+                    "Type": "SingleLayer",
+                    "Subtype": "Wx",
+                    "IsExciInhi": "$Neurons.Recurrent.IsExciInhi",
+                    "Input.Num": "$Neurons.Recurrent.Num",
+                    "Output.Num": "$Neurons.Recurrent.Num",
+                },
+                "CellStateDecay":{
+                    "IsExciInhi": "$Neurons.Recurrent.IsExciInhi",
+                },
+                "NoiseGenerator":{
+                    "Type": "NoiseGenerator",
+                    "SubType": "Gaussian",
+                    "Method": "Adaptive",
+                    "SubMethod": "AccordingToInputStd",
+                    "StdRatio": 0.05,
+                }
+            },
+            "Router":{
+                "In": ["cellState", "recurrentInput", "input"],
+                "Out": ["cellState", "hiddenState", "output"],
+                "Routings":[
+                    "&GetBias |--> bias",
+                    "recurrentInput, input, bias |--> &Add |--> inputTotal",
+                    "inputTotal |--> NoiseGenerator |--> noise",
+                    "inputTotal, noise |--> &Add |--> inputTotal",
+                    "inputTotal, cellState |--> &ProcessInputTotalAndcellState |--> cellState",
+                    "cellState |--> &NonLinear |--> firingRate",
+                    "firingRate |--> &HiddenStateTransform |--> recurrentInput",
+                    "cellState |--> &CellStateDecay |--> cellState"
+                ]
+            }
         },
         "Output":{
             "Type":"SingleLayer",
             "Subtype":"Wx+b",
             "Weight":{
-                "Size":["&Neurons.Recurrent.Num", "&Neurons.Output.Num"],
-                "Initialize":{
+                "Size":["$Neurons.Recurrent.Num", "$Neurons.Output.Num"],
+                "Init":{
                     "Method": "kaiming",
                     "Coefficient": 1.0e-1
                 }
             },
             "Bias":true,
-            "NonLinear":"&Neurons.Recurrent.NonLinear"
+            //"NonLinear":"$Neurons.Recurrent.NonLinear"
         },
         "Input":{
             "Type": "SingleLayer",
             "Subtype":"f(Wx+b)",
-            "Input.Num":"&Neurons.Input.Num",
-            "Output.Num":"&Neurons.Recurrent.Num",
+            "Input.Num":"$Neurons.Input.Num",
+            "Output.Num":"$Neurons.Recurrent.Num",
             "Weight":{
-                "Initialize":{
+                "Init":{
                     "Method": "kaiming",
                     "Coefficient": 1.0e-1
                 }
             },
             "Bias": true,
-            "NonLinear":"&Neurons.Recurrent.NonLinear"
+            "NonLinear":"$Neurons.Recurrent.NonLinear"
         },
-        "Initialize":{
+        "Init":{
             "Type":"MLP",
-            "Output":{"Num":"&Neurons.Recurrent.Num"},
-            "Initialize.Method":"FromNeuronNum",
+            "Output":{"Num":"$Neurons.Recurrent.Num"},
+            "Init.Method":"FromNeuronNum",
             "Neurons":{
                 "Num":[
-                    "&^param.agent.model.InputInit.Num",
-                    "&Neurons.Recurrent.Num // 2",
-                    "&Neurons.Recurrent.Num"
+                    "$^param.agent.model.InputInit.Num",
+                    "$Neurons.Recurrent.Num ",
+                    "$Neurons.Recurrent.Num * 2"
                 ]
             },
             "Layers":{
-                "Num": "len(&Modules.Initialize.Neurons.Num) - 1",
-                "NonLinear": "&Neurons.Recurrent.NonLinear",
+                "Num": "len($Modules.Init.Neurons.Num) - 1",
+                "NonLinear": "$Neurons.Recurrent.NonLinear",
                 "Bias": true,
+                "NonLinearOnLastLayer": false,
             }
         },
         "OutputReceiver":{
             "Type":"SerialReceiver",
-            "ExtractMethod.Initialize":{
+            "ExtractMethod.Init":{
                 "Method": "eval",
-                "Args": "lambda List, Index:np.take(List, Index, axis=1)"
+                //"Args": "lambda List, Index:torch.take(input=List, index=Index, axis=1)" //torch.take requires index to be LongTensor
+                "Args": "lambda List, Index: List[:, Index, :]"
             }
         },
         "InputSender":{
             "Type":"SerialSender",
-            "ExtractMethod.Initialize":{
+            "ExtractMethod.Init":{
                 "Method": "eval",
-                "Args": "lambda List, Index:np.take(List, Index, axis=1)"
+                //"Args": "lambda List, Index:torch.take(input=List, index=Index, axis=1)" //torch.take requires index to be LongTensor
+                "Args": "lambda List, Index: List[:, Index, :]"
             }
         },
+        "Splitter":{
+            "Type": "Lambda",
+            "Num": "$Neurons.Recurrent.Num",
+            //"Lambda": "# \"lambda data:(data[:, :\" + \"$~Num\" + \"], data[:, \" + \"$~Num\" + \":])\""
+            "Lambda": "lambda data:[data[:, :($Neurons.Recurrent.Num)], data[:, ($Neurons.Recurrent.Num):]]"
+        }
     },
     "Dynamics":{
         "Run":{
@@ -112,20 +154,20 @@
             "Out":["OutputSeries"],
             "Routings":[
                 "inputSeries |--> &InputSender.Receive |-->",
-                "inputInit |--> &Initialize |--> stateHidden, stateCell",
-                "|--> &Iterate |--> || repeat=%time",
+                "inputInit |--> &Init |--> state",
+                "state |--> &Splitter |--> hiddenState, cellState",
+                "hiddenState, cellState |--> &Iterate |--> hiddenState, cellState, Output || repeat=%time",
                 "|--> &OutputReceiver.Send |--> OutputSeries"
             ]
         },
         "Iterate":{
-            "In":["stateHidden", "stateCell"],
-            "Out":["stateHidden", "stateCell", "Output"],
+            "In":["hiddenState", "cellState"],
+            "Out":["hiddenState", "cellState"],
             "Routings":[
-                "|--> &InputSender |--> input",
+                "|--> &InputSender.Send |--> input",
                 "input |-->&Input |--> inputProcessed",
-                "inputProcessed, hiddenState, cellState |--> &Recurrent |--> hiddenState, cellState, OutputRecurrent",
-                "outRecurrent |--> &Output |--> Output",
-                "Output |--> &OutputReceiver.Receive |-->"
+                "inputProcessed, hiddenState, cellState |--> &Recurrent |--> hiddenState, cellState, outputRecurrent",
+                "outputRecurrent |--> &OutputReceiver.Receive |-->",
             ]
         },
         "__Entry__":"&Dynamics.Run"

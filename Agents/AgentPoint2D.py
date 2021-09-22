@@ -29,6 +29,7 @@ import cv2 as cv
 
 import utils
 from utils_torch.attrs import *
+from utils_torch.utils import NpArray2Tensor
 
 def InitFromParam(param):
     #setattr(param, "__ObjRoot__", utils.ArgsGlobal["ObjRoot"]) 
@@ -44,36 +45,37 @@ class Agent(object):
         else:
             param = self.param
         param.__object__ = self
+        
+        self.cache = utils_torch.json.EmptyPyObj()
+        self.cache.Modules = utils_torch.json.EmptyPyObj()
+
         utils.AddLog("Agent: Initializing.")
 
-        EnsureAttrs(param, "Initialize", default=[])
-        for Task in param.Initialize:
-            utils_torch.ImplementInitializeTask(Task, ObjCurrent=self.param, ObjRoot=utils.ArgsGlobal)
+        EnsureAttrs(param, "InitTasks", default=[])
+        for Task in param.InitTasks:
+            utils_torch.ProcessInitTask(Task, ObjCurrent=self.param, ObjRoot=utils.ArgsGlobal)
 
         utils.AddLog("Agent: Initialized.")
-
         self.PlotPlaceCells(Save=True, SavePath="./PlaceCellsActivity.png")
         self.PlotPlaceCellsXY(Save=True, SavePath="./PlaceCellsXY.png")
+    def AddModule(self, name, module):
+        setattr(self.cache.Modules, name, module)
+    def SetTensorLocation(self, Location="cpu"):
+        return
     def SetModelInputOutput(self):
         self.SetTrajectory2ModelInputMethod()
         self.SetTrajectory2ModelOutputMethod()
         self.SetModelInputNum()
-    def SetModelInputNum(self):
-        param = self.param
-        EnsureAttrs(param, "Task", default="PredictPlaceCellsActivity")
-        if param.Task in ["PredictPlaceCellsActivity"]:
-            SetAttrs(param, "model.InputInit.Num", value=self.param.PlaceCells.Num)
-        elif param.Task in ["PredictXYs"]:
-            SetAttrs(param, "model.InputInit.Num", value=2)
-        else:
-            raise Exception()
-        return
-    def ParseParam(self):
-        utils_torch.parse.ParsePyObjStatic(self.param, ObjCurrent=self.param, ObjRoot=utils.ArgsGlobal, InPlace=True)
-        utils_torch.parse.ParsePyObjDynamic(self.param, ObjCurrent=self.param, ObjRoot=utils.ArgsGlobal, InPlace=True)
-        return
     def SetTrajectory2ModelInputMethod(self):
         param = self.param
+
+        if param.Task in ["PredictXYs"]:
+            self.Trajectory2ModelInputInit = self.Trajectory2ModelInputInitXY
+        elif param.Task in ["PredictPlaceCellsActivity"]:
+            self.Trajectory2ModelInputInit = self.Trajectory2ModelInputInitPlaceCells
+        else:
+            raise Exception()
+
         EnsureAttrs(param, "model.Input.Type", default="dXY")
         if param.model.Input.Type in ["dXY"]:
             SetAttrs(param, "model.Input.Num", value=2)
@@ -85,7 +87,25 @@ class Agent(object):
             raise Exception()
     def SetTrajectory2ModelOutputMethod(self):
         param = self.param
-        self.Trajectory2ModelOutput = self.Trajectory2ModelOutputPlaceCells
+        if param.Task in ["PredictXYs"]:
+            self.Trajectory2ModelOutput = self.Trajectory2ModelOutputXYs
+        elif param.Task in ["PredictPlaceCellsActivity"]:
+            self.Trajectory2ModelOutput = self.Trajectory2ModelOutputPlaceCells
+        else:
+            raise Exception()
+    def SetModelInputNum(self):
+        param = self.param
+        # EnsureAttrs(param, "Task", default="PredictPlaceCellsActivity")
+        if param.Task in ["PredictPlaceCellsActivity"]:
+            SetAttrs(param, "model.InputInit.Num", value=self.param.PlaceCells.Num)
+        elif param.Task in ["PredictXYs"]:
+            SetAttrs(param, "model.InputInit.Num", value=2)
+        else:
+            raise Exception()
+        return
+    def ParseParam(self):
+        utils_torch.parse.ParsePyObjStatic(self.param, ObjCurrent=self.param, ObjRoot=utils.ArgsGlobal, InPlace=True)
+        #utils_torch.parse.ParsePyObjDynamic(self.param, ObjCurrent=self.param, ObjRoot=utils.ArgsGlobal, InPlace=True)
         return
     def PlotPlaceCellsXY(self, Save=True, SavePath=utils.ArgsGlobal.SaveDir + "agent-PlaceCells-XYs.svg"):
         param = self.param
@@ -106,10 +126,21 @@ class Agent(object):
         Activity = self.PlaceCells.XYs2Activity(XYs) # [PointNum, PlaceCellsNum, (Activity)]
         Activity = Activity[:, CellIndices]
 
+        mask = Arena.GetInsideMask(BoundaryBox, ResolutionX, ResolutionY) # [ResolutionX, ResolutionY]
+        mask = mask[:, :, np.newaxis]
+        
+        #print(utils_torch.NpArrayType(mask))
+        InsideMask = mask.astype(np.float32)
+        OutsideMask = (~mask).astype(np.float32)
+        
         for Index, CellIndex in enumerate(CellIndices):
             ax = utils_torch.plot.GetAx(axes, Index)
             Arena.PlotArena(ax, Save=False)
-            utils_torch.plot.PlotMatrix(ax, Activity[:, Index].reshape(ResolutionX, ResolutionY), XYRange=BoundaryBox)
+            _Activity = Activity[:, Index].reshape(ResolutionX, ResolutionY)
+            _Activity = utils_torch.plot.Map2Color(_Activity, ColorMap="jet")
+            _Activity = InsideMask * _Activity + OutsideMask * (0.5, 0.5, 0.5)
+
+            utils_torch.plot.PlotMatrix(ax, _Activity, ApplyColorMap=False, XYRange=BoundaryBox)
             utils_torch.plot.SetAxRangeFromBoundaryBox(ax, BoundaryBox)
             CellXY = self.PlaceCells.data.XYs[CellIndex]
             utils_torch.plot.PlotPoint(ax, CellXY, Color="Red", Type="Triangle")
@@ -455,13 +486,15 @@ class Agent(object):
             "dXYs": dXYs,
             "dLs": dLs,
             "dDirections": dDirections,
+            "StepNum": param.StepNum,
+            "TrajectoryNum": param.TrajectoryNum
         })
     def GenerateRandomTrajectoryAndPlot(self, param, Save=False, SavePath=True):
         Trajectory = self.GenerateRandomTrajectory(param)
         PlotNum = param.TrajectoryNum
         #figure, ax = plt.subplots()
         figure, ax = plt.subplots(1, 1, figsize=(5*1.5, 5*1.0)) # figsize (width, length) in inches.
-        
+
         BoundaryBox = param.Arena.param.BoundaryBox
         ax.set_xlim(BoundaryBox.XMin, BoundaryBox.XMax)
         ax.set_ylim(BoundaryBox.YMin, BoundaryBox.YMax)
@@ -511,21 +544,44 @@ class Agent(object):
             plt.savefig(SavePath)
         plt.savefig("./Trajectory.svg", format="svg")
         return ax
+    def Trajectory2ModelInputInitXY(self, Trajectory):
+        return Trajectory.XYs[:, 0, :]
+    def Trajectory2ModelInputInitPlaceCells(self, Trajectory):
+        XYInit = Trajectory.XYs[:, 0, :] # [BatchSize, (x, y)]
+        PlaceCellsActivity = self.PlaceCells.XYs2Activity(XYInit) # inputInit
+        return PlaceCellsActivity
     def Trajectory2ModelInputdXY(self, Trajectory):
         return [
-          Trajectory.XYs[0], # inputInit
-          Trajectory.dXYs, # inputSeries
-          Trajectory.XYs.shape[1] - 1 # time
+            utils_torch.NpArray2Tensor( # inputInit
+                self.Trajectory2ModelInputInit(Trajectory), 
+                Location=self.GetTensorLocation(),
+            ),
+            utils_torch.NpArray2Tensor( # inputSeries
+                Trajectory.dXYs[:, 1:, :], 
+                Location=self.GetTensorLocation(),
+            ),
+            Trajectory.StepNum # time
         ]
     def Trajectory2ModelInputdLDirection(self, Trajectory):
         dLDirection = np.stack(
-            [Trajectory.dLs, np.cos(Trajectory.Directions)[:, :-1], np.sin(Trajectory.Directions)[:, :-1]],
+            [
+                Trajectory.dLs,
+                np.cos(Trajectory.Directions)[:, :-1],
+                np.sin(Trajectory.Directions)[:, :-1],
+            ],
             axis=2
-        ) # [BatchSize, ]
+        ) # [BatchSize, StepNum, (dL, cos, sin)]
         return [
-          Trajectory.XYs[0], # inputInit
-          dLDirection, # inputSeries
-          Trajectory.XYs.shape[1] - 1 # time
+            utils_torch.NpArray2Tensor( # inputInit
+                self.Trajectory2ModelInputInit(Trajectory), 
+                Location=self.GetTensorLocation(),
+            ),
+            utils_torch.NpArray2Tensor( # inputSeries: [BatchSize, StepNum, (dL, cos, sin)]
+                dLDirection, 
+                Location=self.GetTensorLocation()
+            ),
+            #Trajectory.XYs.shape[1] - 1 # time
+            Trajectory.StepNum
         ]
     def Trajectory2PlaceCellsActivity(self, Trajectory):
         XYs = Trajectory.XYs[:, 1:, :]
@@ -533,8 +589,26 @@ class Agent(object):
         return self.PlaceCells.XYs2Activity(XYs.reshape(shape[0] * shape[1], 2)).reshape(shape[0], shape[1], -1) # [BatchSize, StepNum, PlaceCellsNum]
     def Trajectory2ModelOutputPlaceCells(self, Trajectory):
         return [
-            self.Trajectory2PlaceCellsActivity(Trajectory)
+            utils_torch.NpArray2Tensor(
+                self.Trajectory2PlaceCellsActivity(Trajectory),
+                Location=self.GetTensorLocation()
+            )
         ]
+    def Trajectory2ModelOutputXYs(self, Trajectory):
+        return [
+            utils_torch.NpArray2Tensor(
+                Trajectory.XYs[:, 1:, :],
+                Location=self.GetTensorLocation()
+            )    
+        ]
+    def SetTensorLocation(self, Location="cpu", Recur=True):
+        self.cache.TensorLocation = Location
+        if Recur:
+            for Module in ListValues(self.cache.Modules):
+                if hasattr(Module, "SetTensorLocation"):
+                    Module.SetTensorLocation(Location)
+    def GetTensorLocation(self):
+        return self.cache.TensorLocation
     def plot_path(self, path=None, model=None, plot_num=2, arena=None, save=True, save_path='./', save_name='path_plot', cmap='jet', **kw):
         if arena is None:
             arena = self.arenas.GetCurrentArena()

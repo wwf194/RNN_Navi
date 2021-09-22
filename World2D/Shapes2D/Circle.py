@@ -18,12 +18,12 @@ class Circle(Shapes2D.Shape2D):
         else:
             param = self.param
         CheckAttrs(param, "Type", value="Circle")
-        EnsureAttrs(param, "Initialize.Method", default="CenterRadius")
-        if param.Initialize.Method in ["CenterRadius"]:
+        EnsureAttrs(param, "Init.Method", default="CenterRadius")
+        if param.Init.Method in ["CenterRadius"]:
             if not HasAttrs(param, "Center"):
-                param.Center = GetAttrs(param.Initialize, "Center")
+                param.Center = GetAttrs(param.Init, "Center")
             if not HasAttrs(param, "Radius"):
-                param.Radius = GetAttrs(param.Initialize, "Radius")
+                param.Radius = GetAttrs(param.Init, "Radius")
         else:
             raise Exception()
         SetAttrs(param, "Center.X", GetAttrs(param.Center)[0])

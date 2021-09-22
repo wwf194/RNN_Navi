@@ -34,53 +34,83 @@ class RNNLIF(nn.Module):
             self.param = param
         else:
             param = self.param
+        
+        self.data = utils_torch.json.EmptyPyObj()
+        self.cache = utils_torch.json.EmptyPyObj()
+        data = self.data
+        cache = self.cache
+
         utils.AddLog("RNNLIF: Initializing from param...")
         CheckAttrs(param, "Type", value="RNNLIF")
         self.param = param
         #self.json_external_dict = {}
         Neurons = param.Neurons
-        EnsureAttrs(param, "Neurons", "isExciInhi", default=False)
-        if MatchAttrs(Neurons.Recurrent, "isExciInhi", value=True):
-            RemoveAttrs(Neurons.Recurrent.isExciInhi)
+        EnsureAttrs(param, "Neurons", "IsExciInhi", default=False)
+        if MatchAttrs(Neurons.Recurrent, "IsExciInhi", value=True):
+            RemoveAttrs(Neurons.Recurrent.IsExciInhi)
             SetAttrs(Neurons.Recurrent.ExciInhi, value={"Enable":True})
-        if MatchAttrs(Neurons.Recurrent, "isExciInhi.Enable", value=True):
+        if MatchAttrs(Neurons.Recurrent, "IsExciInhi.Enable", value=True):
             if not HasAttrs(Neurons.Recurrent, "Excitatory.Num"):
                 SetAttrs(Neurons.Recurrent, "Excitatory.Num", value=int(Neurons.Recurrent.Num * Neurons.Recurrent.Excitatory.Ratio))
                 SetAttrs(Neurons.Recurrent, "Inhibitory.Num", value=(Neurons.Num - Neurons.excitatory.Num))
 
-        data = utils_torch.json.EmptyPyObj()
-        data.Modules = utils_torch.json.EmptyPyObj()
-        data.Routers = utils_torch.json.EmptyPyObj()
-        self.data = data
+        cache.Modules = utils_torch.json.EmptyPyObj()
+        cache.Dynamics = utils_torch.json.EmptyPyObj()
 
         # initialize modules
-        #for module in ListAttrs(param.modules):
-        for name, param in ListAttrsAndValues(self.param.Modules):
-            Module = BuildModule(param)
-            self.add_module(name, Module)
-            SetAttrs(data.Modules, name, Module)
+        # for module in ListAttrs(param.modules):
+        for Name, ModuleParam in ListAttrsAndValues(param.Modules, Exceptions=["__ResolveRef__"]):
+            Module = BuildModule(ModuleParam)
+            self.add_module(Name, Module)
+            setattr(cache.Modules, Name, Module)
+        
+        self.InitModules()
+        self.ParseRouters()
+        self.SetForwardEntry()
 
-        for name, param in ListAttrsAndValues(self.param.Dynamics):
-            if name in ["__Entry__"]:
-                continue
-            setattr(data.Routers, name, param)
-        for router in ListValues(data.Routers):
-            utils_torch.parse.ParseRouter(router, InPlace=True, ObjRefList=[data.Modules, data.Routers, data])
-
-        DefaultDynamicsEntry = "&Dynamics.%s"%ListAttrsAndValues(self.param.Dynamics)[0][0]
-        EnsureAttrs(self.param.Dynamics, "__Entry__", default=DefaultDynamicsEntry)
-        #utils_torch.parse.ParseRouters(data.Routers, ObjRefList=[data.Modules, data.Routers, data])
-
-        EnsureAttrs(self.param, "Inintialize", default=[])
-        for Instruction in self.param.Initialize:
-            utils_torch.ImplementInitializeTask(Instruction, ObjCurrent=self.data, ObjRoot=utils.ArgsGlobal)
-
+        EnsureAttrs(param, "InitTasks", default=[])
+        for Task in self.param.InitTasks:
+            utils_torch.ProcessInitTask(Task, ObjCurrent=self.cache, ObjRoot=utils.ArgsGlobal)
+        utils_torch.model.ListParameter(self)
+        
     def Train(self, Input, OutputTarget):
         Output = self.forward(Input)
         return
+    def ParseRouters(self):
+        cache = self.cache
+        param = self.param
+        for Name, RouterParam in ListAttrsAndValues(param.Dynamics, Exceptions=["__ResolveRef__", "__Entry__"]):
+            utils_torch.router.ParseRouterStatic(RouterParam)
+            setattr(cache.Dynamics, Name, RouterParam)
+            setattr(RouterParam, "Name", Name) # For Debug
+        for Name, RouterParam in ListAttrsAndValues(param.Dynamics, Exceptions=["__ResolveRef__", "__Entry__"]):
+            RouterParsed = utils_torch.router.ParseRouterDynamic(RouterParam, InPlace=True, 
+                ObjRefList=[cache.Modules, cache.Dynamics, cache, param.Modules, param.Dynamics, param])
+            setattr(cache.Dynamics, Name, RouterParsed)
+    def SetForwardEntry(self):
+        param = self.param
+        data = self.data
+        cache = self.cache
+        DefaultEntryStr = "&Dynamics.%s"%ListAttrsAndValues(self.param.Dynamics)[0][0]
+        EnsureAttrs(param.Dynamics, "__Entry__", default=DefaultEntryStr)
+        SetAttrs(cache, "Dynamics.__Entry__", value=utils_torch.parse.Resolve(param.Dynamics.__Entry__, 
+            ObjRefList=[cache.Modules, cache.Dynamics, cache, param.Modules, param.Dynamics, param]))
+        #utils_torch.parse.ParseRouters(data.Routers, ObjRefList=[data.Modules, data.Routers, data])
     def forward(self, Input):
-        Output = self.data.__Entry__.forward(Input)
+        Output = utils_torch.CallGraph(self.cache.Dynamics.__Entry__, Input)
         return Output
+    def SetTensorLocation(self, Location):
+        for name, module in ListAttrsAndValues(self.cache.Modules):
+            if hasattr(module, "SetTensorLocation"):
+                module.SetTensorLocation(Location)
+            else:
+                utils_torch.AddWarning("%s has not implemented SetTensorLocation method."%name)
+    def InitModules(self):
+        for name, module in ListAttrsAndValues(self.cache.Modules):
+            if hasattr(module, "InitFromParam"):
+                module.InitFromParam()
+            else:
+                utils_torch.AddWarning("Modules %s has not implemented InitFromParam method."%name)
     def forward_once(self, s=None, h=None, i=None):
         batch_size = i.size(0)
         '''

@@ -48,14 +48,14 @@ class Polygon(Shape2D):
             self.IsInside = self.IsOutsideShape
             self.IsOutside = self.IsInsideShape
         
-        if HasAttrs(param, "Initialize.Center"):
-            SetAttrs(param.Initialize, "Center.X", GetAttrs(param.Initialize.Center)[0])
-            SetAttrs(param.Initialize, "Center.Y", GetAttrs(param.Initialize.Center)[1])
+        if HasAttrs(param, "Init.Center"):
+            SetAttrs(param.Init, "Center.X", GetAttrs(param.Init.Center)[0])
+            SetAttrs(param.Init, "Center.Y", GetAttrs(param.Init.Center)[1])
 
-        EnsureAttrs(param, "Initialize.Method", default="FromVertices")
-        if param.Initialize.Method in ["FromVertices", "FromVertex"]:
+        EnsureAttrs(param, "Init.Method", default="FromVertices")
+        if param.Init.Method in ["FromVertices", "FromVertex"]:
             self.CalculatEdgesFromVertices()
-        elif param.Initialize.Method in ["CenterRadiusTheta"]:
+        elif param.Init.Method in ["CenterRadiusTheta"]:
             CheckAttrs(param.Subtype, value="RegularPolygon")
             self.InitRegularPolygon()
             self.CalculatEdgesFromVertices()
@@ -71,20 +71,20 @@ class Polygon(Shape2D):
         return
     def InitRegularPolygon(self):
         param = self.param
-        Initialize = param.Initialize
+        Init = param.Init
         if not HasAttrs(param, "Edges.Num"):
             if not HasAttrs(param, "Vertices.Num"):
                 raise Exception()
             SetAttrs(param, "Edges.Num", param.Vertices.Num)        
-        EnsureAttrs(param.Initialize, "")
+        EnsureAttrs(param.Init, "")
         DirectionIncrement = math.pi * 2 / param.Edges.Num
         #PointsNp = np.zeros([param.Edges.Num, 2])
         Vertices = []
-        EnsureAttrs(Initialize, "Rotation", default=0.0)
-        DirectionCurrent = Initialize.Rotation
+        EnsureAttrs(Init, "Rotation", default=0.0)
+        DirectionCurrent = Init.Rotation
         for Index in range(param.Edges.Num):
-            x, y = utils_torch.geometry2D.Polar2XY(Initialize.Radius, DirectionCurrent)
-            Vertices.append([x + Initialize.Center.X, y + Initialize.Center.Y])
+            x, y = utils_torch.geometry2D.Polar2XY(Init.Radius, DirectionCurrent)
+            Vertices.append([x + Init.Center.X, y + Init.Center.Y])
             DirectionCurrent += DirectionIncrement
         SetAttrs(param.Vertices, value=Vertices)
         return

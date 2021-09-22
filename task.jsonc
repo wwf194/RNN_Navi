@@ -2,7 +2,7 @@
     "SavePath": "&^SaveDir",
     "Tasks": [
         {
-            "Type":"LoadJsonFile",
+            "Type":"LoadParamFile",
             "Args":[
                 {
                     "FilePath":"./param/RNNLIF.jsonc",
@@ -18,9 +18,7 @@
                 }
             ]
         },
-        {
-            "Type":"ParseParam",
-        },
+        "ParseParamStatic",
         {
             "Type":"BuildObject",
             "Args":[
@@ -36,9 +34,7 @@
                 }
             ]
         },
-        {
-            "Type":"ParseParam",
-        },
+        "ParseParamStatic",
         {
             "Type": "FunctionCall",
             "Args":[
@@ -48,9 +44,8 @@
                 //["&^agent.GenerateRandomTrajectoryAndPlot", ["param=50"]]
             ]
         },
-        {
-            "Type":"ParseParam",
-        },
+        "ParseParamStatic",
+        "SetTensorLocation",
         {
             "Type": "Train",
             //"SubType": "Router",

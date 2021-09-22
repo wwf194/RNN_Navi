@@ -19,7 +19,7 @@ class Arena2D():
             self.param = param
         else:
             param = self.param
-        EnsureAttrs(param, "Initialize", default=[])
+        EnsureAttrs(param, "Init", default=[])
         EnsureAttrs(param, "Shapes", default=[])
         if len(param.Shapes)==0:
             raise Exception()
