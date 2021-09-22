@@ -47,7 +47,7 @@
             "TimeConstance": 0.1,
             "Modules":{
                 "NonLinear":{
-                    "Init":"$Neurons.Recurrent.NonLinear",
+                    "Subtype":"$Neurons.Recurrent.NonLinear",
                 },
                 "HiddenStateTransform":{
                     "Type": "SingleLayer",
