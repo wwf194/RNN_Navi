@@ -46,7 +46,9 @@
             "Bias": true,
             "TimeConstance": 0.1,
             "Modules":{
-                "NonLinear.Init":"$Neurons.Recurrent.NonLinear",
+                "NonLinear":{
+                    "Init":"$Neurons.Recurrent.NonLinear",
+                },
                 "HiddenStateTransform":{
                     "Type": "SingleLayer",
                     "Subtype": "Wx",
@@ -55,15 +57,16 @@
                     "Output.Num": "$Neurons.Recurrent.Num",
                 },
                 "CellStateDecay":{
+                    "Type": "Internal",
                     "IsExciInhi": "$Neurons.Recurrent.IsExciInhi",
                 },
                 "NoiseGenerator":{
                     "Type": "NoiseGenerator",
-                    "SubType": "Gaussian",
+                    "Distribution": "Gaussian",
                     "Method": "Adaptive",
                     "SubMethod": "AccordingToInputStd",
                     "StdRatio": 0.05,
-                }
+                },
             },
             "Router":{
                 "In": ["cellState", "recurrentInput", "input"],
@@ -71,9 +74,9 @@
                 "Routings":[
                     "&GetBias |--> bias",
                     "recurrentInput, input, bias |--> &Add |--> inputTotal",
-                    "inputTotal |--> NoiseGenerator |--> noise",
+                    "inputTotal |--> &NoiseGenerator |--> noise",
                     "inputTotal, noise |--> &Add |--> inputTotal",
-                    "inputTotal, cellState |--> &ProcessInputTotalAndcellState |--> cellState",
+                    "inputTotal, cellState |--> &ProcessInputTotalAndCellState |--> cellState",
                     "cellState |--> &NonLinear |--> firingRate",
                     "firingRate |--> &HiddenStateTransform |--> recurrentInput",
                     "cellState |--> &CellStateDecay |--> cellState"
