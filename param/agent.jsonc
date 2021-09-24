@@ -71,5 +71,17 @@
     //"model.__ResolveBase__":true,
     "model.Input.Type": "dLDirection",
     "model.InputInit.Type": "ToBeParsed",
-    "__ResolveBase__": true
+    "__ResolveBase__": true,
+    "Dynamics":{
+        "Train":{
+            "In":["TrajectoryParam"],
+            "Out":[],
+            "Routings": [
+                "TrajectoryParam |--> &GenerateRandomTrajectory |--> Trajectory",
+                "Trajectory |--> &Trajectory2ModelInput |--> ModelInput",
+                "Trajectory |--> &Trajectory2ModelOutput |--> ModelOutputTarget",
+                "ModelInput, ModelOutputTarget |--> &model.Train",
+            ],
+        }
+    }
 }

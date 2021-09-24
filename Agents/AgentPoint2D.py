@@ -459,7 +459,7 @@ class Agent(object):
         Directions[:, 0] = np.random.uniform(-np.pi, np.pi, param.TrajectoryNum)
 
         for StepIndex in range(param.StepNum):
-            utils.AddLog("Step: %d"%StepIndex)
+            #utils.AddLog("Step: %d"%StepIndex)
             XY = XYs[:, StepIndex, :] # [PointNum, 2]
             Direction = Directions[:, StepIndex]
             dL = dLs[:, StepIndex]

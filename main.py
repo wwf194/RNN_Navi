@@ -35,6 +35,8 @@ def main():
                 raise Exception()
         else:
             ProcessTasks(TaskList)
+    elif Args.task in ["TotalLines"]:
+        utils_torch.CalculateGitProjectTotalLines()
     else:
         raise Exception("Inavlid Task: %s"%Args.task)
 

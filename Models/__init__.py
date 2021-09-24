@@ -8,7 +8,7 @@ import Models.RNNLIF
 from Models.PlaceCells2D import PlaceCells2D
 
 def BuildModule(module):
-    if module.type in ["LeakySingleLayer"]:
+    if module.type in ["LeakyNonLinearLayer"]:
         # to be implemented
         pass
     else:

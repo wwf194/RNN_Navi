@@ -72,9 +72,8 @@ class RNNLIF(nn.Module):
         for Task in self.param.InitTasks:
             utils_torch.ProcessInitTask(Task, ObjCurrent=self.cache, ObjRoot=utils.ArgsGlobal)
         utils_torch.model.ListParameter(self)
-        
     def Train(self, Input, OutputTarget):
-        Output = self.forward(Input)
+        Output = utils_torch.CallGraph(Input, [Input, OutputTarget])
         return
     def ParseRouters(self):
         cache = self.cache
