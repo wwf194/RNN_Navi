@@ -34,7 +34,8 @@ class RNNLIF(nn.Module):
             self.param = param
         else:
             param = self.param
-        
+
+        param.cache.__object__ = self
         self.data = utils_torch.json.EmptyPyObj()
         self.cache = utils_torch.json.EmptyPyObj()
         data = self.data
@@ -59,9 +60,10 @@ class RNNLIF(nn.Module):
 
         # initialize modules
         # for module in ListAttrs(param.modules):
-        for Name, ModuleParam in ListAttrsAndValues(param.Modules, Exceptions=["__ResolveRef__"]):
+        for Name, ModuleParam in ListAttrsAndValues(param.Modules):
             Module = BuildModule(ModuleParam)
-            self.add_module(Name, Module)
+            if isinstance(Module, nn.Module):
+                self.add_module(Name, Module)
             setattr(cache.Modules, Name, Module)
         
         self.InitModules()
@@ -72,8 +74,9 @@ class RNNLIF(nn.Module):
         for Task in self.param.InitTasks:
             utils_torch.ProcessInitTask(Task, ObjCurrent=self.cache, ObjRoot=utils.ArgsGlobal)
         utils_torch.model.ListParameter(self)
-    def Train(self, Input, OutputTarget):
-        Output = utils_torch.CallGraph(Input, [Input, OutputTarget])
+    def Train(self, Input, OutputTarget, TrainParam):
+        cache = self.cache
+        Output = utils_torch.CallGraph(cache.Dynamics.Train, [Input, OutputTarget, TrainParam])
         return
     def ParseRouters(self):
         cache = self.cache
@@ -84,7 +87,10 @@ class RNNLIF(nn.Module):
             setattr(RouterParam, "Name", Name) # For Debug
         for Name, RouterParam in ListAttrsAndValues(param.Dynamics, Exceptions=["__ResolveRef__", "__Entry__"]):
             RouterParsed = utils_torch.router.ParseRouterDynamic(RouterParam, InPlace=True, 
-                ObjRefList=[cache.Modules, cache.Dynamics, cache, param.Modules, param.Dynamics, param])
+                ObjRefList=[cache.Modules, cache.Dynamics, cache, 
+                    param.Modules, param.Dynamics, param,
+                    utils_torch.Models.Operators        
+                ])
             setattr(cache.Dynamics, Name, RouterParsed)
     def SetForwardEntry(self):
         param = self.param
@@ -109,7 +115,7 @@ class RNNLIF(nn.Module):
             if hasattr(module, "InitFromParam"):
                 module.InitFromParam()
             else:
-                utils_torch.AddWarning("Modules %s has not implemented InitFromParam method."%name)
+                utils_torch.AddWarning("Module %s has not implemented InitFromParam method."%name)
     def forward_once(self, s=None, h=None, i=None):
         batch_size = i.size(0)
         '''
@@ -520,33 +526,9 @@ class RNNLIF(nn.Module):
 
         plt.tight_layout()
         if save:
-            EnsurePath(save_path)
+            utils_torch.EnsureFileDir(save_path)
             plt.savefig(save_path + save_name)
-    def reset_zero(self, **kw):
-        batch_size = kw['i0'].size(0)
-        self.x = torch.zeros((batch_size, self.N_num), device=self.device) # [batch_size, N_num]
-        return 0.0 # r0       
-    def reset_linear(self, **kw):
-        self.x = torch.mm(kw['i0'], self.i_0_x) #[batch_size, input_num] x [input_num, N_num] = [batch_size, N_num]
-        r0 = torch.mm(kw['i0'], self.i_0_r)
-        return r0 # r0
-    def reset_encoder(self, **kw):
-        #print(kw['i0'].dtype)
-        self.x_r = self.encoder(kw['i0'])
-        self.x = self.x_r[:, 0:self.N_num]
-        return self.x_r[:, self.N_num:] # r0
-    def reset_fixed(self, **kw):
-        x0 = torch.unsqueeze(self.x0, 0) # [1, input_num]
-        self.x = torch.cat([x0 for i in range(kw['i0'].size(0))], dim = 0) # [batch_size, input_num]
-        r0 = torch.unsqueeze(self.r0, 0) # [1, input_num]
-        return torch.cat([r0 for i in range(kw['i0'].size(0))], dim = 0) # [batch_size, input_num]
-    def reset_from_given(self, **kw):
-        self.x = kw['x0']
-    def Getnoise_gaussian(self, batch_size):
-        noise = torch.zeros((batch_size, self.dict['input_num']), device=self.device)
-        torch.nn.init.normal_(noise, 0.0, self.noise_coeff)
-        return noise
-    def Gettrain_param(self):
+    def GetTrainWeight(self):
         return self.parameters()
 
 __MainClass__ = RNNLIF

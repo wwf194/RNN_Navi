@@ -58,7 +58,7 @@
                 "Batch.Size": 200,
                 "TrajectoryParam": {
                     //"TrajectoryNum": "$Batch.Size",
-                    "TrajectoryNum": 3,
+                    "TrajectoryNum": 200,
                     "XYStart.Method": "UniformInArena",
                     "StepNum": 50,
                     "Arena": "&^object.world.GetArenaByIndex(0)",
@@ -72,21 +72,17 @@
                         "Std": "#3.1415926 / 180 * 5"      
                     }
                 },
+                "TrainParam":{
+                    "LearningRate": 0.01
+                },
                 "Batch.Internal":{
-                    "In":["TrajectoryParam"],
+                    "In":["TrajectoryParam", "TrainParam"],
                     "Out":[],
                     "Routings": [
-                        // [
-                        //     "&^object.agent.GenerateRandomTrajectoryAndPlot",
-                        //     ["&TrajectoryParam", "SavePath=$^SaveDir + 'RandomTrajectory.svg/'"],
-                        // ],
-                        "TrajectoryParam |--> &^object.agent.GenerateRandomTrajectory |--> Trajectory",
-                        "Trajectory |--> &^object.agent.Trajectory2ModelInput |--> ModelInput",
-                        "Trajectory |--> &^object.agent.Trajectory2ModelOutput |--> ModelOutputTarget",
-                        "ModelInput, ModelOutputTarget |--> &^object.agent.model.Train |--> ModelOutput",
+                        "TrajectoryParam, TrainParam |--> &^object.agent.cache.Train"
                     ],
                 },
-                "Batch.Input": ["&TrajectoryParam"]
+                "Batch.Input": ["&TrajectoryParam", "&TrainParam"]
             },
         }
     ]

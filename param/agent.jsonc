@@ -74,13 +74,13 @@
     "__ResolveBase__": true,
     "Dynamics":{
         "Train":{
-            "In":["TrajectoryParam"],
+            "In":["TrajectoryParam", "TrainParam"],
             "Out":[],
             "Routings": [
                 "TrajectoryParam |--> &GenerateRandomTrajectory |--> Trajectory",
                 "Trajectory |--> &Trajectory2ModelInput |--> ModelInput",
                 "Trajectory |--> &Trajectory2ModelOutput |--> ModelOutputTarget",
-                "ModelInput, ModelOutputTarget |--> &model.Train",
+                "ModelInput, ModelOutputTarget, TrainParam |--> &model.Train",
             ],
         }
     }

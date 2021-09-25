@@ -34,18 +34,18 @@
     },
     "Loss":{
         "WeightConstrain":{
-            "Coefficient.__value__":"Dynamic",
+            "Coefficient.__value__":"Adaptive",
             "Coefficient":{
                 "Method": "Ratio2RefLoss",
                 "Ratio": [0.05, 0.15],
                 "Reference": "&Modules.CalculatePredictionLoss",
             },
             "Weight":[
-                "&Recurrent.FiringRate2RecurrentInput.GetWeight",
-                "&Recurrent.FiringRate2Output.GetWeight"
+                "&*cache.Modules.Recurrent.FiringRate2RecurrentInput.GetWeight",
+                "&*cache.Modules.Recurrent.FiringRate2Output.GetWeight"
             ],
         },
-        "ActivityContrain":{
+        "ActivityConstrain":{
             "Coefficient.__value__":"Adaptive",
             "Coefficient":{
                 "Method": "Ratio2RefLoss",
@@ -151,7 +151,7 @@
             "Bias": true,
             "NonLinear":"$Neurons.Recurrent.NonLinear"
         },
-        "Init":{
+        "InputInit2StateInit":{
             "Type":"MLP",
             "Output.":"$Neurons.Recurrent.Num",
             "Init.Method":"FromNeuronNum",
@@ -163,43 +163,56 @@
                 ]
             },
             "Layers":{
-                "Num": "len($Modules.Init.Neurons.Num) - 1",
+                "Num": "len($Modules.InputInit2StateInit.Neurons.Num) - 1",
                 "NonLinear": "$Neurons.Recurrent.NonLinear",
                 "Bias": true,
                 "NonLinearOnLastLayer": false,
             }
         },
-        "OutputReceiver":{
-            "Type":"SerialReceiver",
-            "ExtractMethod.Init":{
-                "Method": "eval",
-                //"Args": "lambda List, Index:torch.take(input=List, index=Index, axis=1)" //torch.take requires index to be LongTensor
-                "Args": "lambda List, Index: List[:, Index, :]"
-            }
-        },
-        "InputSender":{
-            "Type":"SerialSender",
-            "ExtractMethod.Init":{
-                "Method": "eval",
-                //"Args": "lambda List, Index:torch.take(input=List, index=Index, axis=1)" //torch.take requires index to be LongTensor
-                "Args": "lambda List, Index: List[:, Index, :]"
-            }
-        },
         "Splitter":{
             "Type": "Lambda",
-            "Num": "$Neurons.Recurrent.Num",
-            //"Lambda": "# \"lambda data:(data[:, :\" + \"$~Num\" + \"], data[:, \" + \"$~Num\" + \":])\""
-            "Lambda": "lambda data:[data[:, :($Neurons.Recurrent.Num)], data[:, ($Neurons.Recurrent.Num):]]"
+            "Lambda": "lambda data: [data[:, :($Neurons.Recurrent.Num)], data[:, ($Neurons.Recurrent.Num):]]"
+        },
+        "Inputs":{
+            "Type":"SerialSender",
+            "Send":{
+                "Method": "Lambda",
+                "Args": "lambda List, Index: List[:, Index, :]"
+            }
+        },
+        "Outputs":{
+            "Type":"SerialReceiver",
+            "Send":{
+                "Method": "Lambda",
+                //"Args": "lambda List, Index:torch.take(input=List, index=Index, axis=1)" //torch.take requires index to be LongTensor
+                "Args": "lambda List:torch.stack(List, axis=1)"
+            }
         },
         "HiddenStates":{
             "Type": "SerialReceiver",
+            "Send":{
+                "Method": "Lambda",
+                "Args": "lambda List:torch.stack(List, axis=1)"
+            }
         },
         "CellStates":{
-            "Type": "SerialReceiver"
+            "Type": "SerialReceiver",
+            "Send":{
+                "Method": "Lambda",
+                "Args": "lambda List:torch.stack(List, axis=1)"
+            }
         },
+        "FiringRates":{
+            "Type": "SerialReceiver",
+            "Send":{
+                "Method": "Lambda",
+                "Args": "lambda List:torch.stack(List, axis=1)"
+            }
+        },
+        "PredictionLoss": "$Loss.Prediction",
         "GetConstrainWeight":{
-            "Type": "FunctionsOutputs2List",
-            "Function": "$Loss.WeightConstrain.Weight"
+            "Type": "FunctionsOutputs",
+            "Functions": "$Loss.WeightConstrain.Weight"
         },
         "WeightConstrainLoss":{
             "Type": "L2Loss",
@@ -208,56 +221,57 @@
         "ActivityConstrainLoss":{
             "Type": "L2Loss",
             "Coefficient": "$Loss.ActivityConstrain.Coefficient",
-        }
+        },
     },
     "Dynamics":{
         "Run":{
             "In":["inputInit", "inputSeries", "time"],
             "Out":["OutputSeries"],
             "Routings":[
-                "inputSeries |--> &InputSender.Receive",
-                "inputInit |--> &Init |--> state",
+                "inputSeries |--> &Inputs.Receive",
+                "inputInit |--> &InputInit2StateInit |--> state",
                 "state |--> &Splitter |--> hiddenState, cellState",
                 "hiddenState, cellState |--> &Iterate |--> hiddenState, cellState || repeat=%time",
-                "&OutputReceiver.Send |--> OutputSeries"
+                "&Outputs.Send |--> OutputSeries"
             ]
         },
         "Iterate":{
             "In":["hiddenState", "cellState"],
             "Out":["hiddenState", "cellState"],
             "Routings":[
-                "&InputSender.Send |--> input",
+                "&Inputs.Send |--> input",
                 "input |--> &Input |--> inputProcessed",
                 "hiddenState, cellState, inputProcessed |--> &Recurrent |--> hiddenState, cellState, output, firingRate",
-                "output |--> &OutputReceiver.Receive",
+                "output |--> &Outputs.Receive",
                 "hiddenState |--> &HiddenStates.Receive",
                 "cellState |--> &CellStates.Receive"
-            ]
-        },
-        "RunTrain":{
-            "In":["inputInit", "inputSeries", "time"],
-            "Out":["outputSeries", "hiddenStateSeries", "cellStateSeries", "firingRateSeries"],
-            "Routings":[
-                "inputSeries |--> &InputSender.Receive",
-                "inputInit |--> &Init |--> state",
-                "state |--> &Splitter |--> hiddenState, cellState",
-                "hiddenState, cellState |--> &Iterate |--> hiddenState, cellState || repeat=%time",
-                "&OutputReceiver.Send |--> outputSeries",
-                "&HiddenStates.Send |--> hiddenStateSeries",
-                "&CellStates.Send |--> cellStateSeries",
-                "&FiringRate.Send |--> firingRateSeries",
             ]
         },
         "IterateTrain":{
             "In":["hiddenState", "cellState"],
             "Out":["hiddenState", "cellState"],
             "Routings":[
-                "&InputSender.Send |--> input",
+                "&Inputs.Send |--> input",
                 "input |--> &Input |--> inputProcessed",
                 "hiddenState, cellState, inputProcessed |--> &Recurrent |--> hiddenState, cellState, firingRate, output",
-                "output |--> &OutputReceiver.Receive",
+                "output |--> &Outputs.Receive",
                 "hiddenState |--> &HiddenStates.Receive",
-                "cellState |--> &CellStates.Receive"
+                "cellState |--> &CellStates.Receive",
+                "firingRate |--> &FiringRates.Receive",
+            ]
+        },
+        "RunTrain":{
+            "In":["inputInit", "inputSeries", "time"],
+            "Out":["outputSeries", "hiddenStateSeries", "cellStateSeries", "firingRateSeries"],
+            "Routings":[
+                "inputSeries |--> &Inputs.Receive",
+                "inputInit |--> &InputInit2StateInit |--> state",
+                "state |--> &Splitter |--> hiddenState, cellState",
+                "hiddenState, cellState |--> &IterateTrain |--> hiddenState, cellState || repeat=%time",
+                "&Outputs.Send |--> outputSeries",
+                "&HiddenStates.Send |--> hiddenStateSeries",
+                "&CellStates.Send |--> cellStateSeries",
+                "&FiringRates.Send |--> firingRateSeries",
             ]
         },
         "Train":{
@@ -265,20 +279,21 @@
             "Out":[],
             "Routings":[
                 "input |--> &Split |--> inputInit, inputSeries, time",
-                "inputInit, inputSeries, time |--> &RunTrain |--> outputSeries, hiddenStateSeries, cellStateSeries",
+                "inputInit, inputSeries, time |--> &RunTrain |--> outputSeries, hiddenStateSeries, cellStateSeries, firingRateSeries",
                 "hiddenStateSeries, cellStateSeries, firingRateSeries |--> &Merge |--> activity",
                 "outputSeries, outputTarget, activity, trainParam |--> &Optimize",
             ]
         },
         "Optimize":{
-            "In": ["output", "outputTarget", "activity"],
+            "In": ["output", "outputTarget", "activity", "trainParam"],
             "Routings":[
-                "output, outputTarget |--> &MainLoss |--> mainLoss",
+                "output, outputTarget |--> &PredictionLoss |--> mainLoss",
                 "activity, mainLoss |--> &CalculateActivityConstrainLoss |--> activityConstrainLoss",
                 "mainLoss |--> &CalculateWeightConstrainLoss |--> weightConstrainLoss",
                 "mainLoss, activityConstrainLoss, weightConstrainLoss |--> &Add |--> totalLoss",
                 "totalLoss |--> &CalculateGradient",
-                "trainParam |--> &GradientDescend"
+                "&*GetTrainWeight |--> trainWeight",
+                "trainWeight, trainParam |--> &GradientDescend"
             ],
         },
         "CalculateWeightConstrainLoss":{

@@ -7,6 +7,7 @@
 # Every component, such as model, optimizer, trainer, agent, is initialized according to a dict in a .py file.
 
 import os
+from re import L
 import sys
 import argparse
 import traceback
@@ -115,11 +116,16 @@ def ParseTaskObj(TaskObj, Save=True):
     return TaskList
 
 def BuildObject(Args):
+    if isinstance(Args, utils_torch.PyObj):
+        Args = GetAttrs(Args)
+
     if isinstance(Args, list):
         for arg in Args:
             _BuildObject(arg)
-    elif isinstance(Args, dict):
+    elif isinstance(Args, utils_torch.PyObj):
         _BuildObject(Args)
+    else:
+        raise Exception()
 
 def _BuildObject(Args):
     import utils_torch
@@ -129,11 +135,15 @@ def _BuildObject(Args):
     utils_torch.MountObj(Obj, ArgsGlobal, Args.MountPath.replace("&^", ""))
 
 def LoadJsonFile(Args):
+    if isinstance(Args, utils_torch.PyObj):
+        Args = GetAttrs(Args)
     if isinstance(Args, dict):
-        _LoadJsonFile(Args)
+        _LoadJsonFile(utils_torch.json.JsonObj2PyObj(Args))
     elif isinstance(Args, list):
         for Arg in Args:
             _LoadJsonFile(Arg)
+    elif isinstance(Args, utils_torch.PyObj):
+        _LoadJsonFile(Args)
     else:
         raise Exception()
 
@@ -145,11 +155,15 @@ def _LoadJsonFile(Args):
     SetAttrs(ArgsGlobal, MountPath, Obj)
 
 def LoadParamFile(Args):
+    if isinstance(Args, utils_torch.PyObj):
+        Args = GetAttrs(Args)
     if isinstance(Args, dict):
-        _LoadParamFile(Args)
+        _LoadParamFile(utils_torch.json.JsonObj2PyObj(Args))
     elif isinstance(Args, list):
         for Arg in Args:
             _LoadParamFile(Arg)
+    elif isinstance(Args, utils_torch.PyObj):
+        LoadParamFile(Args)
     else:
         raise Exception()
 

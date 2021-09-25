@@ -44,7 +44,7 @@ class Agent(object):
             self.param = param
         else:
             param = self.param
-        param.__object__ = self
+        param.cache.__object__ = self
         
         self.cache = utils_torch.json.EmptyPyObj()
         self.cache.Modules = utils_torch.json.EmptyPyObj()
@@ -55,9 +55,12 @@ class Agent(object):
         for Task in param.InitTasks:
             utils_torch.ProcessInitTask(Task, ObjCurrent=self.param, ObjRoot=utils.ArgsGlobal)
 
+        utils_torch.router.ParseRoutersForObj(self, ObjRefList=[self, self.param])
+
         utils.AddLog("Agent: Initialized.")
-        self.PlotPlaceCells(Save=True, SavePath="./PlaceCellsActivity.png")
-        self.PlotPlaceCellsXY(Save=True, SavePath="./PlaceCellsXY.png")
+
+        self.PlotPlaceCells(Save=True, SavePath=utils.ArgsGlobal.SaveDir + "PlaceCellsActivity.png")
+        self.PlotPlaceCellsXY(Save=True, SavePath=utils.ArgsGlobal.SaveDir + "PlaceCellsXY.png")
     def AddModule(self, name, module):
         setattr(self.cache.Modules, name, module)
     def SetTensorLocation(self, Location="cpu"):

@@ -37,7 +37,7 @@ class Arenas2D:
         else:
             param = self.param
         self.Arenas = []
-        for ArenaParam in param.Arenas:
+        for ArenaParam in GetAttrs(param.Arenas):
             Arena = BuildArena(ArenaParam)
             Arena.InitFromParam()
             self.Arenas.append(Arena)
