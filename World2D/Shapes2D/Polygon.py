@@ -27,8 +27,8 @@ class Polygon(Shape2D):
         else:
             param = self.param
         
-        self.data = utils_torch.json.EmptyPyObj()
-        self.cache = utils_torch.json.EmptyPyObj()
+        self.data = utils_torch.EmptyPyObj()
+        self.cache = utils_torch.EmptyPyObj()
         cache = self.cache
         cache.CollisionPoints = []
         cache.CollisionLines = [] 

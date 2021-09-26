@@ -46,8 +46,8 @@ class Agent(object):
             param = self.param
         param.cache.__object__ = self
         
-        self.cache = utils_torch.json.EmptyPyObj()
-        self.cache.Modules = utils_torch.json.EmptyPyObj()
+        self.cache = utils_torch.EmptyPyObj()
+        self.cache.Modules = utils_torch.EmptyPyObj()
 
         utils.AddLog("Agent: Initializing.")
 
@@ -63,12 +63,10 @@ class Agent(object):
         self.PlotPlaceCellsXY(Save=True, SavePath=utils.ArgsGlobal.SaveDir + "PlaceCellsXY.png")
     def AddModule(self, name, module):
         setattr(self.cache.Modules, name, module)
-    def SetTensorLocation(self, Location="cpu"):
-        return
     def SetModelInputOutput(self):
         self.SetTrajectory2ModelInputMethod()
         self.SetTrajectory2ModelOutputMethod()
-        self.SetModelInputNum()
+        self.SetModelInputOutputNum()
     def SetTrajectory2ModelInputMethod(self):
         param = self.param
 
@@ -78,13 +76,10 @@ class Agent(object):
             self.Trajectory2ModelInputInit = self.Trajectory2ModelInputInitPlaceCells
         else:
             raise Exception()
-
         EnsureAttrs(param, "model.Input.Type", default="dXY")
         if param.model.Input.Type in ["dXY"]:
-            SetAttrs(param, "model.Input.Num", value=2)
             self.Trajectory2ModelInput = self.Trajectory2ModelInputdXY
         elif param.model.Input.Type in ["dLDirection"]:
-            SetAttrs(param, "model.Input.Num", value=3)
             self.Trajectory2ModelInput = self.Trajectory2ModelInputdLDirection
         else:
             raise Exception()
@@ -96,13 +91,21 @@ class Agent(object):
             self.Trajectory2ModelOutput = self.Trajectory2ModelOutputPlaceCells
         else:
             raise Exception()
-    def SetModelInputNum(self):
+    def SetModelInputOutputNum(self):
         param = self.param
         # EnsureAttrs(param, "Task", default="PredictPlaceCellsActivity")
         if param.Task in ["PredictPlaceCellsActivity"]:
             SetAttrs(param, "model.InputInit.Num", value=self.param.PlaceCells.Num)
+            SetAttrs(param, "model.Neurons.Output.Num", value=self.param.PlaceCells.Num)
         elif param.Task in ["PredictXYs"]:
             SetAttrs(param, "model.InputInit.Num", value=2)
+            SetAttrs(param, "model.Neurons.Output.Num", value=2)
+        else:
+            raise Exception()
+        if param.model.Input.Type in ["dXY"]:
+            SetAttrs(param, "model.Neurons.Input.Num", value=2)
+        elif param.model.Input.Type in ["dLDirection"]:
+            SetAttrs(param, "model.Neurons.Input.Num", value=3)
         else:
             raise Exception()
         return
@@ -602,7 +605,7 @@ class Agent(object):
             utils_torch.NpArray2Tensor(
                 Trajectory.XYs[:, 1:, :],
                 Location=self.GetTensorLocation()
-            )    
+            )
         ]
     def SetTensorLocation(self, Location="cpu", Recur=True):
         self.cache.TensorLocation = Location

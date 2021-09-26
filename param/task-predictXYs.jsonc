@@ -1,0 +1,39 @@
+{
+    "Type": "SupervisedLearning",
+    "SubType": "EpochBatch",
+    "Method": "GradientDescend",
+    "Epoch.Num": 200,
+    "Batch.Num": "#1000 * 2",
+    "Batch.Size": 200,
+    "Task": "PredictXYs",
+    "TrajectoryParam": {
+        //"TrajectoryNum": "$Batch.Size",
+        "TrajectoryNum": 200,
+        "XYStart.Method": "UniformInArena",
+        "StepNum": 50,
+        "Arena": "&^object.world.GetArenaByIndex(0)",
+        "StepLength.Distribution":{
+            "Type": "Reyleigh",
+            "Mean": 0.05,
+        },
+        "DirectionChange.Distribution":{
+            "Type": "Gaussian",
+            "Mean": 0.0,
+            "Std": "#3.1415926 / 180 * 5"      
+        }
+    },
+    "TrainParam":{
+        "LearningRate": 0.01,
+        "WeightDecay": 0.0,
+        "Momentum": 0.0,
+        "Dampening": 0.0, 
+        "Nesterov": false,
+    },
+    "Batch.Internal":{
+        "In":["TrajectoryParam", "TrainParam"],
+        "Routings": [
+            "TrajectoryParam, TrainParam |--> &^object.agent.cache.Train"
+        ],
+    },
+    "Batch.Input": ["&TrajectoryParam", "&TrainParam"]
+}

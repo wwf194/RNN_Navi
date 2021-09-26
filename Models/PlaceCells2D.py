@@ -25,7 +25,7 @@ def InitFromParam(param):
 
 class PlaceCells2D(object):
     def __init__(self, param=None):
-        self.data = EmptyPyObj()
+        self.data = utils_torch.EmptyPyObj()
         if param is not None:
             self.param = param
     def InitFromParam(self, param=None):

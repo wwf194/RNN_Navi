@@ -54,6 +54,8 @@ def ProcessTasks(TaskList):
             ParseParamStatic(Task.Args)
         elif Task.Type in ["ParseParamDynamic"]:
             ParseParamDynamic(Task.Args)
+        elif Task.Type in ["ParseSelf"]:
+            utils_torch.parse.ParsePyObjStatic(TaskList, ObjRoot=utils.ArgsGlobal, InPlace=True)
         elif Task.Type in ["BuildObject"]:
             BuildObject(Task.Args)
         elif Task.Type in ["SetTensorLocation"]:
@@ -104,10 +106,12 @@ def ParseTaskObj(TaskObj, Save=True):
         TaskList = TaskObj.Tasks
     for Index, Task in enumerate(TaskList):
         if isinstance(Task, str):
-            TaskList[Index] = utils_torch.json.PyObj({
+            TaskList[Index] = utils_torch.PyObj({
                 "Type": Task,
                 "Args": {}
             })
+    for Index, Task in enumerate(TaskList):
+        Task.SetResolveBase()
     if Save:
         utils_torch.json.PyObj2JsonFile(TaskList, utils.ArgsGlobal.SaveDir + "task_loaded.jsonc")
     utils_torch.parse.ParsePyObjStatic(TaskList, ObjCurrent=TaskList, ObjRoot=utils.ArgsGlobal, InPlace=True)
@@ -118,7 +122,6 @@ def ParseTaskObj(TaskObj, Save=True):
 def BuildObject(Args):
     if isinstance(Args, utils_torch.PyObj):
         Args = GetAttrs(Args)
-
     if isinstance(Args, list):
         for arg in Args:
             _BuildObject(arg)

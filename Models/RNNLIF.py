@@ -11,7 +11,7 @@ import matplotlib as mpl
 from matplotlib import pyplot as plt
 
 from utils_torch.attrs import *
-from utils_torch.model import BuildModule
+from utils_torch.model import BuildModule, ListParameter
 import utils_torch
 import utils
 
@@ -36,8 +36,8 @@ class RNNLIF(nn.Module):
             param = self.param
 
         param.cache.__object__ = self
-        self.data = utils_torch.json.EmptyPyObj()
-        self.cache = utils_torch.json.EmptyPyObj()
+        self.data = utils_torch.EmptyPyObj()
+        self.cache = utils_torch.EmptyPyObj()
         data = self.data
         cache = self.cache
 
@@ -55,8 +55,8 @@ class RNNLIF(nn.Module):
                 SetAttrs(Neurons.Recurrent, "Excitatory.Num", value=int(Neurons.Recurrent.Num * Neurons.Recurrent.Excitatory.Ratio))
                 SetAttrs(Neurons.Recurrent, "Inhibitory.Num", value=(Neurons.Num - Neurons.excitatory.Num))
 
-        cache.Modules = utils_torch.json.EmptyPyObj()
-        cache.Dynamics = utils_torch.json.EmptyPyObj()
+        cache.Modules = utils_torch.EmptyPyObj()
+        cache.Dynamics = utils_torch.EmptyPyObj()
 
         # initialize modules
         # for module in ListAttrs(param.modules):
@@ -105,41 +105,16 @@ class RNNLIF(nn.Module):
         Output = utils_torch.CallGraph(self.cache.Dynamics.__Entry__, Input)
         return Output
     def SetTensorLocation(self, Location):
-        for name, module in ListAttrsAndValues(self.cache.Modules):
-            if hasattr(module, "SetTensorLocation"):
-                module.SetTensorLocation(Location)
-            else:
-                utils_torch.AddWarning("%s has not implemented SetTensorLocation method."%name)
+        utils_torch.model.SetTensorLocationForModel(self, Location)
+        self.SetTrainWeight()
+    def GetTensorLocation(self):
+        return self.cache.TensorLocation
     def InitModules(self):
         for name, module in ListAttrsAndValues(self.cache.Modules):
             if hasattr(module, "InitFromParam"):
                 module.InitFromParam()
             else:
                 utils_torch.AddWarning("Module %s has not implemented InitFromParam method."%name)
-    def forward_once(self, s=None, h=None, i=None):
-        batch_size = i.size(0)
-        '''
-        if s is None and h is None:
-            s, h = self.Getinit_state_zero(batch_size=batch_size)
-        elif s is not None or h is not None:
-            raise Exception('s and h must simultaneously be None or not None')
-        '''
-        noise = self.Getnoise(batch_size=batch_size)
-        s = (1.0 - self.time_const) * (s + noise) + self.time_const * (h + i)# s:[batch_size, sequence_length, output_num]
-        s = s + noise
-        u = self.act_func(s)
-        '''
-        if self.drop_out:
-            u = self.drop_out(u)
-        '''
-        o = torch.mm(u, self.Geto()) # [batch_size, neuron_num] x [neuron_num, output_num]
-        h = torch.mm(u, self.Getr()) + self.r_b
-        return {
-            's': s, # cell state
-            'u': u, # firing rate
-            'h': h, # Recurrent output
-            'o': o, # output
-        }
     def plot_act(self, data=None, ax=None, data_type='u', save=True, save_path='./', save_name='act_map.png', cmap='jet', plot_N_num=200, select_strategy='first', verbose=False):
         if isinstance(data, torch.Tensor):
             data = data.detach().cpu().Numpy() # [step_num, N_num]
@@ -523,12 +498,15 @@ class RNNLIF(nn.Module):
             pass
         else:
             pass
-
         plt.tight_layout()
         if save:
             utils_torch.EnsureFileDir(save_path)
             plt.savefig(save_path + save_name)
     def GetTrainWeight(self):
-        return self.parameters()
+        return self.cache.TrainWeight
+    def SetTrainWeight(self):
+        return utils_torch.model.SetTrainWeightForModel(self)
+    def ClearTrainWeight(self):
+        utils_torch.model.ClearTrainWeightForModel(self)
 
 __MainClass__ = RNNLIF

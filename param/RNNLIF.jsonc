@@ -10,7 +10,7 @@
     ],
     "Neurons":{
         "Input":{
-            "Num":"$^param.agent.model.Input.Num"
+            "Num":"__ToBeSet__"
         },
         "Recurrent":{
             "ExciInhi":{
@@ -28,7 +28,7 @@
             "NonLinear":"ReLU"
         },
         "Output":{
-            "Num": "$Neurons.Recurrent.Num // 4"
+            "Num": "__ToBeSet__"
         },
         "Num": "$Neurons.Recurrent.Num"
     },
@@ -125,18 +125,18 @@
                 },
             }
         },
-        "Output":{
-            "Type":"LinearLayer",
-            "Subtype": "Wx+b",
-            "Input.Num": "$Neurons.Recurrent.Num",
-            "Output.Num": "$Neurons.Output.Num",
-            "Weight.Init":{
-                "Method": "kaiming",
-                "Coefficient": 1.0e-1
-            },
-            "Bias":true,
-            //"NonLinear":"$Neurons.Recurrent.NonLinear"
-        },
+        // "Output":{
+        //     "Type":"LinearLayer",
+        //     "Subtype": "Wx+b",
+        //     "Input.Num": "$Neurons.Recurrent.Num",
+        //     "Output.Num": "$Neurons.Output.Num",
+        //     "Weight.Init":{
+        //         "Method": "kaiming",
+        //         "Coefficient": 1.0e-1
+        //     },
+        //     "Bias":true,
+        //     //"NonLinear":"$Neurons.Recurrent.NonLinear"
+        // },
         "Input":{
             "Type": "NonLinearLayer",
             "Subtype":"f(Wx+b)",
@@ -222,6 +222,7 @@
             "Type": "L2Loss",
             "Coefficient": "$Loss.ActivityConstrain.Coefficient",
         },
+        "GradientDescend.Type":"GradientDescend"
     },
     "Dynamics":{
         "Run":{
@@ -288,6 +289,8 @@
             "In": ["output", "outputTarget", "activity", "trainParam"],
             "Routings":[
                 "output, outputTarget |--> &PredictionLoss |--> mainLoss",
+                "output, Name='output' |--> &Log",
+                "outputTarget, Name='outputTarget' |--> &Log",
                 "activity, mainLoss |--> &CalculateActivityConstrainLoss |--> activityConstrainLoss",
                 "mainLoss |--> &CalculateWeightConstrainLoss |--> weightConstrainLoss",
                 "mainLoss, activityConstrainLoss, weightConstrainLoss |--> &Add |--> totalLoss",

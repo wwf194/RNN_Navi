@@ -9,12 +9,16 @@
                     "MountPath":"&^param.model",
                 },
                 {
-                    "FilePath":"./param/arena_square.jsonc",
+                    "FilePath":"./param/world.jsonc",
                     "MountPath":"&^param.world"
                 },
                 {
                     "FilePath":"./param/agent.jsonc",
                     "MountPath":"&^param.agent"
+                },
+                {
+                    "FilePath":"./param/task-predictXYs.jsonc",
+                    "MountPath":"&^param.task"
                 }
             ]
         },
@@ -46,44 +50,11 @@
         },
         "ParseParamStatic",
         "SetTensorLocation",
+        "ParseSelf",
         {
             "Type": "Train",
             //"SubType": "Router",
-            "Args": {
-                "Type": "SupervisedLearning",
-                "SubType": "EpochBatch",
-                "Method": "GradientDescend",
-                "Epoch.Num": 200,
-                "Batch.Num": "#1000 * 2",
-                "Batch.Size": 200,
-                "TrajectoryParam": {
-                    //"TrajectoryNum": "$Batch.Size",
-                    "TrajectoryNum": 200,
-                    "XYStart.Method": "UniformInArena",
-                    "StepNum": 50,
-                    "Arena": "&^object.world.GetArenaByIndex(0)",
-                    "StepLength.Distribution":{
-                        "Type": "Reyleigh",
-                        "Mean": 0.05,
-                    },
-                    "DirectionChange.Distribution":{
-                        "Type": "Gaussian",
-                        "Mean": 0.0,
-                        "Std": "#3.1415926 / 180 * 5"      
-                    }
-                },
-                "TrainParam":{
-                    "LearningRate": 0.01
-                },
-                "Batch.Internal":{
-                    "In":["TrajectoryParam", "TrainParam"],
-                    "Out":[],
-                    "Routings": [
-                        "TrajectoryParam, TrainParam |--> &^object.agent.cache.Train"
-                    ],
-                },
-                "Batch.Input": ["&TrajectoryParam", "&TrainParam"]
-            },
-        }
+            "Args": "$^param.task"
+        },
     ]
 }

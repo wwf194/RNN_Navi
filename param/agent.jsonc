@@ -1,6 +1,7 @@
 {
-    "Task": "PredictPlaceCellsActivity",
+    //"Task": "PredictPlaceCellsActivity",
     //"Task": "PredictXYs",
+    "Task": "$^param.task.Task",
     "InitTasks":[
         {
             "Type": "BuildObj",
