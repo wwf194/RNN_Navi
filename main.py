@@ -56,14 +56,16 @@ def ProcessTasks(TaskList):
             ParseParamDynamic(Task.Args)
         elif Task.Type in ["ParseSelf"]:
             utils_torch.parse.ParsePyObjStatic(TaskList, ObjRoot=utils.ArgsGlobal, InPlace=True)
-        elif Task.Type in ["BuildObject"]:
-            BuildObject(Task.Args)
+        elif Task.Type in ["BuildObjectFromParam"]:
+            BuildObjFromParam(Task.Args)
         elif Task.Type in ["SetTensorLocation"]:
             SetTensorLocation(Task.Args)
+        elif Task.Type in ["SetLogger", "SetDataLogger"]:
+            SetLogger(Task.Args)
         elif Task.Type in ["FunctionCall"]:
             utils_torch.CallFunctions(Task.Args, ObjRoot=ArgsGlobal)
         elif Task.Type in ["Train"]:
-            utils_torch.train.Train(Task.Args, ObjRoot=ArgsGlobal)
+            utils_torch.train.Train(Task.Args, ObjRoot=ArgsGlobal, Logger=utils.ArgsGlobal.LoggerData)
         else:
             utils.AddWarning("Unknown Task.Type: %s"%Task.Type)
 
@@ -77,6 +79,12 @@ def SetTensorLocation(Args):
     for Obj in utils_torch.ListValues(ArgsGlobal.object):
         if hasattr(Obj, "SetTensorLocation"):
             Obj.SetTensorLocation(Location)
+
+def SetLogger(Args):
+    utils.ArgsGlobal.LoggerData = utils_torch.log.DataLogger(IsRoot=True)
+    for Obj in utils_torch.ListValues(ArgsGlobal.object):
+        if hasattr(Obj, "SetLogger"):
+            Obj.SetLogger(utils.ArgsGlobal.LoggerData)
 
 def ScanConfigFile():
     import utils
@@ -94,6 +102,7 @@ logger = utils.GetLoggerGlobal()
 import utils_torch
 from utils_torch.attrs import *
 utils_torch.SetLogger(utils.GetLoggerGlobal()) # Pass logger to library utils_torch
+utils_torch.SetSaveDir(utils.GetSaveDir())
 #print(utils_torch.ListAllMethodsOfModule("utils_torch.json"))
 
 def LoadTaskFile(FilePath="./task.jsonc", Save=True):
@@ -119,18 +128,18 @@ def ParseTaskObj(TaskObj, Save=True):
         utils_torch.json.PyObj2JsonFile(TaskList, utils.ArgsGlobal.SaveDir + "task_parsed.jsonc")
     return TaskList
 
-def BuildObject(Args):
+def BuildObjFromParam(Args):
     if isinstance(Args, utils_torch.PyObj):
         Args = GetAttrs(Args)
     if isinstance(Args, list):
         for arg in Args:
-            _BuildObject(arg)
+            _BuildObjFromParam(arg)
     elif isinstance(Args, utils_torch.PyObj):
-        _BuildObject(Args)
+        _BuildObjFromParam(Args)
     else:
         raise Exception()
 
-def _BuildObject(Args):
+def _BuildObjFromParam(Args):
     import utils_torch
     param = utils_torch.parse.Resolve(Args.ParamPath, ObjRoot=utils.ArgsGlobal)
     Module = utils_torch.ImportModule(Args.ModulePath)

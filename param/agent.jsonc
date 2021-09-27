@@ -2,6 +2,7 @@
     //"Task": "PredictPlaceCellsActivity",
     //"Task": "PredictXYs",
     "Task": "$^param.task.Task",
+    "model.Input.Type": "dLDirection", //dXY
     "InitTasks":[
         {
             "Type": "BuildObj",
@@ -69,9 +70,8 @@
         }
     },
     "model":"$^param.model",
-    //"model.__ResolveBase__":true,
-    "model.Input.Type": "dLDirection",
-    "model.InputInit.Type": "ToBeParsed",
+
+    "model.InputInit.Type": "__ToBeSet__",
     "__ResolveBase__": true,
     "Dynamics":{
         "Train":{

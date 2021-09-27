@@ -615,6 +615,12 @@ class Agent(object):
                     Module.SetTensorLocation(Location)
     def GetTensorLocation(self):
         return self.cache.TensorLocation
+    def SetLogger(self, logger):
+        return utils_torch.model.SetLoggerForModel(self, logger)
+    def GetLogger(self):
+        return utils_torch.model.GetLoggerForModel(self)
+    def Log(self, data, Name="Undefined"):
+        return utils_torch.model.LogForModel(self, data, Name)
     def plot_path(self, path=None, model=None, plot_num=2, arena=None, save=True, save_path='./', save_name='path_plot', cmap='jet', **kw):
         if arena is None:
             arena = self.arenas.GetCurrentArena()

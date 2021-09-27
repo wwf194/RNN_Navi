@@ -14,7 +14,7 @@ def Init():
     SetLoggerGlobal()
     SetSaveDir()
 
-def Getrequired_file(file_start):
+def GetRequiredFile(file_start):
     if isinstance(file_start, str):
         file_start = [file_start]
     elif isinstance(file_start, tuple) or isinstance(file_start, set):
@@ -22,16 +22,16 @@ def Getrequired_file(file_start):
 
     file_list = file_start
     for file in file_start:
-        Getrequired_file_recur(file, file_list)
+        _GetRequiredFile(file, file_list)
     return file_list
 
-def Getrequired_file_recur(file, file_list):
+def _GetRequiredFile(file, file_list):
     # file_list: stores required files in format of relative path to ./
     if not file.startswith('/') and not file.startswith('./'):
         file = './' + file
     if not file in file_list:
         file_list.append(file)
-    File = import_file(file)
+    File = utils_torch.ImportFile(file)
 
     if 'file_required' in dir(File):
         file_required = File.file_required
@@ -48,8 +48,10 @@ def Getrequired_file_recur(file, file_list):
         for file_rel in file_required:
             file_rel_main = cal_path_rel_main(path_rel=file_rel, path_start=File.__file__, path_main=__file__)
             #print('file_rel_main: %s'%file_rel_main)
-            Getrequired_file_recur(file_rel_main, file_list)
+            _GetRequiredFile(file_rel_main, file_list)
 
+def GetSaveDir():
+    return ArgsGlobal.SaveDir
 
 def SetSaveDir():
     import utils_torch

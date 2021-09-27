@@ -24,7 +24,7 @@
         },
         "ParseParamStatic",
         {
-            "Type":"BuildObject",
+            "Type":"BuildObjectFromParam",
             "Args":[
                 {
                     "ParamPath": "&^param.world",
@@ -35,7 +35,7 @@
                     "ParamPath": "&^param.agent",
                     "ModulePath": "Agents.AgentPoint2D",
                     "MountPath": "&^object.agent"
-                }
+                },
             ]
         },
         "ParseParamStatic",
@@ -50,6 +50,7 @@
         },
         "ParseParamStatic",
         "SetTensorLocation",
+        "SetLogger",
         "ParseSelf",
         {
             "Type": "Train",

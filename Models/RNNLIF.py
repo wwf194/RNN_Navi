@@ -88,7 +88,7 @@ class RNNLIF(nn.Module):
         for Name, RouterParam in ListAttrsAndValues(param.Dynamics, Exceptions=["__ResolveRef__", "__Entry__"]):
             RouterParsed = utils_torch.router.ParseRouterDynamic(RouterParam, InPlace=True, 
                 ObjRefList=[cache.Modules, cache.Dynamics, cache, 
-                    param.Modules, param.Dynamics, param,
+                    param.Modules, param.Dynamics, param, self,
                     utils_torch.Models.Operators        
                 ])
             setattr(cache.Dynamics, Name, RouterParsed)
@@ -508,5 +508,12 @@ class RNNLIF(nn.Module):
         return utils_torch.model.SetTrainWeightForModel(self)
     def ClearTrainWeight(self):
         utils_torch.model.ClearTrainWeightForModel(self)
+    def SetLogger(self, logger):
+        return utils_torch.model.SetLoggerForModel(self, logger)
+    def GetLogger(self):
+        return utils_torch.model.GetLoggerForModel(self)
+    def Log(self, data, Name="Undefined"):
+        return utils_torch.model.LogForModel(self, data, Name)
+
 
 __MainClass__ = RNNLIF

@@ -1,13 +1,6 @@
 {
     "Type": "RNNLIF",
-    "InitTasks":[
-        {
-            "Type": "FunctionCall",
-            "Args":[
-                //"&*InitModules"
-            ]
-        }
-    ],
+    "InitTasks":[],
     "Neurons":{
         "Input":{
             "Num":"__ToBeSet__"
@@ -289,14 +282,20 @@
             "In": ["output", "outputTarget", "activity", "trainParam"],
             "Routings":[
                 "output, outputTarget |--> &PredictionLoss |--> mainLoss",
-                "output, Name='output' |--> &Log",
-                "outputTarget, Name='outputTarget' |--> &Log",
                 "activity, mainLoss |--> &CalculateActivityConstrainLoss |--> activityConstrainLoss",
                 "mainLoss |--> &CalculateWeightConstrainLoss |--> weightConstrainLoss",
                 "mainLoss, activityConstrainLoss, weightConstrainLoss |--> &Add |--> totalLoss",
                 "totalLoss |--> &CalculateGradient",
                 "&*GetTrainWeight |--> trainWeight",
-                "trainWeight, trainParam |--> &GradientDescend"
+                "trainWeight, trainParam |--> &GradientDescend",
+                
+                "output, Name='output' |--> &Log",
+                "outputTarget, Name='outputTarget' |--> &Log",
+                "mainLoss, Name=MainLoss |--> &Log",
+                "totalLoss, Name=TotalLoss |--> &Log",
+                "activityConstrainLoss, Name=ActivityConstrainLoss |--> &Log",
+                "weightConstrainLoss, Name=WeightConstrainLoss |--> &Log",
+                "activityConstrainLoss, Name=activityContrainLoss |--> &Log",
             ],
         },
         "CalculateWeightConstrainLoss":{
