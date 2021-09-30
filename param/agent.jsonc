@@ -2,6 +2,10 @@
     //"Task": "PredictPlaceCellsActivity",
     //"Task": "PredictXYs",
     "Task": "$^param.task.Task",
+    "HiddenNeurons.Num":{
+        "PredictXYs": 100,
+        "PredictPlaceCellsActivity": 2048
+    },
     "model.Input.Type": "dLDirection", //dXY
     "InitTasks":[
         {

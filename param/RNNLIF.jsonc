@@ -6,6 +6,7 @@
             "Num":"__ToBeSet__"
         },
         "Recurrent":{
+            "Num": "$^param.agent.HiddenNeurons.Num.($^param.agent.Task)",
             "ExciInhi":{
                 "Enable": true,
                 "Weight": [
@@ -13,7 +14,6 @@
                     "&Modules.Output.Weight"
                 ]
             },
-            "Num": 2048,
             "Excitatory":{
                 "Ratio": 0.8
             },
@@ -62,7 +62,7 @@
                 "Size":["$Neurons.Recurrent.Num", "$Neurons.Recurrent.Num"],
                 "Init":{
                     "Method": "kaiming",
-                    "Coefficient": 1.0e-1
+                    "Coefficient": 1.0e-2
                 }
             },
             "TimeConstance": 0.1,
@@ -296,6 +296,12 @@
                 "activityConstrainLoss, Name=ActivityConstrainLoss |--> &Log",
                 "weightConstrainLoss, Name=WeightConstrainLoss |--> &Log",
                 "activityConstrainLoss, Name=activityContrainLoss |--> &Log",
+
+                "output, Name=Output |--> &Data2TextFile",
+                "outputTarget, Name=OutputTarget |--> &Data2TextFile",
+                //"output, Name=Output |--> &Tensor2Statistics2File",
+                //"outputTarget, Name=OutputTarget |--> &Tensor2Statistics2File",
+                //"output, outputTarget,  Name1=Output, Name2=OutputTarget |--> &CompareDensityCurve",
             ],
         },
         "CalculateWeightConstrainLoss":{

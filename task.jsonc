@@ -44,7 +44,8 @@
             "Args":[
                 "&^object.world.InitFromParam",
                 "&^object.agent.InitFromParam",
-                "&^object.agent.PlotPlaceCells",
+                "&^object.agent.PlotPlaceCellsActivity",
+                ["&^object.agent.SetFullName", ["agent"]]
                 //["&^agent.GenerateRandomTrajectoryAndPlot", ["param=50"]]
             ]
         },

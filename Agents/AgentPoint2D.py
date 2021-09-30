@@ -18,24 +18,11 @@ import matplotlib.patches as patches
 from matplotlib.lines import Line2D
 import cv2 as cv
 
-# import utils
-# from utils_torch import GetFromDict, GetItemsFromDict, search_dict, Getname_args, EnsurePath, contain, remove_suffix, Getax
-# from utils_torch.plot import Getres_xy, PlotPolyLineFromVerticesPlt, Getint_coords_np, norm_and_map
-# import utils.train
-# from utils.train import set_train_info
-# import utils.model
-# from utils.model import Gettensor_info, Gettensor_stat
-# from utils.anal import calculate_grid_score
-
 import utils
 from utils_torch.attrs import *
 from utils_torch.utils import NpArray2Tensor
 
-def InitFromParam(param):
-    #setattr(param, "__ObjRoot__", utils.ArgsGlobal["ObjRoot"]) 
-    return Agent(param)
-
-class Agent(object):
+class AgentPoint2D(object):
     def __init__(self, param=None):
         if param is not None:
             self.param = param        
@@ -59,7 +46,7 @@ class Agent(object):
 
         utils.AddLog("Agent: Initialized.")
 
-        self.PlotPlaceCells(Save=True, SavePath=utils.ArgsGlobal.SaveDir + "PlaceCellsActivity.png")
+        self.PlotPlaceCellsActivity(Save=True, SavePath=utils.ArgsGlobal.SaveDir + "PlaceCellsActivity.png")
         self.PlotPlaceCellsXY(Save=True, SavePath=utils.ArgsGlobal.SaveDir + "PlaceCellsXY.png")
     def AddModule(self, name, module):
         setattr(self.cache.Modules, name, module)
@@ -117,7 +104,10 @@ class Agent(object):
         param = self.param
         ax = utils.ArgsGlobal.object.world.Arenas[0].PlotArena(Save=False)
         self.PlaceCells.PlotXYs(ax, Save=Save, SavePath=SavePath)
-    def PlotPlaceCells(self, PlotNum=3, Resolution=50, Arena=None, Save=True, SavePath=utils.ArgsGlobal.SaveDir + "agent-PlaceCells-XYs.svg"):
+    def PlotPlaceCellsActivity(
+            self, PlotNum=3, Resolution=50, Arena=None, 
+            Save=True, SavePath=utils.ArgsGlobal.SaveDir + "agent-PlaceCells-XYs.svg"
+        ):
         param = self.param
         if PlotNum > param.PlaceCells.Num:
             CellIndices = range(param.PlaceCells.Num)
@@ -143,14 +133,22 @@ class Agent(object):
             ax = utils_torch.plot.GetAx(axes, Index)
             Arena.PlotArena(ax, Save=False)
             _Activity = Activity[:, Index].reshape(ResolutionX, ResolutionY)
-            _Activity = utils_torch.plot.Map2Color(_Activity, ColorMap="jet")
+            ActivityColored = utils_torch.plot.Map2Color(_Activity, ColorMap="jet")
+            _Activity = ActivityColored.dataColored
             _Activity = InsideMask * _Activity + OutsideMask * (0.5, 0.5, 0.5)
 
-            utils_torch.plot.PlotMatrix(ax, _Activity, ApplyColorMap=False, XYRange=BoundaryBox)
+            utils_torch.plot.PlotMatrixWithColorBar(
+                ax, _Activity, IsDataColored=True, 
+                XYRange=BoundaryBox,
+                ColorMap="jet",
+                Min=ActivityColored.Min, Max=ActivityColored.Max, 
+            )
             utils_torch.plot.SetAxRangeFromBoundaryBox(ax, BoundaryBox)
             CellXY = self.PlaceCells.data.XYs[CellIndex]
             utils_torch.plot.PlotPoint(ax, CellXY, Color="Red", Type="Triangle")
             ax.set_title("PlaceCells Index:%d XY:(%.2f, %.2f)"%(CellIndex, CellXY[0], CellXY[1]))
+
+        plt.tight_layout()
         if Save:
             plt.savefig(SavePath)
     def report_perform(self, prefix='', verbose=True):
@@ -621,6 +619,9 @@ class Agent(object):
         return utils_torch.model.GetLoggerForModel(self)
     def Log(self, data, Name="Undefined"):
         return utils_torch.model.LogForModel(self, data, Name)
+    def PlotTrueAndPredictedTrajectory(self, ):
+        return
+    
     def plot_path(self, path=None, model=None, plot_num=2, arena=None, save=True, save_path='./', save_name='path_plot', cmap='jet', **kw):
         if arena is None:
             arena = self.arenas.GetCurrentArena()
@@ -1095,8 +1096,6 @@ class Agent(object):
         cbar = ax.figure.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax)
         #tick_locator = mpl.ticker.MaxNLocator(nbins=5)  # colorbar上的刻度值个数
         #cbar.locator = tick_locator
-        print(cbar_ticks)
-        print(cbar_tick_labels)
         cbar.set_ticks(cbar_ticks)
         #cbar.update_ticks()
         cbar.set_ticklabels(cbar_tick_labels) # cbar.ax.set_yticklabels will cause Exception
@@ -1170,5 +1169,7 @@ class Agent(object):
         with open(save_path + save_name, 'wb') as f:
             torch.save(self.dict, f)
         self.model.save(save_path, '%s_model'%save_name)
+    def SetFullName(self, FullName):
+        utils_torch.model.SetFullNameForModel(self, FullName)
 
-__MainClass__ = Agent
+__MainClass__ = AgentPoint2D

@@ -198,18 +198,19 @@ class Polygon(Shape2D):
                     utils_torch.plot.SetHeightWidthRatio(ax, 1.0)
                     ax.set_title("Lambda=%.2f"%Lambda)
             if Plot:
-                plt.savefig(utils_torch.files.RenameFileIfPathExists(SavePath))
+                plt.savefig(utils_torch.files.RenameIfPathExists(SavePath))
                 plt.close()
     def PlotEdgesPlt(self, ax): # img: [H, W, C], np.uint8.
         utils_torch.plot.PlotLines(ax, self.EdgesNp)
-    def PlotShape(self, ax=None, PlotNorm=False, Save=True, SavePath="./", SetXYRange=True):
+    def PlotShape(self, ax=None, PlotNorm=False, PlotVertices=False, Save=True, SavePath="./", SetXYRange=True):
         param = self.param
         data = self.data
         if ax is None:
             plt.close("all")
             fig, ax = plt.subplots()
         utils_torch.plot.PlotPolyLine(ax, GetAttrs(param.Vertices))
-        utils_torch.plot.PlotXYs(ax, GetAttrs(param.Vertices))
+        if PlotVertices:
+            utils_torch.plot.PlotXYs(ax, GetAttrs(param.Vertices))
         
         if PlotNorm:
             utils_torch.plot.PlotDirectionsOnEdges(ax, GetAttrs(param.Edges), GetAttrs(param.Edges.Norm), Color="Red")

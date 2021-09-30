@@ -81,10 +81,11 @@ def SetTensorLocation(Args):
             Obj.SetTensorLocation(Location)
 
 def SetLogger(Args):
-    utils.ArgsGlobal.LoggerData = utils_torch.log.DataLogger(IsRoot=True)
-    for Obj in utils_torch.ListValues(ArgsGlobal.object):
-        if hasattr(Obj, "SetLogger"):
-            Obj.SetLogger(utils.ArgsGlobal.LoggerData)
+    #utils.ArgsGlobal.LoggerData = utils_torch.log.LoggerForEpochBatchTrain(IsRoot=True)
+    utils.ArgsGlobal.LoggerData = utils_torch.log.LoggerForEpochBatchTrain()
+    # for Obj in utils_torch.ListValues(ArgsGlobal.object):
+    #     if hasattr(Obj, "SetLogger"):
+    #         Obj.SetLogger(utils.ArgsGlobal.LoggerData)
 
 def ScanConfigFile():
     import utils
@@ -101,6 +102,7 @@ logger = utils.GetLoggerGlobal()
 
 import utils_torch
 from utils_torch.attrs import *
+utils_torch.SetArgsGlobal(utils.ArgsGlobal)
 utils_torch.SetLogger(utils.GetLoggerGlobal()) # Pass logger to library utils_torch
 utils_torch.SetSaveDir(utils.GetSaveDir())
 #print(utils_torch.ListAllMethodsOfModule("utils_torch.json"))
@@ -248,7 +250,7 @@ def ParseParamStatic(Args, Save=True, SavePath=utils.ArgsGlobal.SaveDir + "param
     param = ArgsGlobal.param
     utils_torch.parse.ParsePyObjStatic(param, ObjCurrent=param, ObjRoot=utils.ArgsGlobal, InPlace=True)
     if Save:
-        SavePath = utils_torch.RenameFileIfPathExists(SavePath)
+        SavePath = utils_torch.RenameIfPathExists(SavePath)
         utils_torch.json.PyObj2JsonFile(ArgsGlobal.param, SavePath)
     return
 def ParseParamDynamic(Args, Save=True, SavePath=utils.ArgsGlobal.SaveDir + "param_parsed_dynamic.jsonc"):
@@ -256,7 +258,7 @@ def ParseParamDynamic(Args, Save=True, SavePath=utils.ArgsGlobal.SaveDir + "para
     for attr, param in utils_torch.ListAttrsAndValues(ArgsGlobal.param):
         utils_torch.parse.ParsePyObjDynamic(param, ObjCurrent=param, ObjRoot=utils.ArgsGlobal, InPlace=True)
     if Save:
-        utils_torch.json.PyObj2JsonFile(ArgsGlobal.param, utils_torch.RenameFileIfPathExists(SavePath))
+        utils_torch.json.PyObj2JsonFile(ArgsGlobal.param, utils_torch.RenameIfPathExists(SavePath))
     return
 def train(Args):
     if Args.type in ["SupervisedLearning"]:

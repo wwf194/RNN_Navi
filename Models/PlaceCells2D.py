@@ -65,7 +65,7 @@ class PlaceCells2D(object):
                 Function = lambda dLs:GaussianCurve(dLs)
             elif method.Type in ["Norm2Mean0Std1"]:
                 Function = lambda Activity:utils_torch.math.Norm2GivenMeanStd(Activity, 0.0, 1.0)
-            elif method.Type in ["Norm2Sum1"]:
+            elif method.Type in ["Norm2Sum1", "Norm2Probability"]:
                 Function = utils_torch.math.Norm2Sum1
             elif method.Type in ["Norm2Min0"]:
                 Function = utils_torch.math.Norm2Min0
@@ -73,7 +73,11 @@ class PlaceCells2D(object):
                 raise Exception(method)
             Functions.append(Function)
         self.XYs2Activity = utils_torch.StackFunction(*Functions)
-
+    def GetActivityStatisticsInBoundaryBox(self, BoundaryBox, Resolution=50):
+        ResolutionX, ResolutionY = utils_torch.plot.ParseResolution(BoundaryBox.Width, BoundaryBox.Height, Resolution)
+        XYs = utils_torch.geometry2D.LatticeXYs(BoundaryBox, ResolutionX, ResolutionY, Flatten=True)
+        activity = self.XYs2Activity(XYs)
+        return utils_torch.math.NpArrayStatistics(activity)
     def XYs2ActivityDefault(self, XYs):
         # @param XYs: np.ndarray [PointNum, (x, y)]
         # @return Activity: np.ndarray [PointNum, PlaceCells.Num]

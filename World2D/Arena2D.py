@@ -69,6 +69,8 @@ class Arena2D():
             Shape.PlotShape(ax, Save=False, SetXYRange=False)
         utils_torch.plot.SetHeightWidthRatio(ax, 1.0)
         utils_torch.plot.SetAxRangeFromBoundaryBox(ax, param.BoundaryBox)
+        utils_torch.plot.SetXTicksForAx(ax, param.BoundaryBox.XMin, param.BoundaryBox.XMax)
+        utils_torch.plot.SetYTicksForAx(ax, param.BoundaryBox.YMin, param.BoundaryBox.YMax)
         if Save:
             utils_torch.EnsureFileDir(SavePath)
             plt.savefig(SavePath)
@@ -113,7 +115,7 @@ class Arena2D():
 
         self.ReportCollision(XY[CollisionPointIndices], dXY[CollisionPointIndices])
 
-        return utils_torch.json.JsonObj2PyObj({
+        return utils_torch.PyObj({
             "Indices": CollisionPointIndices,
             "Lambdas": np.atleast_1d(Lambdas[CollisionPointIndices]), # [CollisionPointNum]
             "Norms": Norms[CollisionPointIndices, CollisionShapeIndices, :] # [CollisionPointNum, 2]
@@ -138,10 +140,7 @@ class Arena2D():
         isInsideIndex = np.argwhere(isInside)[:, 0]
         mask[isInsideIndex // ResolutionY, isInsideIndex % ResolutionY] = 1
         return mask
-    #@abc.abstractmethod
-    def Getrandom_xy(self): # must be implemented by child class.
-        return
-    def GenerateRandomPointsInBoundaryBox(self, Num):
+    def GenerateRandomXYsInBoundaryBox(self, Num):
         param = self.param
         Points = np.stack([np.random.uniform(param.BoundaryBox.XMin, param.BoundaryBox.XMax, Num), 
             np.random.uniform(param.BoundaryBox.YMin, param.BoundaryBox.YMax, Num)], axis=1) #[points_num, (x, y)]
@@ -150,7 +149,7 @@ class Arena2D():
         PointNum = 0
         PointList = []
         while(PointNum < Num):
-            Points = self.GenerateRandomPointsInBoundaryBox(int(2.2 * Num))
+            Points = self.GenerateRandomXYsInBoundaryBox(int(2.2 * Num))
             PointsOutsideIndices = np.argwhere(self.IsOutside(Points, MinDistance2Border=MinDistance2Border))       
             Points = np.delete(Points, PointsOutsideIndices, axis=0)
             PointList.append(Points)
@@ -196,7 +195,6 @@ class Arena2D():
             print(points_out_of_region)
             print(points_out_of_region.shape)           
             points_out_of_region = points_out_of_region.transpose((1,0))
-            
             for i in range(points_out_of_region.shape[0]):
                 arena_mask[points_out_of_region[i,0], points_out_of_region[i,1]] = 0.0        
             #arena_mask[points_out_of_region] = 0.0 does not work.
