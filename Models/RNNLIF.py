@@ -11,7 +11,6 @@ import matplotlib as mpl
 from matplotlib import pyplot as plt
 
 from utils_torch.attrs import *
-from utils_torch.model import BuildModule, ListParameter
 import utils_torch
 import utils
 
@@ -27,8 +26,7 @@ class RNNLIF(nn.Module):
     # Singel-Layer Recurrent Neural Network with Leaky Integrate-and-Fire Dynamics
     def __init__(self, param=None):
         super(RNNLIF, self).__init__()
-        if param is not None:
-            self.param=param
+        utils_torch.model.InitForModel(self, param)
     def InitFromParam(self, param=None):
         if param is not None:
             self.param = param
@@ -41,7 +39,7 @@ class RNNLIF(nn.Module):
         data = self.data
         cache = self.cache
 
-        utils.AddLog("RNNLIF: Initializing from param...")
+        utils_torch.AddLog("RNNLIF: Initializing from param...")
         CheckAttrs(param, "Type", value="RNNLIF")
         self.param = param
         #self.json_external_dict = {}
@@ -58,14 +56,7 @@ class RNNLIF(nn.Module):
         cache.Modules = utils_torch.EmptyPyObj()
         cache.Dynamics = utils_torch.EmptyPyObj()
 
-        # initialize modules
-        # for module in ListAttrs(param.modules):
-        for Name, ModuleParam in ListAttrsAndValues(param.Modules):
-            Module = BuildModule(ModuleParam)
-            if isinstance(Module, nn.Module):
-                self.add_module(Name, Module)
-            setattr(cache.Modules, Name, Module)
-        
+        self.BuildModules()
         self.InitModules()
         self.ParseRouters()
         self.SetForwardEntry()
@@ -92,6 +83,7 @@ class RNNLIF(nn.Module):
                     utils_torch.Models.Operators        
                 ])
             setattr(cache.Dynamics, Name, RouterParsed)
+        return
     def SetForwardEntry(self):
         param = self.param
         data = self.data
@@ -109,12 +101,24 @@ class RNNLIF(nn.Module):
         self.SetTrainWeight()
     def GetTensorLocation(self):
         return self.cache.TensorLocation
-    def InitModules(self):
-        for name, module in ListAttrsAndValues(self.cache.Modules):
-            if hasattr(module, "InitFromParam"):
-                module.InitFromParam()
-            else:
-                utils_torch.AddWarning("Module %s has not implemented InitFromParam method."%name)
+    # def BuildModules(self):
+    #     # initialize modules
+    #     # for module in ListAttrs(param.modules):
+    #     param = self.param
+    #     cache = self.cache
+    #     for Name, ModuleParam in ListAttrsAndValues(param.Modules):
+    #         ModuleParam.Name = Name
+    #         ModuleParam.FullName = self.FullName + "." + Name
+    #         Module = BuildModule(ModuleParam)
+    #         if isinstance(Module, nn.Module):
+    #             self.add_module(Name, Module)
+    #         setattr(cache.Modules, Name, Module)
+    # def InitModules(self):
+    #     for name, module in ListAttrsAndValues(self.cache.Modules):
+    #         if hasattr(module, "InitFromParam"):
+    #             module.InitFromParam()
+    #         else:
+    #             utils_torch.AddWarning("Module %s has not implemented InitFromParam method."%name)
     def plot_act(self, data=None, ax=None, data_type='u', save=True, save_path='./', save_name='act_map.png', cmap='jet', plot_N_num=200, select_strategy='first', verbose=False):
         if isinstance(data, torch.Tensor):
             data = data.detach().cpu().Numpy() # [step_num, N_num]
@@ -508,14 +512,14 @@ class RNNLIF(nn.Module):
         return utils_torch.model.SetTrainWeightForModel(self)
     def ClearTrainWeight(self):
         utils_torch.model.ClearTrainWeightForModel(self)
-    def SetLogger(self, logger):
-        return utils_torch.model.SetLoggerForModel(self, logger)
-    def GetLogger(self):
-        return utils_torch.model.GetLoggerForModel(self)
-    def Log(self, data, Name="Undefined"):
-        return utils_torch.model.LogForModel(self, data, Name)
+    # def SetLogger(self, logger):
+    #     return utils_torch.model.SetLoggerForModel(self, logger)
+    # def GetLogger(self):
+    #     return utils_torch.model.GetLoggerForModel(self)
+    # def Log(self, data, Name="Undefined"):
+    #     return utils_torch.model.LogForModel(self, data, Name)
     def SetFullName(self, FullName):
         utils_torch.model.SetFullNameForModel(self, FullName)
 
-
 __MainClass__ = RNNLIF
+utils_torch.model.SetMethodForModelClass(__MainClass__)

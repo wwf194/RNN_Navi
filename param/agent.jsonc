@@ -9,74 +9,56 @@
     "model.Input.Type": "dLDirection", //dXY
     "InitTasks":[
         {
-            "Type": "BuildObj",
-            "Args": [
-                {
-                    "ParamPath": "&PlaceCells",
-                    "MountPath": "&*PlaceCells",
-                    "ModulePath": "Models.PlaceCells2D"
-                },
-                {
-                    "ParamPath": "&model",
-                    "MountPath": "&*model",
-                    "ModulePath": "Models.RNNLIF"                    
-                }
-            ]
-        },
-        {
-            "Type": "FunctionCall",
-            "Args": [
+            "FunctionCall": [
                 "&*SetModelInputOutput",
                 "&*ParseParam",
-                "&*model.InitFromParam",
-                "&*PlaceCells.InitFromParam",
-                [
-                    "&*AddModule",
-                    ["model", "&*model"]
-                ]
+                //["&*SetFullName", [""]],
             ]
         },
     ],
-    "PlaceCells":{
-        "__ResolveBase__": true, 
-        "Num": "$^param.agent.model.Neurons.Num // 4",
-        "XYs":{
-            "Init": {
-                "Method": "FunctionCall",
-                "Args": [
-                    [
-                        "&^object.world.Arenas[0].GenerateRandomInternalXYs",
-                        ["$Num"]
-                    ],
-                    [
-                        "&^object.agent.PlaceCells.SetXYs",
-                        ["__PreviousFunctionOutput__"]
+    "Modules":{
+        "PlaceCells":{
+            "ModulePath": "Models.PlaceCells2D",
+            "__ResolveBase__": true, 
+            "Num": "$^param.agent.Modules.model.Neurons.Num // 4",
+            "XYs":{
+                "Init": {
+                    "Method": "FunctionCall",
+                    "Args": [
+                        [
+                            "&^object.world.Arenas[0].GenerateRandomInternalXYs",
+                            ["$Num"]
+                        ],
+                        [
+                            "&^object.agent.cache.Modules.PlaceCells.SetXYs",
+                            ["__PreviousFunctionOutput__"]
+                        ]
                     ]
+                }
+            },
+            "Activity.Max": 1.0,
+            "XYs2Activity":{
+                "Init":[
+                    {
+                        "Type":"XYs2dLs"
+                    },
+                    {
+                        "Type": "DiffGaussian",
+                        "Amp1": "$Activity.Max",
+                        "Mean1": 0.0, 
+                        "Std1": "$^param.world.Arenas[0].BoundaryBox.Size * 0.07",
+                        "Amp2": "$~Amp1 * 0.5",
+                        "Mean2": 0.0,
+                        "Std2": "$~Std1 * 2.0"
+                    },
                 ]
             }
         },
-        "Activity.Max": 1.0,
-        "XYs2Activity":{
-            "Init":[
-                {
-                    "Type":"XYs2dLs"
-                },
-                {
-                    "Type": "DiffGaussian",
-                    "Amp1": "$Activity.Max",
-                    "Mean1": 0.0, 
-                    "Std1": "$^param.world.Arenas[0].BoundaryBox.Size * 0.07",
-                    "Amp2": "$~Amp1 * 0.5",
-                    "Mean2": 0.0,
-                    "Std2": "$~Std1 * 2.0"
-                },
-            ]
-        }
+        "model":"$^param.model",
+        "model.InputInit.Type": "__ToBeSet__",
+        "model.ModulePath": "Models.RNNLIF",
+        "__ResolveBase__": true,
     },
-    "model":"$^param.model",
-
-    "model.InputInit.Type": "__ToBeSet__",
-    "__ResolveBase__": true,
     "Dynamics":{
         "Train":{
             "In":["TrajectoryParam", "TrainParam"],

@@ -142,8 +142,8 @@ class Circle(Shapes2D.Shape2D):
 
     def ReportInfo(self):
         param = self.param
-        utils.AddLog("Circle2D: ", end="")
-        utils.AddLog("Center:(%.1f, %.1f)"%(param.Center.X, param.Center.Y))
-        utils.AddLog("Radius:(%.3f)"%param.Radius)
+        utils_torch.AddLog("Circle2D: ", end="")
+        utils_torch.AddLog("Center:(%.1f, %.1f)"%(param.Center.X, param.Center.Y))
+        utils_torch.AddLog("Radius:(%.3f)"%param.Radius)
 
 __MainClass__ = Circle

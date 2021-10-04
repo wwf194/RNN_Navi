@@ -130,12 +130,12 @@ class Polygon(Shape2D):
         SetAttrs(param, "BoundaryBox.Size", max(param.BoundaryBox.Width, param.BoundaryBox.Height))
     
     def PrintInfo(self):
-        utils.AddLog('ArenaPolygon: edge_num:%d'%(self.edge_num))
-        utils.AddLog('center_coord:(%.1f, %.1f)'%(self.center_coord[0], self.center_coord[1]))
-        utils.AddLog('vertices:', end='')
+        utils_torch.AddLog('ArenaPolygon: edge_num:%d'%(self.edge_num))
+        utils_torch.AddLog('center_coord:(%.1f, %.1f)'%(self.center_coord[0], self.center_coord[1]))
+        utils_torch.AddLog('vertices:', end='')
         for index in range(self.edge_num):
-            utils.AddLog('(%.1f, %.1f)'%(self.vertices[index][0], self.vertices[index][1]), end='')
-        utils.AddLog('\n')
+            utils_torch.AddLog('(%.1f, %.1f)'%(self.vertices[index][0], self.vertices[index][1]), end='')
+        utils_torch.AddLog('\n')
     def Vector2NearstBorder(self, Points):
         return
     def Distance2Edges(self, PointsNp):

@@ -12,7 +12,7 @@ import sys
 import argparse
 import traceback
 
-from utils.utils import ArgsGlobal
+#from utils.utils import ArgsGlobal
 
 parser = argparse.ArgumentParser()
 parser.add_argument("task", nargs="?", default="ProcessTasks")
@@ -26,13 +26,12 @@ def main():
         CleanFigures()
     elif Args.task in ["ProcessTasks"]:
         TaskObj = LoadTaskFile()
-        TaskList = ParseTaskObj(TaskObj)
-        if Args.IsDebug:
-            ProcessTasks(TaskList)
+        TaskList = utils_torch.ParseTaskObj(TaskObj)
+        if not Args.IsDebug:
             try: # catch all unhandled exceptions
-                ProcessTasks()
+                ProcessTasks(TaskList)
             except Exception:
-                logger.error(traceback.format_exc())
+                utils_torch.AddError(traceback.format_exc())
                 raise Exception()
         else:
             ProcessTasks(TaskList)
@@ -41,31 +40,38 @@ def main():
     else:
         raise Exception("Inavlid Task: %s"%Args.task)
 
-def ProcessTasks(TaskList):    
+def ProcessTasks(TaskList):  
     for Index, Task in enumerate(TaskList):
         utils_torch.EnsureAttrs(Task, "Args", default={})
-        if Task.Type in ["AddLibraryPath"]:
-            AddLibraryPath(Task.Args)
-        elif Task.Type in ["LoadJsonFile"]:
-            LoadJsonFile(Task.Args)
-        elif Task.Type in ["LoadParamFile"]:
-            LoadParamFile(Task.Args)
-        elif Task.Type in ["ParseParam", "ParseParamStatic"]:
-            ParseParamStatic(Task.Args)
-        elif Task.Type in ["ParseParamDynamic"]:
-            ParseParamDynamic(Task.Args)
-        elif Task.Type in ["ParseSelf"]:
+        TaskType = Task[0]
+        TaskArgs = Task[1]
+        # if TaskType in ["FunctionCall"]:
+        #     print("aaa")
+        if TaskType in ["AddLibraryPath"]:
+            AddLibraryPath(TaskArgs)
+        elif TaskType in ["LoadJsonFile"]:
+            LoadJsonFile(TaskArgs)
+        elif TaskType in ["LoadParamFile"]:
+            LoadParamFile(TaskArgs)
+        elif TaskType in ["ParseParam", "ParseParamStatic"]:
+            ParseParamStatic(TaskArgs)
+        elif TaskType in ["ParseParamDynamic"]:
+            ParseParamDynamic(TaskArgs)
+        elif TaskType in ["ParseSelf"]:
             utils_torch.parse.ParsePyObjStatic(TaskList, ObjRoot=utils.ArgsGlobal, InPlace=True)
-        elif Task.Type in ["BuildObjectFromParam"]:
-            BuildObjFromParam(Task.Args)
-        elif Task.Type in ["SetTensorLocation"]:
-            SetTensorLocation(Task.Args)
-        elif Task.Type in ["SetLogger", "SetDataLogger"]:
-            SetLogger(Task.Args)
-        elif Task.Type in ["FunctionCall"]:
-            utils_torch.CallFunctions(Task.Args, ObjRoot=ArgsGlobal)
-        elif Task.Type in ["Train"]:
-            utils_torch.train.Train(Task.Args, ObjRoot=ArgsGlobal, Logger=utils.ArgsGlobal.LoggerData)
+        elif TaskType in ["BuildObjectFromParam"]:
+            BuildObjFromParam(TaskArgs)
+        elif TaskType in ["SetTensorLocation"]:
+            SetTensorLocation(TaskArgs)
+        elif TaskType in ["SetLogger", "SetDataLogger"]:
+            SetLogger(TaskArgs)
+        elif TaskType in ["FunctionCall"]:
+            utils_torch.CallFunctions(TaskArgs, ObjRoot=ArgsGlobal)
+        elif TaskType in ["Train"]:
+            utils_torch.train.Train(TaskArgs, ObjRoot=ArgsGlobal, Logger=utils.ArgsGlobal.LoggerData)
+        elif TaskType in ["DoTasks"]:
+            _TaskList = utils_torch.ParseTaskObj(TaskArgs, ObjRoot=ArgsGlobal)
+            ProcessTasks(_TaskList)
         else:
             utils.AddWarning("Unknown Task.Type: %s"%Task.Type)
 
@@ -81,54 +87,33 @@ def SetTensorLocation(Args):
             Obj.SetTensorLocation(Location)
 
 def SetLogger(Args):
-    #utils.ArgsGlobal.LoggerData = utils_torch.log.LoggerForEpochBatchTrain(IsRoot=True)
     utils.ArgsGlobal.LoggerData = utils_torch.log.LoggerForEpochBatchTrain()
-    # for Obj in utils_torch.ListValues(ArgsGlobal.object):
-    #     if hasattr(Obj, "SetLogger"):
-    #         Obj.SetLogger(utils.ArgsGlobal.LoggerData)
 
-def ScanConfigFile():
-    import utils
-    Config = utils.json.JsonFile2PyObj("./config.jsonc")
-    sys.path.append(Config.LibraryPath.utils_torch)
+def ScanConfigFile(FilePath="./config.jsonc"):
+    import json5
+    with open(FilePath, "r") as f:
+        JsonObj = json5.load(f) # json5 allows comments
+    Config = JsonObj
+    sys.path.append(Config["LibraryPath"]["utils_torch"])
     import utils_torch
-    utils_torch.attrs.SetAttrs(ArgsGlobal, "Config", Config)
+    import utils
+    utils_torch.attrs.SetAttrs(utils.ArgsGlobal, "Config", Config)
 ScanConfigFile()
 
 import utils
-from utils import AddLog, AddWarning, ArgsGlobal
+from utils import ArgsGlobal
 utils.Init()
-logger = utils.GetLoggerGlobal()
 
 import utils_torch
 from utils_torch.attrs import *
 utils_torch.SetArgsGlobal(utils.ArgsGlobal)
-utils_torch.SetLogger(utils.GetLoggerGlobal()) # Pass logger to library utils_torch
-utils_torch.SetSaveDir(utils.GetSaveDir())
+#utils_torch.SetLogger(utils.GetLoggerGlobal()) # Pass logger to library utils_torch
 #print(utils_torch.ListAllMethodsOfModule("utils_torch.json"))
 
 def LoadTaskFile(FilePath="./task.jsonc", Save=True):
     TaskObj = utils_torch.json.JsonFile2PyObj('./task.jsonc')
     return TaskObj
-def ParseTaskObj(TaskObj, Save=True):
-    if isinstance(TaskObj, list):
-        TaskList = TaskObj
-    else:
-        TaskList = TaskObj.Tasks
-    for Index, Task in enumerate(TaskList):
-        if isinstance(Task, str):
-            TaskList[Index] = utils_torch.PyObj({
-                "Type": Task,
-                "Args": {}
-            })
-    for Index, Task in enumerate(TaskList):
-        Task.SetResolveBase()
-    if Save:
-        utils_torch.json.PyObj2JsonFile(TaskList, utils.ArgsGlobal.SaveDir + "task_loaded.jsonc")
-    utils_torch.parse.ParsePyObjStatic(TaskList, ObjCurrent=TaskList, ObjRoot=utils.ArgsGlobal, InPlace=True)
-    if Save:
-        utils_torch.json.PyObj2JsonFile(TaskList, utils.ArgsGlobal.SaveDir + "task_parsed.jsonc")
-    return TaskList
+
 
 def BuildObjFromParam(Args):
     if isinstance(Args, utils_torch.PyObj):

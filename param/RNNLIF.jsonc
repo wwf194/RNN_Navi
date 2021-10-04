@@ -150,7 +150,7 @@
             "Init.Method":"FromNeuronNum",
             "Neurons":{
                 "Num":[
-                    "$^param.agent.model.InputInit.Num",
+                    "$^param.agent.Modules.model.InputInit.Num",
                     "$Neurons.Recurrent.Num ",
                     "$Neurons.Recurrent.Num * 2"
                 ]
@@ -276,6 +276,12 @@
                 "inputInit, inputSeries, time |--> &RunTrain |--> outputSeries, hiddenStateSeries, cellStateSeries, firingRateSeries",
                 "hiddenStateSeries, cellStateSeries, firingRateSeries |--> &Merge |--> activity",
                 "outputSeries, outputTarget, activity, trainParam |--> &Optimize",
+
+                "hiddenStateSeries, Name=HiddenStates |--> &LogCache",
+                "cellStateSeries,   Name=CellStates |--> &LogCache",
+                "firingRateSeries,  Name=FiringRates |--> &LogCache",
+                "outputSeries, Name=Outputs |--> &LogCache",
+                "outputTarget, Name=OutputTargets |--> &LogCache",
             ]
         },
         "Optimize":{
@@ -289,16 +295,13 @@
                 "&*GetTrainWeight |--> trainWeight",
                 "trainWeight, trainParam |--> &GradientDescend",
                 
-                "output, Name='output' |--> &Log",
-                "outputTarget, Name='outputTarget' |--> &Log",
-                "mainLoss, Name=MainLoss |--> &Log",
-                "totalLoss, Name=TotalLoss |--> &Log",
-                "activityConstrainLoss, Name=ActivityConstrainLoss |--> &Log",
-                "weightConstrainLoss, Name=WeightConstrainLoss |--> &Log",
-                "activityConstrainLoss, Name=activityContrainLoss |--> &Log",
+                "output, Name='output' |--> &LogStatistics",
+                "outputTarget, Name='outputTarget' |--> &LogStatistics",
+                "mainLoss, Name=MainLoss |--> &LogFloat",
+                "totalLoss, Name=TotalLoss |--> &LogFloat",
+                "activityConstrainLoss, Name=ActivityConstrainLoss |--> &LogFloat",
+                "weightConstrainLoss, Name=WeightConstrainLoss |--> &LogFloat",
 
-                "output, Name=Output |--> &Data2TextFile",
-                "outputTarget, Name=OutputTarget |--> &Data2TextFile",
                 //"output, Name=Output |--> &Tensor2Statistics2File",
                 //"outputTarget, Name=OutputTarget |--> &Tensor2Statistics2File",
                 //"output, outputTarget,  Name1=Output, Name2=OutputTarget |--> &CompareDensityCurve",

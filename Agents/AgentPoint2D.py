@@ -5,6 +5,7 @@ import os
 import math
 import random
 import sys
+from typing import DefaultDict
 from utils.utils import ArgsGlobal
 import warnings
 
@@ -24,8 +25,7 @@ from utils_torch.utils import NpArray2Tensor
 
 class AgentPoint2D(object):
     def __init__(self, param=None):
-        if param is not None:
-            self.param = param        
+        utils_torch.model.InitForModel(self, param, DefaultFullName="agent")
     def InitFromParam(self, param=None):
         if param is not None:
             self.param = param
@@ -33,21 +33,26 @@ class AgentPoint2D(object):
             param = self.param
         param.cache.__object__ = self
         
-        self.cache = utils_torch.EmptyPyObj()
         self.cache.Modules = utils_torch.EmptyPyObj()
 
-        utils.AddLog("Agent: Initializing.")
+        utils_torch.AddLog("Agent: Initializing.")
+
+        self.BuildModules()
 
         EnsureAttrs(param, "InitTasks", default=[])
-        for Task in param.InitTasks:
+        InitTasks = utils_torch.ParseTaskObj(param.InitTasks)
+        for Task in InitTasks:
             utils_torch.ProcessInitTask(Task, ObjCurrent=self.param, ObjRoot=utils.ArgsGlobal)
 
-        utils_torch.router.ParseRoutersForObj(self, ObjRefList=[self, self.param])
+        self.InitModules()
 
-        utils.AddLog("Agent: Initialized.")
+        utils_torch.router.ParseRoutersForObj(self, ObjRefList=[self, self.param])
+        utils_torch.AddLog("Agent: Initialized.")
 
         self.PlotPlaceCellsActivity(Save=True, SavePath=utils.ArgsGlobal.SaveDir + "PlaceCellsActivity.png")
         self.PlotPlaceCellsXY(Save=True, SavePath=utils.ArgsGlobal.SaveDir + "PlaceCellsXY.png")
+
+        #self.SetFullName("") # FullName should be set from outside.
     def AddModule(self, name, module):
         setattr(self.cache.Modules, name, module)
     def SetModelInputOutput(self):
@@ -56,14 +61,13 @@ class AgentPoint2D(object):
         self.SetModelInputOutputNum()
     def SetTrajectory2ModelInputMethod(self):
         param = self.param
-
         if param.Task in ["PredictXYs"]:
             self.Trajectory2ModelInputInit = self.Trajectory2ModelInputInitXY
         elif param.Task in ["PredictPlaceCellsActivity"]:
             self.Trajectory2ModelInputInit = self.Trajectory2ModelInputInitPlaceCells
         else:
             raise Exception()
-        EnsureAttrs(param, "model.Input.Type", default="dXY")
+        EnsureAttrs(param.Modules, "model.Input.Type", default="dXY")
         if param.model.Input.Type in ["dXY"]:
             self.Trajectory2ModelInput = self.Trajectory2ModelInputdXY
         elif param.model.Input.Type in ["dLDirection"]:
@@ -82,17 +86,17 @@ class AgentPoint2D(object):
         param = self.param
         # EnsureAttrs(param, "Task", default="PredictPlaceCellsActivity")
         if param.Task in ["PredictPlaceCellsActivity"]:
-            SetAttrs(param, "model.InputInit.Num", value=self.param.PlaceCells.Num)
-            SetAttrs(param, "model.Neurons.Output.Num", value=self.param.PlaceCells.Num)
+            SetAttrs(param.Modules, "model.InputInit.Num", value=self.param.Modules.PlaceCells.Num)
+            SetAttrs(param, "Modules.model.Neurons.Output.Num", value=self.param.Modules.PlaceCells.Num)
         elif param.Task in ["PredictXYs"]:
-            SetAttrs(param, "model.InputInit.Num", value=2)
-            SetAttrs(param, "model.Neurons.Output.Num", value=2)
+            SetAttrs(param.Modules, "model.InputInit.Num", value=2)
+            SetAttrs(param, "Modules.model.Neurons.Output.Num", value=2)
         else:
             raise Exception()
         if param.model.Input.Type in ["dXY"]:
-            SetAttrs(param, "model.Neurons.Input.Num", value=2)
+            SetAttrs(param.Modules, "model.Neurons.Input.Num", value=2)
         elif param.model.Input.Type in ["dLDirection"]:
-            SetAttrs(param, "model.Neurons.Input.Num", value=3)
+            SetAttrs(param, "Modules.model.Neurons.Input.Num", value=3)
         else:
             raise Exception()
         return
@@ -102,24 +106,26 @@ class AgentPoint2D(object):
         return
     def PlotPlaceCellsXY(self, Save=True, SavePath=utils.ArgsGlobal.SaveDir + "agent-PlaceCells-XYs.svg"):
         param = self.param
+        cache = self.cache
         ax = utils.ArgsGlobal.object.world.Arenas[0].PlotArena(Save=False)
-        self.PlaceCells.PlotXYs(ax, Save=Save, SavePath=SavePath)
+        cache.Modules.PlaceCells.PlotXYs(ax, Save=Save, SavePath=SavePath)
     def PlotPlaceCellsActivity(
             self, PlotNum=3, Resolution=50, Arena=None, 
             Save=True, SavePath=utils.ArgsGlobal.SaveDir + "agent-PlaceCells-XYs.svg"
         ):
         param = self.param
-        if PlotNum > param.PlaceCells.Num:
-            CellIndices = range(param.PlaceCells.Num)
+        cache = self.cache
+        if PlotNum > param.Modules.PlaceCells.Num:
+            CellIndices = range(param.Modules.PlaceCells.Num)
         else:
-            CellIndices = utils_torch.RandomSelect(range(param.PlaceCells.Num), PlotNum)
+            CellIndices = utils_torch.RandomSelect(range(param.Modules.PlaceCells.Num), PlotNum)
         if Arena is None:
             Arena = utils.ArgsGlobal.object.world.Arenas[0]
         BoundaryBox = Arena.param.BoundaryBox
         fig, axes = utils_torch.plot.CreateFigurePlt(PlotNum, RowNum="auto", ColNum="auto")
         ResolutionX, ResolutionY = utils_torch.plot.ParseResolution(BoundaryBox.Width, BoundaryBox.Height, Resolution)
         XYs = utils_torch.geometry2D.LatticeXYs(BoundaryBox, ResolutionX, ResolutionY, Flatten=True)
-        Activity = self.PlaceCells.XYs2Activity(XYs) # [PointNum, PlaceCellsNum, (Activity)]
+        Activity = self.cache.Modules.PlaceCells.XYs2Activity(XYs) # [PointNum, PlaceCellsNum, (Activity)]
         Activity = Activity[:, CellIndices]
 
         mask = Arena.GetInsideMask(BoundaryBox, ResolutionX, ResolutionY) # [ResolutionX, ResolutionY]
@@ -141,10 +147,11 @@ class AgentPoint2D(object):
                 ax, _Activity, IsDataColored=True, 
                 XYRange=BoundaryBox,
                 ColorMap="jet",
+                PixelHeightWidthRatio="Equal",
                 Min=ActivityColored.Min, Max=ActivityColored.Max, 
             )
             utils_torch.plot.SetAxRangeFromBoundaryBox(ax, BoundaryBox)
-            CellXY = self.PlaceCells.data.XYs[CellIndex]
+            CellXY = cache.Modules.PlaceCells.data.XYs[CellIndex]
             utils_torch.plot.PlotPoint(ax, CellXY, Color="Red", Type="Triangle")
             ax.set_title("PlaceCells Index:%d XY:(%.2f, %.2f)"%(CellIndex, CellXY[0], CellXY[1]))
 
@@ -463,7 +470,7 @@ class AgentPoint2D(object):
         Directions[:, 0] = np.random.uniform(-np.pi, np.pi, param.TrajectoryNum)
 
         for StepIndex in range(param.StepNum):
-            #utils.AddLog("Step: %d"%StepIndex)
+            #utils_torch.AddLog("Step: %d"%StepIndex)
             XY = XYs[:, StepIndex, :] # [PointNum, 2]
             Direction = Directions[:, StepIndex]
             dL = dLs[:, StepIndex]
@@ -552,7 +559,7 @@ class AgentPoint2D(object):
         return Trajectory.XYs[:, 0, :]
     def Trajectory2ModelInputInitPlaceCells(self, Trajectory):
         XYInit = Trajectory.XYs[:, 0, :] # [BatchSize, (x, y)]
-        PlaceCellsActivity = self.PlaceCells.XYs2Activity(XYInit) # inputInit
+        PlaceCellsActivity = cache.Modules.PlaceCells.XYs2Activity(XYInit) # inputInit
         return PlaceCellsActivity
     def Trajectory2ModelInputdXY(self, Trajectory):
         return [
@@ -590,7 +597,7 @@ class AgentPoint2D(object):
     def Trajectory2PlaceCellsActivity(self, Trajectory):
         XYs = Trajectory.XYs[:, 1:, :]
         shape = XYs.shape
-        return self.PlaceCells.XYs2Activity(XYs.reshape(shape[0] * shape[1], 2)).reshape(shape[0], shape[1], -1) # [BatchSize, StepNum, PlaceCellsNum]
+        return cache.Modules.PlaceCells.XYs2Activity(XYs.reshape(shape[0] * shape[1], 2)).reshape(shape[0], shape[1], -1) # [BatchSize, StepNum, PlaceCellsNum]
     def Trajectory2ModelOutputPlaceCells(self, Trajectory):
         return [
             utils_torch.NpArray2Tensor(
@@ -608,7 +615,7 @@ class AgentPoint2D(object):
     def SetTensorLocation(self, Location="cpu", Recur=True):
         self.cache.TensorLocation = Location
         if Recur:
-            for Module in ListValues(self.cache.Modules):
+            for Name, Module in ListAttrsAndValues(self.cache.Modules):
                 if hasattr(Module, "SetTensorLocation"):
                     Module.SetTensorLocation(Location)
     def GetTensorLocation(self):
@@ -1164,12 +1171,6 @@ class AgentPoint2D(object):
                             arena=self.arenas.current_arena(),
                             separate_ei=self.model.separate_ei
                         )
-    def save(self, save_path, save_name):
-        utils_torch.EnsurePath(save_path)
-        with open(save_path + save_name, 'wb') as f:
-            torch.save(self.dict, f)
-        self.model.save(save_path, '%s_model'%save_name)
-    def SetFullName(self, FullName):
-        utils_torch.model.SetFullNameForModel(self, FullName)
 
 __MainClass__ = AgentPoint2D
+utils_torch.model.SetMethodForModelClass(__MainClass__)

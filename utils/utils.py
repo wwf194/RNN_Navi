@@ -8,11 +8,16 @@ import json5
 import utils
 from inspect import getframeinfo, stack
 
-ArgsGlobal = utils.json.EmptyPyObj()
+import utils_torch
+
+ArgsGlobal = utils_torch.PyObj({
+    "logger":{}
+})
 
 def Init():
-    SetLoggerGlobal()
-    SetSaveDir()
+    utils_torch.SetSaveDir(ArgsGlobal)
+    utils_torch.SetArgsGlobal(ArgsGlobal)
+    utils_torch.SetLoggerGlobal(ArgsGlobal)
 
 def GetRequiredFile(file_start):
     if isinstance(file_start, str):
@@ -50,67 +55,85 @@ def _GetRequiredFile(file, file_list):
             #print('file_rel_main: %s'%file_rel_main)
             _GetRequiredFile(file_rel_main, file_list)
 
+# class Logger:
+#     def __init__(self, Name):
+#         self.logger = _CreateLogger(Name)
+#     def AddLog(self, log, TimeStamp=True, File=True, LineNum=True):
+#         Caller = getframeinfo(stack()[1][0])
+#         if TimeStamp:
+#             log = "[%s]%s"%(GetTime(), log)
+#         if File:
+#             log = "%s File \"%s\""%(log, Caller.filename)
+#         if LineNum:
+#             log = "%s, line %d"%(log, Caller.lineno)
+#         self.logger.debug(log)
+
+#     def AddWarning(self, log, TimeStamp=True, File=True, LineNum=True):
+#         Caller = getframeinfo(stack()[1][0])
+#         if TimeStamp:
+#             log = "[%s][WARNING]%s"%(GetTime(), log)
+#         if File:
+#             log = "%s File \"%s\""%(log, Caller.filename)
+#         if LineNum:
+#             log = "%s, line %d"%(log, Caller.lineno)
+#         self.logger.debug(log)
+
+#     def AddError(self, log, TimeStamp=True):
+#         if TimeStamp:
+#             self.logger.error("[%s][ERROR]%s"%(GetTime(), log))
+#         else:
+#             self.logger.error("%s"%log)
+
+# def AddLog(log, logger=None, *args, **kw):
+#     ParseLogger(logger).AddLog(log, *args, **kw)
+
+# def AddWarning(log, logger=None, *args, **kw):
+#     ParseLogger(logger).AddWarning(log, *args, **kw)
+
+# def AddError(log, logger=None, *args, **kw):
+#     ParseLogger(logger).AddError(log, *args, **kw)
+
+# def ParseLogger(logger):
+#     if logger is None:
+#         logger = utils_torch.ArgsGlobal.logger.Global
+#     elif isinstance(logger, str):
+#         logger = GetLogger(logger)
+#     else:
+#         raise Exception()
+#     return logger
+
+
 def GetSaveDir():
     return ArgsGlobal.SaveDir
 
-def SetSaveDir():
-    import utils_torch
-    SaveDir = "./log/Experiment-%s/"%(GetTime("%Y-%m-%d-%H:%M:%S"))
-    utils_torch.EnsureDir(SaveDir)
-    ArgsGlobal.SaveDir = SaveDir
+# def GetLogger(Name, CreateIfNone=True):
+#     if not hasattr(ArgsGlobal.logger, Name):
+#         if CreateIfNone:
+#             AddLogger(Name)
+#         else:
+#             raise Exception()
+#     return getattr(ArgsGlobal.logger, Name)
+# def CreateLogger(Name):
+#     return Logger(Name)
 
-def SetLoggerGlobal():
-    ArgsGlobal.logger_global = Getlogger('log-global')
-
-def GetLoggerGlobal():
-    return ArgsGlobal.logger_global
-
-def Getlogger(logger_name='log'):
-    # 输出到console
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.DEBUG) # 指定被处理的信息级别为最低级DEBUG，低于level级别的信息将被忽略
-    if not os.path.exists("./log/"):
-        os.mkdir("./log/")
+# def _CreateLogger(Name):
+#     # 输出到console
+#     console_handler = logging.StreamHandler()
+#     console_handler.setLevel(logging.DEBUG) # 指定被处理的信息级别为最低级DEBUG，低于level级别的信息将被忽略
+#     if not os.path.exists("./log/"):
+#         os.mkdir("./log/")
     
-    if not hasattr(ArgsGlobal, "SaveDir"):
-        SetSaveDir()
+#     if not hasattr(ArgsGlobal, "SaveDir"):
+#         SetSaveDir()
 
-    # 输出到file
-    file_handler = logging.FileHandler(ArgsGlobal.SaveDir + "%s-%s.txt"%(logger_name, GetTime("%Y-%m-%d-%H:%M:%S")), mode='w', encoding='utf-8')  # 不拆分日志文件，a指追加模式,w为覆盖模式
-    file_handler.setLevel(logging.DEBUG)            
-    logger = logging.getLogger("LoggerMain")
-    logger.setLevel(logging.DEBUG)
-    logger.addHandler(console_handler)
-    logger.addHandler(file_handler)
-    return logger
-
-def AddLog(log, logger=None, TimeStamp=True, File=True, LineNum=True):
-    Caller = getframeinfo(stack()[1][0])
-    if TimeStamp:
-        log = "[%s]%s"%(GetTime(), log)
-    if File:
-        log = "%s File \"%s\""%(log, Caller.filename)
-    if LineNum:
-        log = "%s, line %d"%(log, Caller.lineno)
-    if logger is None:
-        logger = GetLoggerGlobal()
-    logger.debug(log)
-
-def AddWarning(log, logger=None, TimeStamp=True):
-    if logger is None:
-        logger = GetLoggerGlobal()
-    if TimeStamp:
-        logger.warning("[%s][WARNING]%s"%(GetTime(), log))
-    else:
-        logger.warning("%s"%log)
-
-def add_error(log, logger=None, TimeStamp=True):
-    if logger is None:
-        logger = GetLoggerGlobal()
-    if TimeStamp:
-        logger.error("[%s][ERROR]%s"%(GetTime(), log))
-    else:
-        logger.error("%s"%log)
+#     # 输出到file
+#     file_handler = logging.FileHandler(ArgsGlobal.SaveDir + "%s.txt"%(Name), mode='w', encoding='utf-8')  # 不拆分日志文件，a指追加模式,w为覆盖模式
+#     file_handler.setLevel(logging.DEBUG)            
+#     logger = logging.Logger(Name)
+#     logger.setLevel(logging.DEBUG)
+#     logger.addHandler(console_handler)
+#     logger.addHandler(file_handler)
+#     return logger
 
 def GetTime(format="%Y-%m-%d %H:%M:%S", verbose=False):
     time_str = time.strftime(format, time.localtime()) # Time display style: 2016-03-20 11:45:39

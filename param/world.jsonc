@@ -43,6 +43,6 @@
     },
     "InputInit":{
         "Type": "PlaceCellsActivation",
-        "Num": "$^param.agent.PlaceCells.Num"
+        "Num": "$^param.agent.Modules.PlaceCells.Num"
     }
 }

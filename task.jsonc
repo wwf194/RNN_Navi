@@ -1,62 +1,26 @@
-{
-    "SavePath": "&^SaveDir",
-    "Tasks": [
-        {
-            "Type":"LoadParamFile",
-            "Args":[
-                {
-                    "FilePath":"./param/RNNLIF.jsonc",
-                    "MountPath":"&^param.model",
-                },
-                {
-                    "FilePath":"./param/world.jsonc",
-                    "MountPath":"&^param.world"
-                },
-                {
-                    "FilePath":"./param/agent.jsonc",
-                    "MountPath":"&^param.agent"
-                },
-                {
-                    "FilePath":"./param/task-predictXYs.jsonc",
-                    "MountPath":"&^param.task"
-                }
-            ]
-        },
-        "ParseParamStatic",
-        {
-            "Type":"BuildObjectFromParam",
-            "Args":[
-                {
-                    "ParamPath": "&^param.world",
-                    "ModulePath": "World2D.Arenas2D",
-                    "MountPath": "&^object.world",
-                },
-                {
-                    "ParamPath": "&^param.agent",
-                    "ModulePath": "Agents.AgentPoint2D",
-                    "MountPath": "&^object.agent"
-                },
-            ]
-        },
-        "ParseParamStatic",
-        {
-            "Type": "FunctionCall",
-            "Args":[
-                "&^object.world.InitFromParam",
-                "&^object.agent.InitFromParam",
-                "&^object.agent.PlotPlaceCellsActivity",
-                ["&^object.agent.SetFullName", ["agent"]]
-                //["&^agent.GenerateRandomTrajectoryAndPlot", ["param=50"]]
-            ]
-        },
-        "ParseParamStatic",
-        "SetTensorLocation",
-        "SetLogger",
-        "ParseSelf",
-        {
-            "Type": "Train",
-            //"SubType": "Router",
-            "Args": "$^param.task"
-        },
-    ]
-}
+[
+    {
+        "Type":"LoadParamFile",
+        "Args":[
+            {
+                "FilePath":"./param/RNNLIF.jsonc",
+                "MountPath":"&^param.model",
+            },
+            {
+                "FilePath":"./param/world.jsonc",
+                "MountPath":"&^param.world"
+            },
+            {
+                "FilePath":"./param/agent.jsonc",
+                "MountPath":"&^param.agent"
+            },
+            {
+                "FilePath":"./param/task-predictXYs.jsonc",
+                "MountPath":"&^param.task"
+            }
+        ]
+    },
+    {
+        "DoTasks": "&^param.task"
+    }
+]

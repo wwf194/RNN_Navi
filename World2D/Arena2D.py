@@ -68,9 +68,7 @@ class Arena2D():
         for Shape in self.Shapes:
             Shape.PlotShape(ax, Save=False, SetXYRange=False)
         utils_torch.plot.SetHeightWidthRatio(ax, 1.0)
-        utils_torch.plot.SetAxRangeFromBoundaryBox(ax, param.BoundaryBox)
-        utils_torch.plot.SetXTicksForAx(ax, param.BoundaryBox.XMin, param.BoundaryBox.XMax)
-        utils_torch.plot.SetYTicksForAx(ax, param.BoundaryBox.YMin, param.BoundaryBox.YMax)
+        utils_torch.plot.SetAxRangeAndTicksFromBoundaryBox(ax, param.BoundaryBox)
         if Save:
             utils_torch.EnsureFileDir(SavePath)
             plt.savefig(SavePath)
