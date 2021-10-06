@@ -42,16 +42,10 @@ class RNNLIF(nn.Module):
         utils_torch.AddLog("RNNLIF: Initializing from param...")
         CheckAttrs(param, "Type", value="RNNLIF")
         self.param = param
-        #self.json_external_dict = {}
         Neurons = param.Neurons
-        EnsureAttrs(param, "Neurons", "IsExciInhi", default=False)
-        if MatchAttrs(Neurons.Recurrent, "IsExciInhi", value=True):
-            RemoveAttrs(Neurons.Recurrent.IsExciInhi)
-            SetAttrs(Neurons.Recurrent.ExciInhi, value={"Enable":True})
-        if MatchAttrs(Neurons.Recurrent, "IsExciInhi.Enable", value=True):
-            if not HasAttrs(Neurons.Recurrent, "Excitatory.Num"):
-                SetAttrs(Neurons.Recurrent, "Excitatory.Num", value=int(Neurons.Recurrent.Num * Neurons.Recurrent.Excitatory.Ratio))
-                SetAttrs(Neurons.Recurrent, "Inhibitory.Num", value=(Neurons.Num - Neurons.excitatory.Num))
+        EnsureAttrs(Neurons.Recurrent, "IsExciInhi", value=True)
+        if GetAttrs(Neurons.Recurrent.IsExciInhi):
+            EnsureAttrs(Neurons, "Recurrent.Excitatory.Ratio", default=0.8)
 
         cache.Modules = utils_torch.EmptyPyObj()
         cache.Dynamics = utils_torch.EmptyPyObj()
@@ -90,7 +84,7 @@ class RNNLIF(nn.Module):
         cache = self.cache
         DefaultEntryStr = "&Dynamics.%s"%ListAttrsAndValues(self.param.Dynamics)[0][0]
         EnsureAttrs(param.Dynamics, "__Entry__", default=DefaultEntryStr)
-        SetAttrs(cache, "Dynamics.__Entry__", value=utils_torch.parse.Resolve(param.Dynamics.__Entry__, 
+        SetAttrs(cache, "Dynamics.__Entry__", value=utils_torch.parse.ResolveStr(param.Dynamics.__Entry__, 
             ObjRefList=[cache.Modules, cache.Dynamics, cache, param.Modules, param.Dynamics, param]))
         #utils_torch.parse.ParseRouters(data.Routers, ObjRefList=[data.Modules, data.Routers, data])
     def forward(self, Input):

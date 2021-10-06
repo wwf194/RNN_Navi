@@ -1,24 +1,14 @@
 [
     {
-        "Type":"LoadParamFile",
-        "Args":[
-            {
-                "FilePath":"./param/RNNLIF.jsonc",
-                "MountPath":"&^param.model",
-            },
-            {
-                "FilePath":"./param/world.jsonc",
-                "MountPath":"&^param.world"
-            },
-            {
-                "FilePath":"./param/agent.jsonc",
-                "MountPath":"&^param.agent"
-            },
+        "LoadParamFile":[
             {
                 "FilePath":"./param/task-predictXYs.jsonc",
                 "MountPath":"&^param.task"
             }
-        ]
+        ],
+        "BuildObj":{
+            
+        }
     },
     {
         "DoTasks": "&^param.task"

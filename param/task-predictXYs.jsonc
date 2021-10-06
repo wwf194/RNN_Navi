@@ -1,25 +1,82 @@
 {
     "Task": "PredictXYs",
     "Tasks":[
-        "ParseParamStatic",
         {
-        "BuildObjectFromParam":[
-                {
-                    "ParamPath": "&^param.world",
-                    "ModulePath": "World2D.Arenas2D",
-                    "MountPath": "&^object.world",
-                },
-                {
-                    "ParamPath": "&^param.agent",
-                    "ModulePath": "Agents.AgentPoint2D",
-                    "MountPath": "&^object.agent"
-                },
-            ],
+            "DoTasks":"&^param.task.Init"
+        },
+        {
+            "Train":"&^param.task.Train"
+        }
+    ],
+    "LoadParamAndBuildObj":[
+        {
+            "SaveObj":{
+                "MountPath": ["&^object.agent", "&^object.world"],
+                "SaveName": ["agent", "world"],
+                "SavePath": ["auto", "auto"],
+            },
+        },
+        {
+            "LoadObj":{
+                "SavePath": ["&^object.agent", "&^object.world"],
+                "SaveName": ["agent", "world"],
+                "MountPath": ["auto", "auto"],
+            },
+        },
+        {
+            "LoadParam":{
+                "ParamPath": ["&^object.agent.param", "&^object.world.param"],
+                "MountPath": ["&^param.agent", "&^param.world"],
+            },
         },
         "ParseParamStatic",
         {
             "FunctionCall":[
-                ["&^object.agent.SetFullName", [""]],
+                "&^object.world.InitFromParam",
+                "&^object.agent.InitFromParam",
+            ],
+        },
+        "ParseParamStatic",
+    ],
+    "Init":[
+        {
+            "LoadParamFile":[
+                {
+                    "FilePath":[
+                        "./param/RNNLIF.jsonc", 
+                        "./param/world.jsonc", 
+                        "./param/agent.jsonc"
+                    ],
+                    "MountPath":[
+                        "&^param.model",
+                        "&^param.world",
+                        "&^param.agent"
+                    ]
+                }
+            ],
+        },
+        "ParseParamStatic",
+        {
+            "BuildObjFromParam":{
+                "ParamPath": ["&^param.world", "&^param.agent"],
+                "ModulePath": ["World2D.Arenas2D", "Agents.AgentPoint2D"],
+                "MountPath": ["&^object.world", "&^object.agent"],
+            },
+        },
+        {
+            "BuildObj":{
+                "ModulePath": [
+                    "utils_torch.log.LoggerForEpochBatchTrain"
+                ],
+                "MountPath":[
+                    "&^log.Data"
+                ]
+            }
+        },
+        "ParseParamStatic",
+        {
+            "FunctionCall":[
+                ["&^object.agent.SetFullName", ""],
                 "&^object.world.InitFromParam",
                 "&^object.agent.InitFromParam",
                 "&^object.agent.PlotPlaceCellsActivity",
@@ -33,52 +90,56 @@
         "ParseSelf",
         {
             "FunctionCall": [
-                "&^object.agent.cache.Modules.model.PlotWeight",
                 "&^object.agent.cache.Modules.model.SetTrainWeight",
-            ]        
+            ]
         },
-        {
-            "Train": {
-                "Type": "SupervisedLearning",
-                "SubType": "EpochBatch",
-                "Method": "GradientDescend",
-                "Epoch.Num": 200,
-                "Batch.Num": "#1000 * 2",
-                "Batch.Size": 200,
-                "Task": "$^param.task.Task",
-                "TrajectoryParam": {
-                    //"TrajectoryNum": "$Batch.Size",
-                    "TrajectoryNum": 200,
-                    "XYStart.Method": "UniformInArena",
-                    "StepNum": 50,
-                    "Arena": "&^object.world.GetArenaByIndex(0)",
-                    "StepLength.Distribution":{
-                        "Type": "Reyleigh",
-                        "Mean": 0.05,
-                    },
-                    "DirectionChange.Distribution":{
-                        "Type": "Gaussian",
-                        "Mean": 0.0,
-                        "Std": "#3.1415926 / 180 * 5"      
-                    }
-                },
-                "TrainParam":{
-                    "LearningRate": 0.001,
-                    "WeightDecay": 0.0,
-                    "Momentum": 0.0,
-                    "Dampening": 0.0, 
-                    "Nesterov": false,
-                },
-                "Batch.Internal":{
-                    "In":["TrajectoryParam", "TrainParam"],
-                    "Routings": [
-                        
-                        // "&CreateDataLogger |--> DataLogger",
-                        "TrajectoryParam, TrainParam |--> &^object.agent.cache.Train"
-                    ],
-                },
-                "Batch.Input": ["&TrajectoryParam", "&TrainParam"]
+    ],
+    "Train": {
+        "Type": "SupervisedLearning",
+        "SubType": "EpochBatch",
+        "Method": "GradientDescend",
+        "Epoch.Num": 200,
+        "Batch.Num": "#1000 * 2",
+        "Batch.Size": 200,
+        "Task": "$^param.task.Task",
+        "TrajectoryParam": {
+            //"TrajectoryNum": "$Batch.Size",
+            "TrajectoryNum": 200,
+            "XYStart.Method": "UniformInArena",
+            "StepNum": 50,
+            "Arena": "&^object.world.GetArenaByIndex(0)",
+            "StepLength.Distribution":{
+                "Type": "Reyleigh",
+                "Mean": 0.05,
+            },
+            "DirectionChange.Distribution":{
+                "Type": "Gaussian",
+                "Mean": 0.0,
+                "Std": "#3.1415926 / 180 * 5"      
             }
+        },
+        "TrainParam":{
+            "LearningRate": 0.001,
+            "WeightDecay": 0.0,
+            "Momentum": 0.0,
+            "Dampening": 0.0, 
+            "Nesterov": false,
+        },
+        "Batch.Input": ["&TrajectoryParam", "&TrainParam"],
+        "Batch.Train":{
+            "In":["TrajectoryParam", "TrainParam"],
+            "Routings": [
+                "TrajectoryParam, TrainParam |--> &^object.agent.cache.Train"
+            ],
+        },
+        "Batch.Test":{
+            "In":["TrajectoryParam", "TrainParam"],
+            "Routings": [
+                "TrajectoryParam, TrainParam |--> &^object.agent.cache.Test"
+            ],
+        },
+        "SaveAndLoad":{                
         }
-    ]
+    },
+
 }

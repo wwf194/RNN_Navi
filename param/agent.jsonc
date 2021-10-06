@@ -67,7 +67,17 @@
                 "TrajectoryParam |--> &GenerateRandomTrajectory |--> Trajectory",
                 "Trajectory |--> &Trajectory2ModelInput |--> ModelInput",
                 "Trajectory |--> &Trajectory2ModelOutput |--> ModelOutputTarget",
-                "ModelInput, ModelOutputTarget, TrainParam |--> &model.Train",
+                "ModelInput, ModelOutputTarget, TrainParam |--> &model.cache.Dynamics.Train",
+            ],
+        },
+        "Test":{
+            "In":["TrajectoryParam", "TrainParam"],
+            "Out":[],
+            "Routings": [
+                "TrajectoryParam |--> &GenerateRandomTrajectory |--> Trajectory",
+                "Trajectory |--> &Trajectory2ModelInput |--> ModelInput",
+                "Trajectory |--> &Trajectory2ModelOutput |--> ModelOutputTarget",
+                "ModelInput, ModelOutputTarget, TrainParam |--> &model.cache.Dynamics.Test",
             ],
         }
     }

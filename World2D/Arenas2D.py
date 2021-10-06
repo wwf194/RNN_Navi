@@ -44,20 +44,9 @@ class Arenas2D:
         self.SetCurrentArena(0)
         for Index, Arena in enumerate(self.Arenas):
             Arena.PlotInsideMask(Save=True, SavePath=utils.ArgsGlobal.SaveDir + "Arenas2D-InsideMask=%d.png"%Index)
-    '''
-    def PlotArenas_cv(self, save=True, save_path='./', **kw):
-        for index, arena in enumerate(self.Arenas):
-            arena.Plotarena_cv(save=save, save_path=save_path, save_name='arena_%d_plot.png'%(index), **kw)
-    '''
     def PlotArenas(self, save=True, save_path='./', **kw):
         for index, arena in enumerate(self.Arenas):
             arena.Plotarena_plt(save=save, save_path=save_path, save_name='arena_%d_plot.png'%(index), **kw)
-    def Plotrandom_xy_cv(self, res=50, save=True, save_path='./', **kw):
-        for index, arena in enumerate(self.Arenas):
-            arena.Plotrandom_xy_cv(save=save, save_path=save_path, save_name='arena_%d_random_xy.png'%(index), **kw)
-    def Plotrandom_xy(self, res=50, save=True, save_path='./', **kw):
-        for index, arena in enumerate(self.Arenas):
-            arena.Plotrandom_xy_plt(save=save, save_path=save_path, save_name='arena_%d_random_xy.png'%(index), **kw)
     def SetCurrentArena(self, Index):
         self.ArenaCurrent = self.Arenas[Index]
     def GetCurrentArena(self):
