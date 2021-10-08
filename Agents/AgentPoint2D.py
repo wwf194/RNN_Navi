@@ -24,34 +24,43 @@ from utils_torch.attrs import *
 from utils_torch.utils import NpArray2Tensor
 
 class AgentPoint2D(object):
-    def __init__(self, param=None):
-        utils_torch.model.InitForModel(self, param, DefaultFullName="agent")
-    def InitFromParam(self, param=None):
+    def __init__(self, param=None, data=None, **kw):
+        utils_torch.model.InitForModel(self, param, data, ClassPath="Agents.AgentPoint2D", **kw)
+    def InitFromParam(self, param=None, IsLoad=False):
         if param is not None:
             self.param = param
         else:
             param = self.param
+            data = self.data
+            cache = self.cache
         param.cache.__object__ = self
+        cache.IsLoad = IsLoad
+        cache.IsInit = not IsLoad
         
-        self.cache.Modules = utils_torch.EmptyPyObj()
-
+        cache.Modules = utils_torch.EmptyPyObj()
+        cache.Dynamics = utils_torch.EmptyPyObj()
+        self.Modules = cache.Modules
+        self.Dynamics = cache.Dynamics
+        
         utils_torch.AddLog("Agent: Initializing.")
-
         self.BuildModules()
 
         EnsureAttrs(param, "InitTasks", default=[])
         InitTasks = utils_torch.ParseTaskObj(param.InitTasks)
         for Task in InitTasks:
-            utils_torch.ProcessInitTask(Task, ObjCurrent=self.param, ObjRoot=utils.ArgsGlobal)
-
+            utils_torch.DoTask(Task, ObjCurrent=self.param, ObjRoot=utils.ArgsGlobal)
         self.InitModules()
-
-        utils_torch.router.ParseRoutersForObj(self, ObjRefList=[self, self.param])
+        self.ParseRouters()
         utils_torch.AddLog("Agent: Initialized.")
-
-        self.PlotPlaceCellsActivity(Save=True, SavePath=utils.ArgsGlobal.SaveDir + "PlaceCellsActivity.png")
-        self.PlotPlaceCellsXY(Save=True, SavePath=utils.ArgsGlobal.SaveDir + "PlaceCellsXY.png")
-
+        
+        self.PlotPlaceCellsActivity(
+            Save=True,
+            SavePath=utils_torch.GetSaveDir() + "PlaceCells/" + "PlaceCellsActivity.png"
+        )
+        self.PlotPlaceCellsXY(
+            Save=True,
+            SavePath=utils_torch.GetSaveDir() + "PlaceCells/" + "PlaceCellsXY.png"
+        )
         #self.SetFullName("") # FullName should be set from outside.
     def AddModule(self, name, module):
         setattr(self.cache.Modules, name, module)
@@ -67,10 +76,10 @@ class AgentPoint2D(object):
             self.Trajectory2ModelInputInit = self.Trajectory2ModelInputInitPlaceCells
         else:
             raise Exception()
-        EnsureAttrs(param.Modules, "model.Input.Type", default="dXY")
-        if param.model.Input.Type in ["dXY"]:
+        EnsureAttrs(param, "Modules.model.Input.Type", default="dXY")
+        if param.Modules.model.Input.Type in ["dXY"]:
             self.Trajectory2ModelInput = self.Trajectory2ModelInputdXY
-        elif param.model.Input.Type in ["dLDirection"]:
+        elif param.Modules.model.Input.Type in ["dLDirection"]:
             self.Trajectory2ModelInput = self.Trajectory2ModelInputdLDirection
         else:
             raise Exception()
@@ -86,16 +95,16 @@ class AgentPoint2D(object):
         param = self.param
         # EnsureAttrs(param, "Task", default="PredictPlaceCellsActivity")
         if param.Task in ["PredictPlaceCellsActivity"]:
-            SetAttrs(param.Modules, "model.InputInit.Num", value=self.param.Modules.PlaceCells.Num)
+            SetAttrs(param, "Modules.model.InputInit.Num", value=self.param.Modules.PlaceCells.Num)
             SetAttrs(param, "Modules.model.Neurons.Output.Num", value=self.param.Modules.PlaceCells.Num)
         elif param.Task in ["PredictXYs"]:
-            SetAttrs(param.Modules, "model.InputInit.Num", value=2)
+            SetAttrs(param, "Modules.model.InputInit.Num", value=2)
             SetAttrs(param, "Modules.model.Neurons.Output.Num", value=2)
         else:
             raise Exception()
-        if param.model.Input.Type in ["dXY"]:
-            SetAttrs(param.Modules, "model.Neurons.Input.Num", value=2)
-        elif param.model.Input.Type in ["dLDirection"]:
+        if param.Modules.model.Input.Type in ["dXY"]:
+            SetAttrs(param, "model.Neurons.Input.Num", value=2)
+        elif param.Modules.model.Input.Type in ["dLDirection"]:
             SetAttrs(param, "Modules.model.Neurons.Input.Num", value=3)
         else:
             raise Exception()
@@ -104,17 +113,23 @@ class AgentPoint2D(object):
         utils_torch.parse.ParsePyObjStatic(self.param, ObjCurrent=self.param, ObjRoot=utils.ArgsGlobal, InPlace=True)
         #utils_torch.parse.ParsePyObjDynamic(self.param, ObjCurrent=self.param, ObjRoot=utils.ArgsGlobal, InPlace=True)
         return
-    def PlotPlaceCellsXY(self, Save=True, SavePath=utils.ArgsGlobal.SaveDir + "agent-PlaceCells-XYs.svg"):
+    def PlotPlaceCellsXY(self, Save=True, SavePath=None):
+        if SavePath is None:
+            SavePath = utils_torch.GetSaveDir() + "PlaceCells/" + "agent-PlaceCells-XYs.svg"
         param = self.param
         cache = self.cache
-        ax = utils.ArgsGlobal.object.world.Arenas[0].PlotArena(Save=False)
+        ax = utils_torch.GetArgsGlobal().object.world.Arenas[0].PlotArena(Save=False)
         cache.Modules.PlaceCells.PlotXYs(ax, Save=Save, SavePath=SavePath)
     def PlotPlaceCellsActivity(
             self, PlotNum=3, Resolution=50, Arena=None, 
-            Save=True, SavePath=utils.ArgsGlobal.SaveDir + "agent-PlaceCells-XYs.svg"
+            Save=True, SavePath=None
         ):
         param = self.param
         cache = self.cache
+        
+        if SavePath is None:
+            SavePath = utils_torch.GetSaveDir() + "PlaceCells/" + "agent-PlaceCells-XYs.svg"
+        
         if PlotNum > param.Modules.PlaceCells.Num:
             CellIndices = range(param.Modules.PlaceCells.Num)
         else:
@@ -156,8 +171,7 @@ class AgentPoint2D(object):
             ax.set_title("PlaceCells Index:%d XY:(%.2f, %.2f)"%(CellIndex, CellXY[0], CellXY[1]))
 
         plt.tight_layout()
-        if Save:
-            plt.savefig(SavePath)
+        utils_torch.plot.SaveFigForPlt(Save, SavePath)
     def report_perform(self, prefix='', verbose=True):
         report = prefix
         for key in self.perform_list.keys():

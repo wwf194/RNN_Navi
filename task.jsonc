@@ -6,8 +6,16 @@
                 "MountPath":"&^param.task"
             }
         ],
+        
+    },
+    {
         "BuildObj":{
-            
+            "ModulePath": [
+                "utils_torch.log.LoggerForEpochBatchTrain"
+            ],
+            "MountPath":[
+                "&^log.Data"
+            ]
         }
     },
     {

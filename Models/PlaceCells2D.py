@@ -24,30 +24,34 @@ def InitFromParam(param):
     return PlaceCells2D(param)
 
 class PlaceCells2D(object):
-    def __init__(self, param=None):
-        self.data = utils_torch.EmptyPyObj()
-        if param is not None:
-            self.param = param
-    def InitFromParam(self, param=None):
+    def __init__(self, param=None, data=None, **kw):
+        utils_torch.model.InitForModel(self, param, data, ClassPath="Models.PlaceCells2D", **kw)
+    def InitFromParam(self, param=None, IsLoad=False):
         if param is not None:
             self.param = param
         else:
             param = self.param
+            cache = self.cache
+        cache.IsLoad = IsLoad
+        cache.IsInit = not IsLoad
         self.CalculateXYs()
         self.SetXYs2ActivityMethod()
     def CalculateXYs(self):
         param = self.param
-        if HasAttrs(param.XYs, "Init"):
-            EnsureAttrs(param.XYs.Init, "Method", default="FunctionCall")
-            if param.XYs.Init.Method in ["FunctionCall"]:
-                utils_torch.CallFunctions(param.XYs.Init.Args, ObjCurrent=self, ObjRoot=utils.ArgsGlobal)
-            else:
-                raise Exception()
+        cache = self.cache
+        if cache.IsInit:
+            if HasAttrs(param.XYs, "Init"):
+                EnsureAttrs(param.XYs.Init, "Method", default="FunctionCall")
+                if param.XYs.Init.Method in ["FunctionCall"]:
+                    utils_torch.CallFunctions(param.XYs.Init.Args, ObjCurrent=self, ObjRoot=utils.ArgsGlobal)
+                else:
+                    raise Exception()
     def SetXYs(self, XYs):
         param = self.param
         data = self.data
-        data.XYsNp = data.XYs = XYs
-        SetAttrs(param, "XYs", value="&data.XYs")
+        cache = self.cache
+        data.XYs = XYs
+        #SetAttrs(param, "XYs", value="&data.XYs")
     def SetXYs2ActivityMethod(self):
         param = self.param
         data = self.data
@@ -55,7 +59,7 @@ class PlaceCells2D(object):
         methods = param.XYs2Activity.Init
         for method in methods:
             if method.Type in ["XYs2dLs"]:
-                Function = lambda XYs:utils_torch.geometry2D.XYsPair2Distance(XYs, data.XYsNp)
+                Function = lambda XYs:utils_torch.geometry2D.XYsPair2Distance(XYs, data.XYs)
             elif method.Type in ["DiffGaussian"]:
                 GaussianCurve1 = utils_torch.math.GetGaussianCurveMethod(method.Amp1, method.Mean1, method.Std1)
                 GaussianCurve2 = utils_torch.math.GetGaussianCurveMethod(method.Amp2, method.Mean2, method.Std2)
@@ -83,7 +87,9 @@ class PlaceCells2D(object):
         # @return Activity: np.ndarray [PointNum, PlaceCells.Num]
         raise Exception()
         return
-    def PlotXYs(self, ax=None, Save=False, SavePath=utils.ArgsGlobal.SaveDir + "PlaceCells2D-XYs.png"):
+    def PlotXYs(self, ax=None, Save=False, SavePath=None):
+        if SavePath is None:
+            SavePath=utils_torch.GetSaveDir() + "PlaceCells2D-XYs.png"
         data = self.data
         if ax is None:
             plt.close("all")
@@ -419,3 +425,4 @@ class PlaceCells2D(object):
         return coords_max.mean(axis=2)
         
 __MainClass__ = PlaceCells2D
+utils_torch.model.SetMethodForModelClass(__MainClass__)

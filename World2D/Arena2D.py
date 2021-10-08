@@ -5,32 +5,36 @@ import torch
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 
-import utils
 import World2D
 import utils_torch
 from utils_torch.attrs import *
+
 class Arena2D():
-    def __init__(self, param=None):
-        self.param = param
-        if param is not None:
-            self.param = param
-    def InitFromParam(self, param=None):
+    def __init__(self, param=None, data=None, **kw):
+        utils_torch.model.InitForModel(self, param, data, ClassPath="World2D.Arena2D", **kw)
+    def InitFromParam(self, param=None, IsLoad=False):
         if param is not None:
             self.param = param
         else:
             param = self.param
-        EnsureAttrs(param, "Init", default=[])
-        EnsureAttrs(param, "Shapes", default=[])
+            cache = self.cache
+        cache.IsLoad = IsLoad
+        cache.IsInit = not IsLoad
+        cache.Modules = utils_torch.EmptyPyObj()
+        if cache.IsInit:
+            EnsureAttrs(param, "Init", default=[])
+            EnsureAttrs(param, "Shapes", default=[])
+        
         if len(param.Shapes)==0:
             raise Exception()
         self.Shapes = []
-        for ShapeParam in param.Shapes:
-            Shape = World2D.Shapes2D.BuildShape(ShapeParam)
-            Shape.InitFromParam()
+        for Index, ShapeParam in enumerate(GetAttrs(param.Shapes)):
+            Shape = World2D.Shapes2D.BuildShape(ShapeParam, LoadDir=cache.LoadDir)
+            Shape.InitFromParam(IsLoad=cache.IsLoad)
             self.Shapes.append(Shape)
-        self.CalculateBoundaryBox()
-
-        
+            setattr(cache.Modules, "Shape%d"%Index, Shape)
+        if cache.IsInit:
+            self.CalculateBoundaryBox()
     def CalculateBoundaryBox(self):
         param = self.param
         BoundaryBoxes = []
@@ -120,13 +124,16 @@ class Arena2D():
         })
     def ReportCollision(XY, dXY, XYCollision=None):
         return
-    def PlotInsideMask(self, ax=None, Save=False, SavePath=utils.ArgsGlobal.SaveDir + "Arena2D-InsideMask.png"):
+    def PlotInsideMask(self, ax=None, Save=False, SavePath=None):
+        if SavePath is None:
+            SavePath = utils_torch.GetSaveDir() + "Arenas/" + "Arena2D-InsideMask.png"
         if ax is None:
             fig, ax = plt.subplots()
         mask = self.GetInsideMask(ResolutionX=50, ResolutionY=50)
         mask = mask.astype(np.int32)
         utils_torch.plot.PlotMatrix(ax, mask)
         if Save:
+            utils_torch.EnsureFileDir(SavePath)
             plt.savefig(SavePath, format="png")
     def GetInsideMask(self, BoundaryBox=None, ResolutionX=None, ResolutionY=None):
         param = self.param
@@ -163,39 +170,6 @@ class Arena2D():
         xys = np.stack([xs,ys], axis=1) # np.stack will insert a dimension at designated axis. [num, 2]
         #print('Getrandom_xy_max: points shape:'+str(xys.shape))
         return xys
-    def save(self, dir_):
-        with open(dir_, 'wb') as f:
-            net = self.to(torch.device('cpu'))
-            torch.save(net.dict, f)
-            net = self.to(self.device)
-    def Getmask(self, res=None, res_x=None, res_y=None, points_grid=None):
-        #print('res_x: %d res_y: %d'%(res_x, res_y))
-        if res is not None:
-            res_x, res_y = Getres_xy(res, self.width, self.height)
-        if points_grid is not None:
-            if points_grid.shape[0] != res_x * res_y:
-                raise Exception('Arena.Getmask: points_grid shape must be consistent with res_x, res_y.')
-        else:
-            points_grid_int = np.empty(shape=[res_x, res_y, 2], dtype=np.int) # coord
-            for i in range(res_x):
-                points_grid_int[i, :, 1] = i # y_index
-            for i in range(res_y):
-                points_grid_int[:, i, 0] = i # x_index
-            points_grid = Getfloat_coords_np( points_grid_int.reshape(res_x * res_y, 2), self.xy_range, res_x, res_y ) # [res_x * res_y, 2]
-        arena_mask = np.ones((res_x, res_y)).astype(np.bool)
-        #print('res_x: %d res_y: %d'%(res_x, res_y))
-        #print(points_grid.shape)
-        points_out_of_region = self.out_of_region(points_grid, thres=0.0)
-        if points_out_of_region.shape[0] > 0:
-            print(points_out_of_region)
-            print(points_out_of_region.shape)
-            points_out_of_region = np.array([points_out_of_region//res_x, points_out_of_region%res_x], dtype=np.int)
-            print(points_out_of_region)
-            print(points_out_of_region.shape)           
-            points_out_of_region = points_out_of_region.transpose((1,0))
-            for i in range(points_out_of_region.shape[0]):
-                arena_mask[points_out_of_region[i,0], points_out_of_region[i,1]] = 0.0        
-            #arena_mask[points_out_of_region] = 0.0 does not work.
-        return arena_mask
 
 __MainClass__ = Arena2D
+utils_torch.model.SetMethodForWorldClass(__MainClass__)

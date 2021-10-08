@@ -1,5 +1,5 @@
 class Simulator2D:
-    def __init__(self, param=None):
+    def __init__(self, param=None, data=None, **kw):
         if param is not None:
             self.param = param
     def Simulate(self, param):

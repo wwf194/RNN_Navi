@@ -25,78 +25,20 @@ def main():
     elif Args.task in ["CleanFigure"]:
         CleanFigures()
     elif Args.task in ["ProcessTasks"]:
-        TaskObj = LoadTaskFile()
+        TaskObj = utils_torch.LoadTaskFile()
         TaskList = utils_torch.ParseTaskObj(TaskObj)
         if not Args.IsDebug:
             try: # catch all unhandled exceptions
-                ProcessTasks(TaskList)
+                utils_torch.DoTasks(TaskList, ObjRoot=utils_torch.GetArgsGlobal())
             except Exception:
                 utils_torch.AddError(traceback.format_exc())
                 raise Exception()
         else:
-            ProcessTasks(TaskList)
+            utils_torch.DoTasks(TaskList, ObjRoot=utils_torch.GetArgsGlobal())
     elif Args.task in ["TotalLines"]:
         utils_torch.CalculateGitProjectTotalLines()
     else:
         raise Exception("Inavlid Task: %s"%Args.task)
-
-def ProcessTasks(TaskList):  
-    for Index, Task in enumerate(TaskList):
-        utils_torch.EnsureAttrs(Task, "Args", default={})
-        TaskType = Task[0]
-        TaskArgs = Task[1]
-        ProcessTask(TaskType, TaskArgs)
-
-def ProcessTask(TaskType, TaskArgs):
-    if isinstance(TaskArgs, str) and "&" in TaskArgs:
-        TaskArgs = utils_torch.parse.ResolveStr(TaskArgs, ObjRoot=utils.ArgsGlobal)
-    # if TaskType in ["FunctionCall"]:
-    #     print("aaa")
-    if TaskType in ["AddLibraryPath"]:
-        AddLibraryPath(TaskArgs)
-    elif TaskType in ["LoadJsonFile"]:
-        LoadJsonFile(TaskArgs)
-    elif TaskType in ["LoadParamFile"]:
-        utils_torch.LoadParamFromFile(TaskArgs, utils.ArgsGlobal)
-    elif TaskType in ["ParseParam", "ParseParamStatic"]:
-        ParseParamStatic(TaskArgs)
-    elif TaskType in ["ParseParamDynamic"]:
-        ParseParamDynamic(TaskArgs)
-    elif TaskType in ["ParseSelf"]:
-        utils_torch.parse.ParsePyObjStatic(TaskArgs, ObjRoot=utils.ArgsGlobal, InPlace=True)
-    elif TaskType in ["BuildObjFromParam", "BuildObjectFromParam"]:
-        utils_torch.BuildObjFromParam(TaskArgs, ObjRoot=utils.ArgsGlobal)
-    elif TaskType in ["BuildObj"]:
-        utils_torch.BuildObj(TaskArgs, ObjRoot=utils.ArgsGlobal)
-    elif TaskType in ["SetTensorLocation"]:
-        SetTensorLocation(TaskArgs)
-    elif TaskType in ["SetLogger", "SetDataLogger"]:
-        SetLogger(TaskArgs)
-    elif TaskType in ["FunctionCall"]:
-        utils_torch.CallFunctions(TaskArgs, ObjRoot=ArgsGlobal)
-    elif TaskType in ["Train"]:
-        utils_torch.train.Train(TaskArgs, ObjRoot=ArgsGlobal, Logger=utils_torch.GetDataLogger())
-    elif TaskType in ["DoTasks"]:
-        _TaskList = utils_torch.ParseTaskObj(TaskArgs, ObjRoot=utils.ArgsGlobal)
-        ProcessTasks(_TaskList)
-    # elif TaskType in ["DoTask"]:
-    #     ProcessTask(TaskType, TaskArgs)
-    else:
-        utils.AddWarning("Unknown Task.Type: %s"%TaskType)
-
-def SetTensorLocation(Args):
-    EnsureAttrs(Args, "Method", default="Auto")
-    if Args.Method in ["Auto", "auto"]:
-        Location = utils_torch.GetGPUWithLargestUseableMemory()
-    else:
-        raise Exception()
-
-    for Obj in utils_torch.ListValues(ArgsGlobal.object):
-        if hasattr(Obj, "SetTensorLocation"):
-            Obj.SetTensorLocation(Location)
-
-def SetLogger(Args):
-    SetAttrs(utils.ArgsGlobal, "log.Data", utils_torch.log.LoggerForEpochBatchTrain())
 
 def ScanConfigFile(FilePath="./config.jsonc"):
     import json5
@@ -116,106 +58,6 @@ utils.Init()
 import utils_torch
 from utils_torch.attrs import *
 utils_torch.SetArgsGlobal(utils.ArgsGlobal)
-
-def LoadTaskFile(FilePath="./task.jsonc", Save=True):
-    TaskObj = utils_torch.json.JsonFile2PyObj(FilePath)
-    return TaskObj
-
-def LoadJsonFile(Args):
-    if isinstance(Args, utils_torch.PyObj):
-        Args = GetAttrs(Args)
-    if isinstance(Args, dict):
-        _LoadJsonFile(utils_torch.json.JsonObj2PyObj(Args))
-    elif isinstance(Args, list):
-        for Arg in Args:
-            _LoadJsonFile(Arg)
-    elif isinstance(Args, utils_torch.PyObj):
-        _LoadJsonFile(Args)
-    else:
-        raise Exception()
-
-def _LoadJsonFile(Args):
-    Obj = utils_torch.json.JsonFile2PyObj(Args.FilePath)
-    if not Args.MountPath.startswith("&^"):
-        raise Exception()
-    MountPath = Args.MountPath.replace("&^", "")
-    SetAttrs(ArgsGlobal, MountPath, Obj)
-
-# def LoadConfigFile(Args):
-#     if isinstance(Args, list):
-#         for Args_dict in Args:
-#             _LoadConfigFile(Args_dict)
-#     else:
-#         _LoadConfigFile(Args)
-
-# def _LoadConfigFile(Args):
-#     path, name = Args["path"], Args["name"]
-#     utils.ArgsGlobal["ConfigDicts"][name] = utils.JsonFile2JsonObj(path)
-#     utils_torch.AddLog("Loaded configuration file from to %s config %s."%(path, name))
-
-def AddLibraryPath(Args):
-    if isinstance(Args, dict):
-        _AddLibraryPath(Args)
-    elif isinstance(Args, list):
-        for Args_dict in Args:
-            _AddLibraryPath(Args_dict)
-    else:
-        raise Exception()
-
-def _AddLibraryPath(Args):
-    # requires Args to be a dict.
-    lib_name = Args['name']
-    lib_path = Args['path']
-    if lib_path=="!Getfrom_config":
-        success = False
-        for config_name, config_dict in utils.ArgsGlobal.ConfigDicts.__dict__.items():
-            if config_dict.get("libs") is not None:
-                libs = config_dict["libs"]
-                if libs.get(lib_name) is not None:
-                    lib_path = libs[lib_name]["path"]
-                    success = True
-                    break
-        if not success:
-            AddWarning('add_lib failed: cannot find path to lib %s'%lib_name)
-            return
-    if os.path.exists(lib_path):
-        if os.path.isdir(lib_path):
-            sys.path.append(lib_path)
-            AddLog("Added library <%s> from path %s"%(lib_name, lib_path))
-        else:
-            AddWarning('add_lib failed: path %s exists but is not a directory.'%lib_path)
-    else:
-        AddWarning('add_lib: invalid lib_path: ', lib_path)
-
-def ParseParamStaticAndDynamic(Args):
-    ParseParamStatic(Args)
-    ParseParamDynamic(Args)
-    return
-def ParseParamStatic(Args, Save=True, SavePath=utils.ArgsGlobal.SaveDir + "param_parsed_static.jsonc"):
-    import utils_torch
-    # for attr, param in utils_torch.ListAttrsAndValues(ArgsGlobal.param):
-    #     utils_torch.parse.ParsePyObjStatic(param, ObjCurrent=param, ObjRoot=utils.ArgsGlobal, InPlace=True)
-    param = ArgsGlobal.param
-    utils_torch.parse.ParsePyObjStatic(param, ObjCurrent=param, ObjRoot=utils.ArgsGlobal, InPlace=True)
-    if Save:
-        SavePath = utils_torch.RenameIfPathExists(SavePath)
-        utils_torch.json.PyObj2JsonFile(ArgsGlobal.param, SavePath)
-    return
-def ParseParamDynamic(Args, Save=True, SavePath=utils.ArgsGlobal.SaveDir + "param_parsed_dynamic.jsonc"):
-    import utils_torch
-    for attr, param in utils_torch.ListAttrsAndValues(ArgsGlobal.param):
-        utils_torch.parse.ParsePyObjDynamic(param, ObjCurrent=param, ObjRoot=utils.ArgsGlobal, InPlace=True)
-    if Save:
-        utils_torch.json.PyObj2JsonFile(ArgsGlobal.param, utils_torch.RenameIfPathExists(SavePath))
-    return
-def train(Args):
-    if Args.type in ["SupervisedLearning"]:
-        train_supervised_learning(Args)
-    else:
-        raise Exception()
-
-def train_supervised_learning(Args):
-    return
 
 def CleanLog():
     import utils_torch

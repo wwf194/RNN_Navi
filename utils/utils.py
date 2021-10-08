@@ -15,9 +15,9 @@ ArgsGlobal = utils_torch.PyObj({
 })
 
 def Init():
-    utils_torch.SetSaveDir(ArgsGlobal)
-    utils_torch.SetArgsGlobal(ArgsGlobal)
-    utils_torch.SetLoggerGlobal(ArgsGlobal)
+    utils_torch.SetArgsGlobal(ArgsGlobal=ArgsGlobal)
+    utils_torch.SetSaveDir(ArgsGlobal=ArgsGlobal)
+    utils_torch.SetLoggerGlobal(ArgsGlobal=ArgsGlobal)
 
 def GetRequiredFile(file_start):
     if isinstance(file_start, str):
@@ -55,14 +55,8 @@ def _GetRequiredFile(file, file_list):
             #print('file_rel_main: %s'%file_rel_main)
             _GetRequiredFile(file_rel_main, file_list)
 
-def GetSaveDir():
-    return ArgsGlobal.SaveDir
-
-# def GetTime(format="%Y-%m-%d %H:%M:%S", verbose=False):
-#     time_str = time.strftime(format, time.localtime()) # Time display style: 2016-03-20 11:45:39
-#     if verbose:
-#         print(time_str)
-#     return time_str
+# def GetSaveDir():
+#     return ArgsGlobal.SaveDir
 
 # basic Json manipulation methods
 def JsonFile2JsonObj(file_path):

@@ -28,7 +28,7 @@ class PyObjCache(object):
         return
 
 class PyObj(object):
-    def __init__(self, param=None):
+    def __init__(self, param=None, data=None, **kw):
         self.cache = PyObjCache()
         if param is not None:
             if type(param) is dict:

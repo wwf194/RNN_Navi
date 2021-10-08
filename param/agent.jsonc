@@ -6,7 +6,7 @@
         "PredictXYs": 100,
         "PredictPlaceCellsActivity": 2048
     },
-    "model.Input.Type": "dLDirection", //dXY
+    
     "InitTasks":[
         {
             "FunctionCall": [
@@ -55,6 +55,7 @@
             }
         },
         "model":"$^param.model",
+        "model.Input.Type": "dLDirection", //dXY
         "model.InputInit.Type": "__ToBeSet__",
         "model.ModulePath": "Models.RNNLIF",
         "__ResolveBase__": true,

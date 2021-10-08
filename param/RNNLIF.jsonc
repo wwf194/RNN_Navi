@@ -139,7 +139,7 @@
         },
         "InputInit2StateInit":{
             "Type":"MLP",
-            "Output.":"$Neurons.Recurrent.Num",
+            //"Output.Num":"$Neurons.Recurrent.Num",
             "Init.Method":"FromNeuronNum",
             "Neurons":{
                 "Num":[
@@ -262,7 +262,6 @@
                 "firingRate |--> &FiringRates.Receive",
             ]
         },
-
         "CalculateWeightConstrainLoss":{
             "In": ["refLoss"],
             "Out": ["weightConstrainLoss"],

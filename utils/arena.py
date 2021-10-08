@@ -25,7 +25,7 @@ class Direction(IntEnum):
     Null = 8
 
 class SquareLattice:
-    def __init__(self, param=None):
+    def __init__(self, param=None, data=None, **kw):
         if param is not None:
             self.param = param
     def InitFromParam(self, param):

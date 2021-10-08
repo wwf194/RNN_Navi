@@ -37,12 +37,12 @@
             ]
         }
     ],
-    "Input":{
-        "Type": "dxdy",
-        "Num": 2
-    },
-    "InputInit":{
-        "Type": "PlaceCellsActivation",
-        "Num": "$^param.agent.Modules.PlaceCells.Num"
-    }
+    // "Input":{
+    //     "Type": "dxdy",
+    //     "Num": 2
+    // },
+    // "InputInit":{
+    //     "Type": "PlaceCellsActivation",
+    //     "Num": "$^param.agent.Modules.PlaceCells.Num"
+    // }
 }

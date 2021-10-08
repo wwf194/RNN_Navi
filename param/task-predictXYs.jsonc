@@ -8,36 +8,48 @@
             "Train":"&^param.task.Train"
         }
     ],
-    "LoadParamAndBuildObj":[
+    "Load":[
+        // {
+        //     "SaveObj":{
+        //         "MountPath": ["&^object.agent", "&^object.world"],
+        //         "SaveName": ["agent", "world"],
+        //         "SavePath": ["auto", "auto"],
+        //     },
+        // },
         {
-            "SaveObj":{
-                "MountPath": ["&^object.agent", "&^object.world"],
+            "LoadObjFromFile":{
+                "SaveDir": ["auto", "auto"],
                 "SaveName": ["agent", "world"],
-                "SavePath": ["auto", "auto"],
+                "MountPath": ["&^object.agent", "&^object.world"],
             },
         },
         {
             "LoadObj":{
-                "SavePath": ["&^object.agent", "&^object.world"],
-                "SaveName": ["agent", "world"],
-                "MountPath": ["auto", "auto"],
-            },
-        },
-        {
-            "LoadParam":{
-                "ParamPath": ["&^object.agent.param", "&^object.world.param"],
+                "SourcePath": ["&^object.agent.param", "&^object.world.param"],
                 "MountPath": ["&^param.agent", "&^param.world"],
             },
         },
         "ParseParamStatic",
         {
             "FunctionCall":[
-                "&^object.world.InitFromParam",
-                "&^object.agent.InitFromParam",
+                ["&^object.world.LoadFromParam"],
+                ["&^object.agent.LoadFromParam"],
             ],
         },
         "ParseParamStatic",
     ],
+    "Save":{
+        "CallGraph":{
+            "Routings": [
+                "Type=Obj |--> #utils_torch.GetSaveDir |--> SaveDir",
+                "Name=agent, SaveDir=%SaveDir |--> &^object.agent.Save",
+                "Name=world, SaveDir=%SaveDir |--> &^object.world.Save",
+            ]
+        },
+        "RemoveObj":{
+            "MountPath":["&^object.agent", "&^object.world"]
+        }       
+    },
     "Init":[
         {
             "LoadParamFile":[
@@ -63,24 +75,15 @@
                 "MountPath": ["&^object.world", "&^object.agent"],
             },
         },
-        {
-            "BuildObj":{
-                "ModulePath": [
-                    "utils_torch.log.LoggerForEpochBatchTrain"
-                ],
-                "MountPath":[
-                    "&^log.Data"
-                ]
-            }
-        },
         "ParseParamStatic",
         {
             "FunctionCall":[
-                ["&^object.agent.SetFullName", ""],
                 "&^object.world.InitFromParam",
                 "&^object.agent.InitFromParam",
+                ["&^object.agent.SetFullName", "agent"],
+                ["&^object.world.SetFullName", "world"],
                 "&^object.agent.PlotPlaceCellsActivity",
-                "&^object.agent.cache.Modules.model.SetTrainWeight",
+                // "&^object.agent.cache.Modules.model.SetTrainWeight",
                 //["&^agent.GenerateRandomTrajectoryAndPlot", ["param=50"]]
             ],
         },
@@ -129,17 +132,15 @@
         "Batch.Train":{
             "In":["TrajectoryParam", "TrainParam"],
             "Routings": [
-                "TrajectoryParam, TrainParam |--> &^object.agent.cache.Train"
+                "TrajectoryParam, TrainParam |--> &^object.agent.cache.Dynamics.Train"
             ],
         },
         "Batch.Test":{
             "In":["TrajectoryParam", "TrainParam"],
             "Routings": [
-                "TrajectoryParam, TrainParam |--> &^object.agent.cache.Test"
+                "TrajectoryParam, TrainParam |--> &^object.agent.cache.Dynamics.Test"
             ],
         },
-        "SaveAndLoad":{                
-        }
-    },
 
+    },
 }

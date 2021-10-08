@@ -18,18 +18,18 @@ from matplotlib import pyplot as plt
 from World2D.Shapes2D import Shape2D
 
 class Polygon(Shape2D):
-    def __init__(self, param=None):
-        if param is not None:
-            self.param = param
-    def InitFromParam(self, param=None):
+    def __init__(self, param=None, data=None, **kw):
+        super().__init__()
+        utils_torch.model.InitForModel(self, param, data=data, ClassPath="World2D.Shapes.Polygon", **kw)
+    def InitFromParam(self, param=None, IsLoad=False):
         if param is not None:
             self.param = param
         else:
             param = self.param
-        
-        self.data = utils_torch.EmptyPyObj()
-        self.cache = utils_torch.EmptyPyObj()
-        cache = self.cache
+            data = self.data
+            cache = self.cache
+        cache.IsLoad = IsLoad
+        cache.IsInit = not IsLoad
         cache.CollisionPoints = []
         cache.CollisionLines = [] 
 
@@ -48,33 +48,31 @@ class Polygon(Shape2D):
             self.IsInside = self.IsOutsideShape
             self.IsOutside = self.IsInsideShape
         
-        if HasAttrs(param, "Init.Center"):
-            SetAttrs(param.Init, "Center.X", GetAttrs(param.Init.Center)[0])
-            SetAttrs(param.Init, "Center.Y", GetAttrs(param.Init.Center)[1])
+        if cache.IsInit:
+            if HasAttrs(param, "Init.Center"):
+                SetAttrs(param.Init, "Center.X", GetAttrs(param.Init.Center)[0])
+                SetAttrs(param.Init, "Center.Y", GetAttrs(param.Init.Center)[1])
 
-        EnsureAttrs(param, "Init.Method", default="FromVertices")
-        if param.Init.Method in ["FromVertices", "FromVertex"]:
-            self.CalculatEdgesFromVertices()
-        elif param.Init.Method in ["CenterRadiusTheta"]:
-            CheckAttrs(param.Subtype, value="RegularPolygon")
-            self.InitRegularPolygon()
-            self.CalculatEdgesFromVertices()
-        else:
-            raise Exception()
-
-        self.data.VerticesNp = np.array(GetAttrs(param.Vertices), dtype=np.float32)
-        self.CalculateEdgesInfo()
-        self.CalculateBoundaryBox()
+            EnsureAttrs(param, "Init.Method", default="FromVertices")
+            if param.Init.Method in ["FromVertices", "FromVertex"]:
+                self.CalculatEdgesFromVertices()
+            elif param.Init.Method in ["CenterRadiusTheta"]:
+                CheckAttrs(param.Subtype, value="RegularPolygon")
+                self.InitRegularPolygon()
+                self.CalculatEdgesFromVertices()
+            else:
+                raise Exception()
+            data.VerticesNp = np.array(GetAttrs(param.Vertices), dtype=np.float32)
+            self.CalculateEdgesInfo()
+            self.CalculateBoundaryBox()
         #self.PlotShape(SavePath="./Polygon.png")
-
     def GenerateRandomInternalPositions(self):
         return
     def InitRegularPolygon(self):
         param = self.param
         Init = param.Init
         if not HasAttrs(param, "Edges.Num"):
-            if not HasAttrs(param, "Vertices.Num"):
-                raise Exception()
+            assert HasAttrs(param, "Vertices.Num")
             SetAttrs(param, "Edges.Num", param.Vertices.Num)        
         EnsureAttrs(param.Init, "")
         DirectionIncrement = math.pi * 2 / param.Edges.Num
@@ -113,22 +111,22 @@ class Polygon(Shape2D):
         data.EdgesNormDirectionNp = np.array(GetAttrs(param.Edges.Norm.Direction), dtype=np.float32)
     def CalculateBoundaryBox(self):
         param = self.param
+        data = self.data
         # Calculate Boundary Box
-       
         VerticesNp = np.array(GetAttrs(param.Vertices), dtype=np.float32) # [VertexNum, (x, y)]
-        XMin = np.min(VerticesNp[:, 0])
-        XMax = np.max(VerticesNp[:, 0])
-        YMin = np.min(VerticesNp[:, 1])
-        YMax = np.max(VerticesNp[:, 1])
+        XMin = float(np.min(VerticesNp[:, 0]))
+        XMax = float(np.max(VerticesNp[:, 0]))
+        YMin = float(np.min(VerticesNp[:, 1]))
+        YMax = float(np.max(VerticesNp[:, 1]))
         SetAttrs(param, "BoundaryBox", value=[XMin, YMin, XMax, YMax])
         SetAttrs(param, "BoundaryBox.XMin", XMin)
-        SetAttrs(param, "BoundaryBox.YMax", XMax)
+        SetAttrs(param, "BoundaryBox.XMax", XMax)
         SetAttrs(param, "BoundaryBox.YMin", YMin)
         SetAttrs(param, "BoundaryBox.YMax", YMax)
         SetAttrs(param, "BoundaryBox.Width", XMax - XMin)
         SetAttrs(param, "BoundaryBox.Height", YMax - YMin)
         SetAttrs(param, "BoundaryBox.Size", max(param.BoundaryBox.Width, param.BoundaryBox.Height))
-    
+        data.VerticesNp = VerticesNp
     def PrintInfo(self):
         utils_torch.AddLog('ArenaPolygon: edge_num:%d'%(self.edge_num))
         utils_torch.AddLog('center_coord:(%.1f, %.1f)'%(self.center_coord[0], self.center_coord[1]))
@@ -141,7 +139,7 @@ class Polygon(Shape2D):
     def Distance2Edges(self, PointsNp):
         data = self.data
         return utils_torch.geometry2D.Distance2Edges(PointsNp, data.VerticesNp, data.EdgesNormNp)
-    def isMovingOutside(self, Points, NextPoints):
+    def IsMovingOutside(self, Points, NextPoints):
         return self.isInside(Points) * self.isOutside(NextPoints)
     def CheckCollision(self, XY, dXY):
         param = self.param
@@ -174,7 +172,6 @@ class Polygon(Shape2D):
             Collision.Lambdas, Collision.Norms, Collision.Edges
         )
         return Collision
-
     def LogCollision(self, XYs, dXYs, Lambdas, Norms, Edges, SavePath="./CollisionPlot-0.png", Plot=False):
         CollisionNum = XYs.shape[0]
         cache = self.cache
@@ -220,48 +217,13 @@ class Polygon(Shape2D):
         if SetXYRange:
             ax.set_xlim(param.BoundaryBox.XMin, param.BoundaryBox.XMax)
             ax.set_ylim(param.BoundaryBox.YMin, param.BoundaryBox.YMax)
-            ax.set_xticks(np.linspace(param.BoundaryBox.XMin, param.BoundaryBox.XMax, 5))
-            ax.set_yticks(np.linspace(param.BoundaryBox.YMin, param.BoundaryBox.YMax, 5))
+            utils_torch.plot.SetXTicksFloat(ax, param.BoundaryBox.XMin, param.BoundaryBox.XMax,)
+            utils_torch.plot.SetYTicksFloat(ax, param.BoundaryBox.YMin, param.BoundaryBox.YMax,)
             ax.set_aspect(1)
 
         if Save:
             EnsureFileDir(SavePath)
             plt.savefig(SavePath, format="svg")
     
-    def plot_random_xy_cv(self, img=None, save=True, save_path='./', save_name='arena_random_xy.png', num=100, color=(0,255,0), plot_arena=True, **kw):
-        if img is None:
-            res = search_dict(kw, ['res, resolution'], default=100)
-            res_x, res_y = Getres_xy(res, self.width, self.height)
-            if plot_arena:
-                img = self.plot_arena(save=False, res=res)
-            else:
-                img = np.zeros([res_x, res_y, 3], dtype=np.uint8)
-                img[:,:,:] = (255, 255, 255)
-        else:
-            res_x, res_y = img.shape[0], img.shape[1]
-        points = self.Getrandom_xy(num=100)
-        points_int = Getint_coords_np(points, self.xy_range, res_x, res_y)
-        for point in points_int:
-            cv.circle(img, (point[0], point[1]), radius=0, color=color, thickness=4)
-        if save:
-            EnsurePath(save_path)
-            cv.imwrite(save_path + save_name, img[:, ::-1, :])
-        return img
-    def plot_random_xy_plt(self, ax=None, save=True, save_path='./', save_name='arena_random_xy.png', num=100, color=(0.0,1.0,0.0), plot_arena=True, **kw):
-        if ax is None:
-            figure, ax = plt.subplots()
-            if plot_arena:
-                self.plot_arena_plt(ax, save=False)
-            else:
-                ax.set_xlim(self.x0, self.x1)
-                ax.set_ylim(self.y0, self.y1)
-                ax.set_aspect(1) # so that x and y has same unit length in image.
-        points = self.Getrandom_xy(num=100)
-        ax.scatter(points[:,0], points[:,1], marker='o', color=color, edgecolors=(0.0,0.0,0.0), label='Start Positions')
-        plt.legend()
-        if save:
-            EnsurePath(save_path)
-            plt.savefig(save_path + save_name)
-        return ax
-    
 __MainClass__ = Polygon
+utils_torch.model.SetMethodForWorldClass(__MainClass__)

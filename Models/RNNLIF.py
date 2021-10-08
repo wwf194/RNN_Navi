@@ -24,21 +24,20 @@ def load_model(args):
 
 class RNNLIF(nn.Module):
     # Singel-Layer Recurrent Neural Network with Leaky Integrate-and-Fire Dynamics
-    def __init__(self, param=None):
+    def __init__(self, param=None, data=None, **kw):
         super(RNNLIF, self).__init__()
-        utils_torch.model.InitForModel(self, param)
-    def InitFromParam(self, param=None):
+        utils_torch.model.InitForModel(self, param, data, ClassPath="Models.RNNLIF", **kw)
+    def InitFromParam(self, param=None, IsLoad=False):
         if param is not None:
             self.param = param
         else:
             param = self.param
-
-        param.cache.__object__ = self
-        self.data = utils_torch.EmptyPyObj()
-        self.cache = utils_torch.EmptyPyObj()
-        data = self.data
-        cache = self.cache
-
+            data = self.data
+            cache = self.cache
+        
+        cache.__object__ = self
+        cache.IsLoad = IsLoad
+        cache.IsInit = not IsLoad
         utils_torch.AddLog("RNNLIF: Initializing from param...")
         CheckAttrs(param, "Type", value="RNNLIF")
         self.param = param
@@ -57,27 +56,27 @@ class RNNLIF(nn.Module):
 
         EnsureAttrs(param, "InitTasks", default=[])
         for Task in self.param.InitTasks:
-            utils_torch.ProcessInitTask(Task, ObjCurrent=self.cache, ObjRoot=utils.ArgsGlobal)
+            utils_torch.DoTask(Task, ObjCurrent=self.cache, ObjRoot=utils.ArgsGlobal)
         utils_torch.model.ListParameter(self)
     def Train(self, Input, OutputTarget, TrainParam):
         cache = self.cache
         Output = utils_torch.CallGraph(cache.Dynamics.Train, [Input, OutputTarget, TrainParam])
         return
-    def ParseRouters(self):
-        cache = self.cache
-        param = self.param
-        for Name, RouterParam in ListAttrsAndValues(param.Dynamics, Exceptions=["__ResolveRef__", "__Entry__"]):
-            utils_torch.router.ParseRouterStatic(RouterParam)
-            setattr(cache.Dynamics, Name, RouterParam)
-            setattr(RouterParam, "Name", Name) # For Debug
-        for Name, RouterParam in ListAttrsAndValues(param.Dynamics, Exceptions=["__ResolveRef__", "__Entry__"]):
-            RouterParsed = utils_torch.router.ParseRouterDynamic(RouterParam, InPlace=True, 
-                ObjRefList=[cache.Modules, cache.Dynamics, cache, 
-                    param.Modules, param.Dynamics, param, self,
-                    utils_torch.Models.Operators        
-                ])
-            setattr(cache.Dynamics, Name, RouterParsed)
-        return
+    # def ParseRouters(self):
+    #     cache = self.cache
+    #     param = self.param
+    #     for Name, RouterParam in ListAttrsAndValues(param.Dynamics, Exceptions=["__ResolveRef__", "__Entry__"]):
+    #         utils_torch.router.ParseRouterStatic(RouterParam)
+    #         setattr(cache.Dynamics, Name, RouterParam)
+    #         setattr(RouterParam, "Name", Name) # For Debug
+    #     for Name, RouterParam in ListAttrsAndValues(param.Dynamics, Exceptions=["__ResolveRef__", "__Entry__"]):
+    #         RouterParsed = utils_torch.router.ParseRouterDynamic(RouterParam, InPlace=True, 
+    #             ObjRefList=[cache.Modules, cache.Dynamics, cache, 
+    #                 param.Modules, param.Dynamics, param, self,
+    #                 utils_torch.Models.Operators        
+    #             ])
+    #         setattr(cache.Dynamics, Name, RouterParsed)
+    #     return
     def SetForwardEntry(self):
         param = self.param
         data = self.data
@@ -397,22 +396,6 @@ class RNNLIF(nn.Module):
         if verbose:
             print(result)
         return result
-    def Getweight_stat(self, verbose=True, complete=False):
-        result = ''
-        for name in ['i', 'r', 'o']:
-            if hasattr(self, name):
-                result += Gettensor_stat(getattr(self, name), name=name, verbose=False, complete=complete)
-        if verbose:
-            print(result)
-        return result
-    def Getweight_info(self, verbose=True, complete=False):
-        result = ''
-        for name in ['i', 'r', 'o']:
-            if hasattr(self, name):
-                result += Gettensor_info(getattr(self, name), name=name, verbose=False, complete=complete)
-        if verbose:
-            print(result)
-        return result
     def anal_gradient(self, verbose=True):
         result = ''
         for name in ['i', 'r', 'o']:
@@ -424,22 +407,6 @@ class RNNLIF(nn.Module):
         if verbose:
             print(result)
         return result
-    '''
-    def prep_path(self, path):
-        if self.input_mode in ['v_xy']:
-            inputs = torch.from_numpy(path['xy_delta']).float() # [batch_size, step_num, (vx, vy)]
-            outputs = torch.from_numpy(path['xy']).float() # [batch_size, step_num, (x, y)]
-        elif self.input_mode in ['v_hd']:
-            inputs = torch.from_numpy(np.stack((path['theta_xy'][:,:,0], path['theta_xy'][:,:,1], path['delta_xy']), axis=-1)).float() # [batch_size, step_num, (cos, sin, v)]
-            outputs = torch.from_numpy(path['xy']).float() # [batch_size, step_num, (x, y)]
-        else:
-            raise Exception('Unknown input mode:'+str(self.input_mode))
-        init = torch.from_numpy(path['xy_init']).float() # [batch_size, 2]
-        inputs = inputs.to(self.device)
-        init = init.to(self.device)
-        outputs = outputs.to(self.device)
-        return (inputs, init), outputs
-    '''
     def plot_Recurrent_weight(self, ax, cmap):
         weight_r = self.Getr().detach().cpu().Numpy()
         weight_r_mapped, weight_min, weight_max = norm_and_map(weight_r, cmap=cmap, return_min_max=True) # weight_r_mapped: [N_num, res_x, res_y, (r,g,b,a)]
