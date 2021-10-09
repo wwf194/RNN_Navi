@@ -57,7 +57,7 @@
             "Type":"RecurrentLIFLayer",
             "Subtype":"f(Wx+b)",
             "IsExciInhi": true,
-            "TimeConst": 0.1,
+            "TimeConst": 0.2,
             "Neurons": "$Neurons.Recurrent",
             "Modules":{
                 "NonLinear":{
@@ -295,11 +295,12 @@
                 "totalLoss |--> &CalculateGradient",
                 "&*GetTrainWeight |--> trainWeight",
                 "trainWeight, trainParam |--> &GradientDescend",
-
+                
+                "trainWeight |--> LogWeighStat",
                 "&*GetPlotWeight |--> plotWeight",
                 "plotWeight |--> &LogWeight",
-                "output, Name='output' |--> &LogStatistics",
-                "outputTarget, Name='outputTarget' |--> &LogStatistics",
+                "output, Name='output' |--> &LogStat",
+                "outputTarget, Name='outputTarget' |--> &LogStat",
                 "mainLoss, Name=MainLoss |--> &LogFloat",
                 "totalLoss, Name=TotalLoss |--> &LogFloat",
                 "activityConstrainLoss, Name=ActivityConstrainLoss |--> &LogFloat",
@@ -322,8 +323,8 @@
 
                 "&*GetPlotWeight |--> plotWeight",
                 "plotWeight |--> &LogWeight",
-                "output, Name='output' |--> &LogStatistics",
-                "outputTarget, Name='outputTarget' |--> &LogStatistics",
+                "output, Name='output' |--> &LogStat",
+                "outputTarget, Name='outputTarget' |--> &LogStat",
                 "mainLoss, Name=MainLoss |--> &LogFloat",
                 "totalLoss, Name=TotalLoss |--> &LogFloat",
                 "activityConstrainLoss, Name=ActivityConstrainLoss |--> &LogFloat",

@@ -1,5 +1,14 @@
 {
-    "LibraryPath":{
-        "utils_torch": "/data3/wangweifan/LibsPython/",
+    //Img17
+    "Library":{
+        "utils_torch": {
+            "Path": "/data3/wangweifan/LibsPython/utils_torch/",
+            "IncludePath": "/data3/wangweifan/LibsPython/",
+        }
+    },
+    "Dataset":{
+        "CIFAR10":{
+            "Path": "/data3/wangweifan/Datasets/CIFAR10/"
+        },
     }
 }
