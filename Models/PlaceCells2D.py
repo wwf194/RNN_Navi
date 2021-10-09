@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from Models.RNNLIF import InitFromParam
 import random
+import cv2 as cv
 
 import scipy
 import numpy as np
@@ -12,12 +12,9 @@ import torch.nn.functional as F
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-import cv2 as cv
-
 import utils
 from utils_torch import EnsurePath
 from utils_torch.plot import *
-#from utils_torch.plot import Getfloat_coords, Getfloat_coords_np, Getres_xy
 from utils.model import *
 
 def InitFromParam(param):

@@ -31,9 +31,9 @@
                 "Ratio": [0.05, 0.15],
                 "Reference": "&Modules.CalculatePredictionLoss",
             },
-            "Weight":[
-                "&*cache.Modules.Recurrent.FiringRate2RecurrentInput.GetWeight",
-                "&*cache.Modules.Recurrent.FiringRate2Output.GetWeight"
+            "GetWeightMethods":[
+                "&*Modules.Recurrent.FiringRate2RecurrentInput.GetWeight",
+                "&*Modules.Recurrent.FiringRate2Output.GetWeight"
             ],
         },
         "ActivityConstrain":{
@@ -56,14 +56,6 @@
         "Recurrent":{
             "Type":"RecurrentLIFLayer",
             "Subtype":"f(Wx+b)",
-            // "Weight":{
-            //     "Size":["$Neurons.Recurrent.Num", "$Neurons.Recurrent.Num"],
-            //     "Init":{
-            //         "Method": "kaiming",
-            //         "Coefficient": 1.0e-2
-            //     }
-            // },
-            //"IsExciInhi":"$Neurons.Recurrent.IsExciInhi",
             "IsExciInhi": true,
             "TimeConst": 0.1,
             "Neurons": "$Neurons.Recurrent",
@@ -199,7 +191,7 @@
         "PredictionLoss": "$Loss.Prediction",
         "GetConstrainWeight":{
             "Type": "FunctionsOutputs",
-            "Functions": "$Loss.WeightConstrain.Weight"
+            "Functions": "$Loss.WeightConstrain.GetWeightMethods"
         },
         "WeightConstrainLoss":{
             "Type": "L2Loss",

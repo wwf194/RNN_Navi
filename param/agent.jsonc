@@ -57,7 +57,7 @@
         "model":"$^param.model",
         "model.Input.Type": "dLDirection", //dXY
         "model.InputInit.Type": "__ToBeSet__",
-        "model.ModulePath": "Models.RNNLIF",
+        "model.ModulePath": "utils_torch.Models.RNNLIF",
         "__ResolveBase__": true,
     },
     "Dynamics":{

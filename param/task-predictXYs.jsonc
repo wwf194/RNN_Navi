@@ -41,7 +41,7 @@
     "Save":{
         "CallGraph":{
             "Routings": [
-                "Type=Obj |--> #utils_torch.GetSaveDir |--> SaveDir",
+                "Type=Obj |--> &#utils_torch.GetSaveDir |--> SaveDir",
                 "Name=agent, SaveDir=%SaveDir |--> &^object.agent.Save",
                 "Name=world, SaveDir=%SaveDir |--> &^object.world.Save",
             ]
@@ -68,6 +68,11 @@
             ],
         },
         "ParseParamStatic",
+        {
+            "RemoveObj":{
+                "MountPath":["&^param.model"]
+            },
+        },
         {
             "BuildObjFromParam":{
                 "ParamPath": ["&^param.world", "&^param.agent"],
