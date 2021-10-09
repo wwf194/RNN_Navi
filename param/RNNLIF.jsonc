@@ -120,11 +120,9 @@
             "Subtype":"f(Wx+b)",
             "Input.Num":"$Neurons.Input.Num",
             "Output.Num":"$Neurons.Recurrent.Num",
-            "Weight":{
-                "Init":{
-                    "Method": "kaiming",
-                    "Coefficient": 1.0e-1
-                }
+            "Weight.Init":{
+                "Method": "kaiming",
+                "Coefficient": 1.0e-0
             },
             "Bias": true,
             "NonLinear":"$Neurons.Recurrent.NonLinear"
@@ -143,9 +141,14 @@
             "Layers":{
                 "Num": "len($Modules.InputInit2StateInit.Neurons.Num) - 1",
                 "NonLinear": "$Neurons.Recurrent.NonLinear",
-                "Type": "f(Wx+b)",
-                "Bias": true,
-                "NonLinearOnLastLayer": false,
+                "Type": "NonLinearLayer",
+                "SubType": "f(Wx+b)",
+                //"Bias": false,
+                "LinearOnLastLayer": true,
+                "Weight.Init":{
+                    "Method": "kaiming",
+                    "Coefficient": 1.0e-1
+                }
             }
         },
         "Splitter":{
@@ -269,6 +272,53 @@
                 "activity, refLoss |--> &ActivityConstrainLoss |--> activityConstrainLoss"
             ]
         },
+
+        "Optimize":{
+            "In": ["output", "outputTarget", "activity", "trainParam"],
+            "Routings":[
+                "output, outputTarget |--> &PredictionLoss |--> mainLoss",
+                "activity, mainLoss |--> &CalculateActivityConstrainLoss |--> activityConstrainLoss",
+                "mainLoss |--> &CalculateWeightConstrainLoss |--> weightConstrainLoss",
+                "mainLoss, activityConstrainLoss, weightConstrainLoss |--> &Add |--> totalLoss",
+                "totalLoss |--> &CalculateGradient",
+                "&*GetTrainWeight |--> trainWeight",
+                "trainWeight, trainParam |--> &GradientDescend",
+                
+                "trainWeight |--> &LogWeightStat",
+                "&*GetPlotWeight |--> plotWeight",
+                "plotWeight |--> &LogWeight",
+                "output, Name='output' |--> &LogStat",
+                "outputTarget, Name='outputTarget' |--> &LogStat",
+                
+                "totalLoss, Name=TotalLoss |--> &LogLoss",
+                "mainLoss, Name=MainLoss |--> &LogLoss",
+                "activityConstrainLoss, Name=ActivityConstrainLoss |--> &LogLoss",
+                "weightConstrainLoss, Name=WeightConstrainLoss |--> &LogLoss",
+            ],
+        },
+        "OptimizeTest":{
+            "In": ["output", "outputTarget", "activity", "trainParam"],
+            "Routings":[
+                "output, outputTarget |--> &PredictionLoss |--> mainLoss",
+                "activity, mainLoss |--> &CalculateActivityConstrainLoss |--> activityConstrainLoss",
+                "mainLoss |--> &CalculateWeightConstrainLoss |--> weightConstrainLoss",
+                "mainLoss, activityConstrainLoss, weightConstrainLoss |--> &Add |--> totalLoss",
+                "totalLoss |--> &CalculateGradient",
+                "&*GetTrainWeight |--> trainWeight",
+                //"trainWeight, trainParam |--> &GradientDescend",
+                
+                "trainWeight |--> &LogWeightStat",
+                "&*GetPlotWeight |--> plotWeight",
+                "plotWeight |--> &LogWeight",
+                "output, Name='output' |--> &LogStat",
+                "outputTarget, Name='outputTarget' |--> &LogStat",
+                
+                "totalLoss, Name=TotalLoss |--> &LogLoss",
+                "mainLoss, Name=MainLoss |--> &LogLoss",
+                "activityConstrainLoss, Name=ActivityConstrainLoss |--> &LogLoss",
+                "weightConstrainLoss, Name=WeightConstrainLoss |--> &LogLoss",
+            ],
+        },
         "Train":{
             "In":["input", "outputTarget", "trainParam"],
             "Out":[],
@@ -284,52 +334,6 @@
                 "outputSeries, Name=Outputs |--> &LogTimeVaryingActivity",
                 "outputTarget, Name=OutputTargets |--> &LogTimeVaryingActivity",
             ]
-        },
-        "Optimize":{
-            "In": ["output", "outputTarget", "activity", "trainParam"],
-            "Routings":[
-                "output, outputTarget |--> &PredictionLoss |--> mainLoss",
-                "activity, mainLoss |--> &CalculateActivityConstrainLoss |--> activityConstrainLoss",
-                "mainLoss |--> &CalculateWeightConstrainLoss |--> weightConstrainLoss",
-                "mainLoss, activityConstrainLoss, weightConstrainLoss |--> &Add |--> totalLoss",
-                "totalLoss |--> &CalculateGradient",
-                "&*GetTrainWeight |--> trainWeight",
-                "trainWeight, trainParam |--> &GradientDescend",
-                
-                "trainWeight |--> LogWeighStat",
-                "&*GetPlotWeight |--> plotWeight",
-                "plotWeight |--> &LogWeight",
-                "output, Name='output' |--> &LogStat",
-                "outputTarget, Name='outputTarget' |--> &LogStat",
-                "mainLoss, Name=MainLoss |--> &LogFloat",
-                "totalLoss, Name=TotalLoss |--> &LogFloat",
-                "activityConstrainLoss, Name=ActivityConstrainLoss |--> &LogFloat",
-                "weightConstrainLoss, Name=WeightConstrainLoss |--> &LogFloat",
-                
-
-                //"output, Name=Output |--> &Tensor2Statistics2File",
-                //"outputTarget, Name=OutputTarget |--> &Tensor2Statistics2File",
-                //"output, outputTarget,  Name1=Output, Name2=OutputTarget |--> &CompareDensityCurve",
-            ],
-        },
-        "OptimizeTest":{
-            "In": ["output", "outputTarget", "activity", "trainParam"],
-            "Routings":[
-                "output, outputTarget |--> &PredictionLoss |--> mainLoss",
-                "activity, mainLoss |--> &CalculateActivityConstrainLoss |--> activityConstrainLoss",
-                "mainLoss |--> &CalculateWeightConstrainLoss |--> weightConstrainLoss",
-                "mainLoss, activityConstrainLoss, weightConstrainLoss |--> &Add |--> totalLoss",
-                "totalLoss |--> &CalculateGradient",
-
-                "&*GetPlotWeight |--> plotWeight",
-                "plotWeight |--> &LogWeight",
-                "output, Name='output' |--> &LogStat",
-                "outputTarget, Name='outputTarget' |--> &LogStat",
-                "mainLoss, Name=MainLoss |--> &LogFloat",
-                "totalLoss, Name=TotalLoss |--> &LogFloat",
-                "activityConstrainLoss, Name=ActivityConstrainLoss |--> &LogFloat",
-                "weightConstrainLoss, Name=WeightConstrainLoss |--> &LogFloat",
-            ],
         },
         "Test":{
             "In":["input", "outputTarget", "trainParam"],

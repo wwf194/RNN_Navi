@@ -47,7 +47,12 @@
             ]
         },
         "RemoveObj":{
-            "MountPath":["&^object.agent", "&^object.world"]
+            "MountPath":[
+                "&^object.agent",
+                "&^object.world",
+                "&^param.agent",
+                "&^param.world"
+            ]
         }       
     },
     "Init":[
@@ -94,7 +99,6 @@
         },
         "ParseParamStatic",
         "SetTensorLocation",
-        "SetLogger",
         "ParseSelf",
         {
             "FunctionCall": [
@@ -137,6 +141,7 @@
         "Batch.Train":{
             "In":["TrajectoryParam", "TrainParam"],
             "Routings": [
+                "TrainParam |--> &#utils_torch.train.ParseTrainParamEpochBatch",
                 "TrajectoryParam, TrainParam |--> &^object.agent.cache.Dynamics.Train"
             ],
         },
@@ -148,4 +153,10 @@
         },
 
     },
+    "Analysis":{
+        "Routings":[
+            
+            "&^object.agent.CompareTrajectory"
+        ]
+    }
 }

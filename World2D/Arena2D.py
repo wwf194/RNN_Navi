@@ -35,6 +35,8 @@ class Arena2D():
             setattr(cache.Modules, "Shape%d"%Index, Shape)
         if cache.IsInit:
             self.CalculateBoundaryBox()
+    def GetBoundaryBox(self):
+        return self.param.BoundaryBox
     def CalculateBoundaryBox(self):
         param = self.param
         BoundaryBoxes = []
@@ -64,7 +66,7 @@ class Arena2D():
         SetAttrs(param, "BoundaryBox.Width", BoundaryBox.XMax - BoundaryBox.XMin)
         SetAttrs(param, "BoundaryBox.Height", BoundaryBox.YMax - BoundaryBox.YMin)
         SetAttrs(param, "BoundaryBox.Size", max(BoundaryBox.Width, BoundaryBox.Height))
-    def PlotArena(self, ax=None, Save=True, SavePath="./Arena2D-Plot.png"):
+    def PlotArena(self, ax=None, Save=False, SavePath=None):
         param = self.param
         if ax is None:
             plt.close("all")
@@ -72,10 +74,8 @@ class Arena2D():
         for Shape in self.Shapes:
             Shape.PlotShape(ax, Save=False, SetXYRange=False)
         utils_torch.plot.SetHeightWidthRatio(ax, 1.0)
-        utils_torch.plot.SetAxRangeAndTicksFromBoundaryBox(ax, param.BoundaryBox)
-        if Save:
-            utils_torch.EnsureFileDir(SavePath)
-            plt.savefig(SavePath)
+        utils_torch.plot.SetAxRangeAndTicksFromBoundaryBox(ax, param.BoundaryBox)        
+        utils_torch.plot.SaveFigForPlt(Save, SavePath)
         return ax
     def PlotRandomInternalPoints(self, PointNum, SavePath):
         fig, ax = plt.subplots()

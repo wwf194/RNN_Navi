@@ -25,7 +25,12 @@ from utils_torch.utils import NpArray2Tensor
 
 class AgentPoint2D(object):
     def __init__(self, param=None, data=None, **kw):
-        utils_torch.model.InitForModel(self, param, data, ClassPath="Agents.AgentPoint2D", **kw)
+        utils_torch.model.InitForModel(
+            self, param, data, 
+            FullName="agent",
+            ClassPath="Agents.AgentPoint2D",
+            **kw
+        )
     def InitFromParam(self, param=None, IsLoad=False):
         if param is not None:
             self.param = param
@@ -514,6 +519,24 @@ class AgentPoint2D(object):
             "StepNum": param.StepNum,
             "TrajectoryNum": param.TrajectoryNum
         })
+    def GetTrajectoryByIndex(self, trajectory, Index):
+        if isinstance(Index, int):
+            TrajectoryNum = 1
+        else:
+            TrajectoryNum = utils_torch.GetLength(Index)
+        return {
+            "XYs": trajectory.XYs[Index, :, :],
+            "Directions": trajectory.Directions[Index, :],
+            "dXYs": trajectory.dXYs[Index, :, :],
+            "dLs": trajectory.dLs[Index, :],
+            "dDirections": trajectory.dDirections[Index, :],
+            "StepNum": trajectory.StepNum,
+            "TrajectoryNum": TrajectoryNum
+        }
+    def Trajectory2BoundaryBox(self, trajectory):
+        XYs = trajectory.XYs
+        XYs = XYs.reshape(-1, 2)
+        return utils_torch.plot.XYs2BoundaryBox(XYs)
     def GenerateRandomTrajectoryAndPlot(self, param, Save=False, SavePath=True):
         Trajectory = self.GenerateRandomTrajectory(param)
         PlotNum = param.TrajectoryNum
@@ -567,8 +590,9 @@ class AgentPoint2D(object):
         if Save:
             utils_torch.EnsureFileDir(SavePath)
             plt.savefig(SavePath)
-        plt.savefig("./Trajectory.svg", format="svg")
+        # plt.savefig("./Trajectory.svg", format="svg")
         return ax
+
     def Trajectory2ModelInputInitXY(self, Trajectory):
         return Trajectory.XYs[:, 0, :]
     def Trajectory2ModelInputInitPlaceCells(self, Trajectory):

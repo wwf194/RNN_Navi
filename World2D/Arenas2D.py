@@ -51,6 +51,8 @@ class Arenas2D:
     def PlotArenas(self, save=True, save_path='./', **kw):
         for index, arena in enumerate(self.Arenas):
             arena.Plotarena_plt(save=save, save_path=save_path, save_name='arena_%d_plot.png'%(index), **kw)
+    def PlotCurrentArena(self, ax=None, Save=False):
+        self.GetCurrentArena().PlotArena(ax, Save)
     def SetCurrentArena(self, Index):
         self.ArenaCurrent = self.Arenas[Index]
     def GetCurrentArena(self):
