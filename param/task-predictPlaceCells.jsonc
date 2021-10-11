@@ -9,6 +9,13 @@
         }
     ],
     "Load":[
+        // {
+        //     "SaveObj":{
+        //         "MountPath": ["&^object.agent", "&^object.world"],
+        //         "SaveName": ["agent", "world"],
+        //         "SavePath": ["auto", "auto"],
+        //     },
+        // },
         {
             "LoadObjFromFile":{
                 "SaveDir": ["auto", "auto"],
@@ -104,14 +111,14 @@
         "SubType": "EpochBatch",
         "Method": "GradientDescend",
         "Epoch.Num": 200,
-        "Batch.Num": "#1000 * 2",
-        "Batch.Size": 50,
+        "Batch.Num": 2000,
+        "Batch.Size": 200,
         "Task": "$^param.task.Task",
         "TrajectoryParam": {
             //"TrajectoryNum": "$Batch.Size",
-            "Trajectory.Num": "$Batch.Size",
+            "TrajectoryNum": 200,
             "XYStart.Method": "UniformInArena",
-            "StepNum": 500,
+            "StepNum": 50,
             "Arena": "&^object.world.GetArenaByIndex(0)",
             "StepLength.Distribution":{
                 "Type": "Reyleigh",

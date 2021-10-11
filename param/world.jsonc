@@ -4,6 +4,15 @@
             "Shapes":[
                 {
                     "Type": "Polygon",
+                    "Subtype": "DefaultSquare",
+                    "Init.Method": "FromVertices",
+                },
+            ]
+        },
+        {
+            "Shapes":[
+                {
+                    "Type": "Polygon",
                     "Subtype": "RegularPolygon",
                     "Init.Method": "CenterRadiusTheta",
                     "Init": {

@@ -7,11 +7,7 @@
         },
         "Recurrent":{
             "Num": "$^param.agent.HiddenNeurons.Num.($^param.agent.Task)",
-            "IsExciInhi": true,
-            // "ExciInhi.Weight":[
-            //     "&Modules.Recurrent.Weight",
-            //     "&Modules.Output.Weight"
-            // ],
+            "IsExciInhi": false,
             "Excitatory":{
                 "Ratio": 0.8
             },
@@ -56,8 +52,8 @@
         "Recurrent":{
             "Type":"RecurrentLIFLayer",
             "Subtype":"f(Wx+b)",
-            "IsExciInhi": true,
-            "TimeConst": 0.2,
+            //"IsExciInhi": "$Neurons.Recurrent.IsExciInhi",
+            "TimeConst": 0.1,
             "Neurons": "$Neurons.Recurrent",
             "Modules":{
                 "NonLinear":{
@@ -71,8 +67,8 @@
                     "Output.Num": "$Neurons.Recurrent.Num",
                     "NoSelfConnection": true,
                     "Weight.Init":{
-                        "Method": "kaiming",
-                        "Coefficient": 1.0e-2
+                        "Method": "KaimingNormal",
+                        "Coefficient": 1.0e-1
                     }
                 },
                 "FiringRate2Output":{
@@ -97,7 +93,7 @@
                 },
             },
             "Dynamics":{
-                "__Entry__":"&Dynamics.Main",
+                //"__Entry__":"&Dynamics.Main",
                 "Main":{
                     "In": ["recurrentInput", "cellState", "input"],
                     "Out": ["recurrentInputNext", "cellStateNext", "firingRate", "output"],
@@ -121,7 +117,7 @@
             "Input.Num":"$Neurons.Input.Num",
             "Output.Num":"$Neurons.Recurrent.Num",
             "Weight.Init":{
-                "Method": "kaiming",
+                "Method": "KaimingNormal",
                 "Coefficient": 1.0e-0
             },
             "Bias": true,
@@ -146,7 +142,7 @@
                 //"Bias": false,
                 "LinearOnLastLayer": true,
                 "Weight.Init":{
-                    "Method": "kaiming",
+                    "Method": "KaimingNormal",
                     "Coefficient": 1.0e-1
                 }
             }

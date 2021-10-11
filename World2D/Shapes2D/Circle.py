@@ -64,11 +64,46 @@ class Circle(Shapes2D.Shape2D):
         return self.Distance2Center(XYs) + MinDistance2Border < self.param.Radius
     def Vector2NearstBorder(self, XYs):
         return
+    def CheckCollision(self, XY, dXY):
+        param = self.param
+        data = self.data
+        XYNext = XY + dXY
+        PointNum = XY.shape[0]
+        LambdasOfAllEdges = np.ones((PointNum, param.Edges.Num), dtype=np.float32)
+        for Index in range(param.Edges.Num):
+            LambdasOfAllEdges[:, Index] = utils_torch.geometry2D.InterceptRatio(XY, XYNext, data.EdgesNp[np.newaxis, Index, 0], data.EdgesNp[np.newaxis, Index, 1])        
+        Lambdas = np.min(LambdasOfAllEdges, axis=1) # [PointNum, ShapeNum] --> [PointNum]
+        CollisionPointIndices = np.argwhere(Lambdas<1.0) # [CollisionPointNum, 1] --> [CollisionPointNum]
+        CollisionPointNum = CollisionPointIndices.shape[0]
+        CollisionPointIndices = CollisionPointIndices.reshape(CollisionPointNum)
+        CollisionEdgeIndices = np.argmin(LambdasOfAllEdges[CollisionPointIndices, :], axis=1)
+        
+        Collision = utils_torch.json.JsonObj2PyObj({
+            "Num": CollisionPointNum,
+            "Indices": CollisionPointIndices,
+            "Lambdas": Lambdas[CollisionPointIndices], # [CollisionPointNum]
+            "Norms": [], # [CollisionPointNum, Norms],
+            "Edges": [],
+        })
+
+        if CollisionPointNum > 0:
+            Collision.Norms = np.stack([data.EdgesNormNp[Index] for Index in CollisionEdgeIndices], axis=0)
+
+        if CollisionPointNum > 0:
+            Collision.Edges = np.stack([data.EdgesNp[Index] for Index in CollisionEdgeIndices], axis=0)
+        # self.LogCollision(XY[Collision.Indices], dXY[Collision.Indices], 
+        #     Collision.Lambdas, Collision.Norms, Collision.Edges
+        # )
+        return Collision
+
+
     def ReportInfo(self):
         param = self.param
         utils_torch.AddLog("Circle2D: ", end="")
         utils_torch.AddLog("Center:(%.1f, %.1f)"%(param.Center.X, param.Center.Y))
         utils_torch.AddLog("Radius:(%.3f)"%param.Radius)
+
+
 
 __MainClass__ = Circle
 utils_torch.model.SetMethodForWorldClass(__MainClass__)

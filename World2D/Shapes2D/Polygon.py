@@ -34,10 +34,8 @@ class Polygon(Shape2D):
         cache.CollisionLines = [] 
 
         # Check Shape Type
-        if GetAttrs(param, "Type") in ["Polygon", "Rectangle", "Triangle"]:
-            SetAttrs(param.Type, "Polygon")
-        else:
-            raise Exception()
+        assert GetAttrs(param, "Type") in ["Polygon", "Rectangle", "Triangle"]
+        SetAttrs(param.Type, "Polygon")
         EnsureAttrs(param, "Subtype", default="RegularPolygon")
         
         EnsureAttrs(param, "Internal", default="Inside")
@@ -49,12 +47,26 @@ class Polygon(Shape2D):
             self.IsOutside = self.IsInsideShape
         
         if cache.IsInit:
-            if HasAttrs(param, "Init.Center"):
-                SetAttrs(param.Init, "Center.X", GetAttrs(param.Init.Center)[0])
-                SetAttrs(param.Init, "Center.Y", GetAttrs(param.Init.Center)[1])
-
+            EnsureAttrs(param, "Init.Center", default=[0.0, 0.0])
+            SetAttrs(param.Init, "Center.X", GetAttrs(param.Init.Center)[0])
+            SetAttrs(param.Init, "Center.Y", GetAttrs(param.Init.Center)[1])
             EnsureAttrs(param, "Init.Method", default="FromVertices")
+
+            XYCenter = param.Init.Center
+            XCenter, YCenter = XYCenter[0], XYCenter[1]
+
             if param.Init.Method in ["FromVertices", "FromVertex"]:
+                if not HasAttrs(param, "Vertices"):
+                    if param.Subtype in ["VerticalSquare", "HorizontalSquare", "DefaultSquare"]:
+                        if not HasAttrs(param, "Vertices"):
+                            SetAttrs(param, "Vertices", 
+                                value=[
+                                    [XCenter - 1.0, YCenter - 1.0], 
+                                    [XCenter + 1.0, YCenter - 1.0], 
+                                    [XCenter + 1.0, YCenter + 1.0], 
+                                    [XCenter - 1.0, YCenter + 1.0],
+                                ]
+                            )
                 self.CalculatEdgesFromVertices()
             elif param.Init.Method in ["CenterRadiusTheta"]:
                 CheckAttrs(param.Subtype, value="RegularPolygon")
@@ -65,6 +77,7 @@ class Polygon(Shape2D):
             data.VerticesNp = np.array(GetAttrs(param.Vertices), dtype=np.float32)
             self.CalculateEdgesInfo()
             self.CalculateBoundaryBox()
+        cache.EdgeNum = param.Edges.Num
         #self.PlotShape(SavePath="./Polygon.png")
     def GenerateRandomInternalPositions(self):
         return
@@ -128,11 +141,12 @@ class Polygon(Shape2D):
         SetAttrs(param, "BoundaryBox.Size", max(param.BoundaryBox.Width, param.BoundaryBox.Height))
         data.VerticesNp = VerticesNp
     def PrintInfo(self):
-        utils_torch.AddLog('ArenaPolygon: edge_num:%d'%(self.edge_num))
+        cache = self.cache
+        utils_torch.AddLog('ArenaPolygon: edge_num:%d'%(cache.EdgeNum))
         utils_torch.AddLog('center_coord:(%.1f, %.1f)'%(self.center_coord[0], self.center_coord[1]))
         utils_torch.AddLog('vertices:', end='')
         for index in range(self.edge_num):
-            utils_torch.AddLog('(%.1f, %.1f)'%(self.vertices[index][0], self.vertices[index][1]), end='')
+            utils_torch.AddLog('(%.2f, %.2f)'%(self.vertices[index][0], self.vertices[index][1]), end='')
         utils_torch.AddLog('\n')
     def Vector2NearstBorder(self, Points):
         return
@@ -141,14 +155,16 @@ class Polygon(Shape2D):
         return utils_torch.geometry2D.Distance2Edges(PointsNp, data.VerticesNp, data.EdgesNormNp)
     def IsMovingOutside(self, Points, NextPoints):
         return self.isInside(Points) * self.isOutside(NextPoints)
-    def CheckCollision(self, XY, dXY):
+    def CheckCollision(self, XYs, dXYs):
         param = self.param
         data = self.data
-        XYNext = XY + dXY
-        PointNum = XY.shape[0]
-        LambdasOfAllEdges = np.ones((PointNum, param.Edges.Num), dtype=np.float32)
-        for Index in range(param.Edges.Num):
-            LambdasOfAllEdges[:, Index] = utils_torch.geometry2D.InterceptRatio(XY, XYNext, data.EdgesNp[np.newaxis, Index, 0], data.EdgesNp[np.newaxis, Index, 1])        
+        cache = self.cache
+        XYsNext = XYs + dXYs
+
+        PointNum = XYs.shape[0]
+        LambdasOfAllEdges = np.ones((PointNum, cache.EdgeNum), dtype=np.float32)
+        for Index in range(cache.EdgeNum):
+            LambdasOfAllEdges[:, Index] = utils_torch.geometry2D.SegmentInterceptedByLine(XYs, XYsNext, data.EdgesNp[np.newaxis, Index, 0], data.EdgesNp[np.newaxis, Index, 1])        
         Lambdas = np.min(LambdasOfAllEdges, axis=1) # [PointNum, ShapeNum] --> [PointNum]
         CollisionPointIndices = np.argwhere(Lambdas<1.0) # [CollisionPointNum, 1] --> [CollisionPointNum]
         CollisionPointNum = CollisionPointIndices.shape[0]
@@ -168,9 +184,9 @@ class Polygon(Shape2D):
 
         if CollisionPointNum > 0:
             Collision.Edges = np.stack([data.EdgesNp[Index] for Index in CollisionEdgeIndices], axis=0)
-        self.LogCollision(XY[Collision.Indices], dXY[Collision.Indices], 
-            Collision.Lambdas, Collision.Norms, Collision.Edges
-        )
+        # self.LogCollision(XY[Collision.Indices], dXY[Collision.Indices], 
+        #     Collision.Lambdas, Collision.Norms, Collision.Edges
+        # )
         return Collision
     def LogCollision(self, XYs, dXYs, Lambdas, Norms, Edges, SavePath="./CollisionPlot-0.png", Plot=False):
         CollisionNum = XYs.shape[0]

@@ -472,21 +472,22 @@ class AgentPoint2D(object):
         EnsureAttrs(param, "XYStart.Method", default="UniformInArena") # should already be done
         EnsureAttrs(param, "XYStart.MinDistance2Border", default=0.0) # should already be done
         if param.XYStart.Method in ["UniformInArena"]:
-            XYStart = param.Arena.GenerateRandomInternalXYs(param.TrajectoryNum, MinDistance2Border=param.XYStart.MinDistance2Border)
+            XYStart = param.Arena.GenerateRandomInternalXYs(param.Trajectory.Num, MinDistance2Border=param.XYStart.MinDistance2Border)
         elif param.XYStart.Method in ["Given"]:
             XYStart = GetAttrs(param.XYStart)
         else:
             raise Exception()
-        XYs = np.zeros((param.TrajectoryNum, param.StepNum + 1, 2), dtype=np.float32) # [TrajectoryNum, StepNum + 2, (x,y)]
-        Directions = np.zeros([param.TrajectoryNum, param.StepNum + 1]) # head direction: [TrajectoryNum, StepNum + 1]
-        dXYs = np.zeros((param.TrajectoryNum, param.StepNum, 2), dtype=np.float32)
+        TrajectoryNum = param.Trajectory.Num
+        XYs = np.zeros((TrajectoryNum, param.StepNum + 1, 2), dtype=np.float32) # [TrajectoryNum, StepNum + 2, (x,y)]
+        Directions = np.zeros([TrajectoryNum, param.StepNum + 1]) # head direction: [TrajectoryNum, StepNum + 1]
+        dXYs = np.zeros((TrajectoryNum, param.StepNum, 2), dtype=np.float32)
 
-        dLs = utils_torch.math.SampleFromDistribution(GetAttrs(param.StepLength.Distribution), Shape=(param.TrajectoryNum, param.StepNum)) # dl = v * dt : [TrajectoryNum, StepNum]
-        dDirections = utils_torch.math.SampleFromDistribution(GetAttrs(param.DirectionChange.Distribution), Shape=(param.TrajectoryNum, param.StepNum)) # [TrajectoryNum, StepNum]
+        dLs = utils_torch.math.SampleFromDistribution(GetAttrs(param.StepLength.Distribution), Shape=(TrajectoryNum, param.StepNum)) # dl = v * dt : [TrajectoryNum, StepNum]
+        dDirections = utils_torch.math.SampleFromDistribution(GetAttrs(param.DirectionChange.Distribution), Shape=(TrajectoryNum, param.StepNum)) # [TrajectoryNum, StepNum]
 
         # Set Initial Location
         XYs[:, 0, :] = XYStart
-        Directions[:, 0] = np.random.uniform(-np.pi, np.pi, param.TrajectoryNum)
+        Directions[:, 0] = np.random.uniform(-np.pi, np.pi, TrajectoryNum)
 
         for StepIndex in range(param.StepNum):
             #utils_torch.AddLog("Step: %d"%StepIndex)
@@ -517,7 +518,7 @@ class AgentPoint2D(object):
             "dLs": dLs,
             "dDirections": dDirections,
             "StepNum": param.StepNum,
-            "TrajectoryNum": param.TrajectoryNum
+            "TrajectoryNum": TrajectoryNum
         })
     def GetTrajectoryByIndex(self, trajectory, Index):
         if isinstance(Index, int):
@@ -539,7 +540,7 @@ class AgentPoint2D(object):
         return utils_torch.plot.XYs2BoundaryBox(XYs)
     def GenerateRandomTrajectoryAndPlot(self, param, Save=False, SavePath=True):
         Trajectory = self.GenerateRandomTrajectory(param)
-        PlotNum = param.TrajectoryNum
+        PlotNum = param.Trajectory.Num
         #figure, ax = plt.subplots()
         figure, ax = plt.subplots(1, 1, figsize=(5*1.5, 5*1.0)) # figsize (width, length) in inches.
 
@@ -596,6 +597,7 @@ class AgentPoint2D(object):
     def Trajectory2ModelInputInitXY(self, Trajectory):
         return Trajectory.XYs[:, 0, :]
     def Trajectory2ModelInputInitPlaceCells(self, Trajectory):
+        cache = self.cache
         XYInit = Trajectory.XYs[:, 0, :] # [BatchSize, (x, y)]
         PlaceCellsActivity = cache.Modules.PlaceCells.XYs2Activity(XYInit) # inputInit
         return PlaceCellsActivity
