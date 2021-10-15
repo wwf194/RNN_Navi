@@ -93,7 +93,6 @@
                 },
             },
             "Dynamics":{
-                //"__Entry__":"&Dynamics.Main",
                 "Main":{
                     "In": ["recurrentInput", "cellState", "input"],
                     "Out": ["recurrentInputNext", "cellStateNext", "firingRate", "output"],

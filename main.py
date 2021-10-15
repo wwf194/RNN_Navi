@@ -6,6 +6,7 @@ import traceback
 parser = argparse.ArgumentParser()
 parser.add_argument("task", nargs="?", default="DoTasksFromFile")
 parser.add_argument("-IsDebug", default=True)
+parser.add_argument("-sd", "--SaveDir", dest="SaveDir", default=None)
 Args = parser.parse_args()
 
 TaskFilePath = "./task.jsonc"
@@ -40,9 +41,29 @@ def ScanConfigFile(FilePath="./config.jsonc"):
     import utils
     utils_torch.attrs.SetAttrs(utils.ArgsGlobal, "config", utils_torch.PyObj(config)) # mount config on utils_torch.ArgsGlobal.config
 ScanConfigFile()
-import utils
-utils.Init()
 
+def ParseMainTask(task):
+    if task in ["CleanLog", "CleanLog", "cleanlog"]:
+        task = "CleanLog"
+    elif task in ["DoTasksFromFile"]:
+        task = "DoTasksFromFile"
+    else:
+        raise Exception(task)
+    return task
+
+def InitUtils():
+    import utils_torch
+    import utils
+    Args.task = ParseMainTask(Args.task)
+    utils_torch.SetArgsGlobal(ArgsGlobal=utils.ArgsGlobal)
+    if Args.SaveDir is not None: # Create
+        utils_torch.SetSaveDir(ArgsGlobal=utils.ArgsGlobal, Name=utils.SaveDirName)
+    else:
+        utils_torch.SetSaveDir(ArgsGlobal=utils.ArgsGlobal, Name=Args.task)
+    utils_torch.SetLoggerGlobal(ArgsGlobal=utils.ArgsGlobal)
+InitUtils()
+
+import utils
 import utils_torch
 from utils_torch.attrs import *
 utils_torch.SetArgsGlobal(utils.ArgsGlobal)

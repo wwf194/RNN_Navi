@@ -80,7 +80,8 @@ class AgentPoint2D(object):
         elif param.Task in ["PredictPlaceCellsActivity"]:
             self.Trajectory2ModelInputInit = self.Trajectory2ModelInputInitPlaceCells
         else:
-            raise Exception()
+
+            raise Exception(param.Task)
         EnsureAttrs(param, "Modules.model.Input.Type", default="dXY")
         if param.Modules.model.Input.Type in ["dXY"]:
             self.Trajectory2ModelInput = self.Trajectory2ModelInputdXY

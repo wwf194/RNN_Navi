@@ -14,9 +14,9 @@ ArgsGlobal = utils_torch.PyObj({
     "logger":{}
 })
 
-def Init():
+def Init(SaveDirName="UnknownTask"):
     utils_torch.SetArgsGlobal(ArgsGlobal=ArgsGlobal)
-    utils_torch.SetSaveDir(ArgsGlobal=ArgsGlobal)
+    utils_torch.SetSaveDir(ArgsGlobal=ArgsGlobal, Name=SaveDirName)
     utils_torch.SetLoggerGlobal(ArgsGlobal=ArgsGlobal)
 
 def GetRequiredFile(file_start):

@@ -1,6 +1,6 @@
 {
     "Task": "PredictXYs",
-    "Tasks":[
+    "__Tasks__":[
         {
             "DoTasks":"&^param.task.Init"
         },
@@ -8,29 +8,40 @@
             "Train":"&^param.task.Train"
         }
     ],
-    "Load":[
-        {
-            "LoadObjFromFile":{
-                "SaveDir": ["auto", "auto"],
-                "SaveName": ["agent", "world"],
-                "MountPath": ["&^object.agent", "&^object.world"],
+    "Load":{
+        "In":["EpochIndex", "BatchIndex"],
+        "__Tasks__":[
+            {
+                "LoadObjFromFile":{
+                    "SaveDir":[
+                        ["&^SaveDirManager.GetSaveDirEpochBatch",
+                            [
+                                "Name=SavedModel",
+                                "EpochIndex=&&Load.cache.In.EpochIndex",
+                                "BatchIndex=&&Load.cache.In.BatchIndex"
+                            ],
+                        ],
+                    ],
+                    "SaveName": ["agent", "world"],
+                    "MountPath": ["/&^object.agent", "/&^object.world"],
+                },
             },
-        },
-        {
-            "LoadObj":{
-                "SourcePath": ["&^object.agent.param", "&^object.world.param"],
-                "MountPath": ["&^param.agent", "&^param.world"],
+            {
+                "LoadObj":{
+                    "SourcePath": ["&^object.agent.param", "&^object.world.param"],
+                    "MountPath": ["/&^param.agent", "/&^param.world"],
+                },
             },
-        },
-        "ParseParamStatic",
-        {
-            "FunctionCall":[
-                ["&^object.world.LoadFromParam"],
-                ["&^object.agent.LoadFromParam"],
-            ],
-        },
-        "ParseParamStatic",
-    ],
+            "ParseParamStatic",
+            {
+                "FunctionCall":[
+                    ["&^object.world.LoadFromParam"],
+                    ["&^object.agent.LoadFromParam"],
+                ],
+            },
+            "ParseParamStatic",
+        ],
+    },
     "Save":{
         "CallGraph":{
             "Routings": [
@@ -41,12 +52,12 @@
         },
         "RemoveObj":{
             "MountPath":[
-                "&^object.agent",
-                "&^object.world",
-                "&^param.agent",
-                "&^param.world"
+                "/&^object.agent",
+                "/&^object.world",
+                "/&^param.agent",
+                "/&^param.world"
             ]
-        }       
+        }   
     },
     "Init":[
         {
@@ -58,9 +69,9 @@
                         "./param/agent.jsonc"
                     ],
                     "MountPath":[
-                        "&^param.model",
-                        "&^param.world",
-                        "&^param.agent"
+                        "/&^param.model",
+                        "/&^param.world",
+                        "/&^param.agent"
                     ]
                 }
             ],
@@ -68,14 +79,14 @@
         "ParseParamStatic",
         {
             "RemoveObj":{
-                "MountPath":["&^param.model"]
+                "MountPath":["/&^param.model"]
             },
         },
         {
             "BuildObjFromParam":{
                 "ParamPath": ["&^param.world", "&^param.agent"],
                 "ModulePath": ["World2D.Arenas2D", "Agents.AgentPoint2D"],
-                "MountPath": ["&^object.world", "&^object.agent"],
+                "MountPath": ["/&^object.world", "/&^object.agent"],
             },
         },
         "ParseParamStatic",
