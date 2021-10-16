@@ -35,13 +35,9 @@
                     ["&^object.agent.LoadFromParam"],
                 ],
             },
-            "ParseParamStatic",
-            "SetTensorLocation",
             {
-                "FunctionCall": [
-                    "&^object.agent.cache.Modules.model.SetTrainWeight",
-                ]
-            },
+                "DoTasks": "&^param.task.BeforeTrain"
+            }
         ],
     },
     "Save":{
@@ -104,12 +100,18 @@
                 "&^object.agent.PlotPlaceCellsActivity",
             ],
         },
+        {
+            "DoTasks": "&^param.task.BeforeTrain"
+        }
+    ],
+    "BeforeTrain":[
         "ParseParamStatic",
         "SetTensorLocation",
-        //"ParseSelf",
         {
             "FunctionCall": [
                 "&^object.agent.cache.Modules.model.SetTrainWeight",
+                "&#utils_torch.ExternalMethods.AddObjRefForParseRouters",
+                "&#utils_torch.ExternalMethods.RegisterExternalMethods",
             ]
         },
     ],
@@ -157,6 +159,12 @@
                 "TrajectoryParam, TrainParam |--> &^object.agent.Dynamics.Test"
             ],
         },
-
+        "TestForSpatialActivityAnalysis":{
+            "SpatialActivityMap":{
+                "Resolution": 50,
+                "BoundaryBox": "&^object.world.Arenas[0].GetBoundaryBox()",
+            },
+            "Arena":"&^object.world.Arenas[0]"
+        }
     },
 }

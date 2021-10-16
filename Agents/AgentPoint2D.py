@@ -6,7 +6,7 @@ import math
 import random
 import sys
 from typing import DefaultDict
-from utils.utils import ArgsGlobal
+from utils.utils import GlobalParam
 import warnings
 
 import torch
@@ -41,7 +41,7 @@ class AgentPoint2D(object):
         self.BuildModules()
 
         EnsureAttrs(param, "InitTasks", default=[])
-        utils_torch.DoTasksForModel(param.InitTasks, ObjCurrent=self.param, ObjRoot=utils_torch.GetArgsGlobal())
+        utils_torch.DoTasksForModel(param.InitTasks, ObjCurrent=self.param, ObjRoot=utils_torch.GetGlobalParam())
         self.InitModules()
         self.ParseRouters()
         utils_torch.AddLog("AgentPoint2D: Initialized.")
@@ -104,15 +104,15 @@ class AgentPoint2D(object):
             raise Exception()
         return
     def ParseParam(self):
-        utils_torch.parse.ParsePyObjStatic(self.param, ObjCurrent=self.param, ObjRoot=utils.ArgsGlobal, InPlace=True)
-        #utils_torch.parse.ParsePyObjDynamic(self.param, ObjCurrent=self.param, ObjRoot=utils.ArgsGlobal, InPlace=True)
+        utils_torch.parse.ParsePyObjStatic(self.param, ObjCurrent=self.param, ObjRoot=utils.GlobalParam, InPlace=True)
+        #utils_torch.parse.ParsePyObjDynamic(self.param, ObjCurrent=self.param, ObjRoot=utils.GlobalParam, InPlace=True)
         return
     def PlotPlaceCellsXY(self, Save=True, SavePath=None):
         if SavePath is None:
             SavePath = utils_torch.GetMainSaveDir() + "PlaceCells/" + "agent-PlaceCells-XYs.svg"
         param = self.param
         cache = self.cache
-        ax = utils_torch.GetArgsGlobal().object.world.Arenas[0].PlotArena(Save=False)
+        ax = utils_torch.GetGlobalParam().object.world.Arenas[0].PlotArena(Save=False)
         cache.Modules.PlaceCells.PlotXYs(ax, Save=Save, SavePath=SavePath)
     def PlotPlaceCellsActivity(
             self, PlotNum=3, Resolution=50, Arena=None, 
@@ -129,7 +129,7 @@ class AgentPoint2D(object):
         else:
             CellIndices = utils_torch.RandomSelect(range(param.Modules.PlaceCells.Num), PlotNum)
         if Arena is None:
-            Arena = utils.ArgsGlobal.object.world.Arenas[0]
+            Arena = utils.GlobalParam.object.world.Arenas[0]
         BoundaryBox = Arena.param.BoundaryBox
         fig, axes = utils_torch.plot.CreateFigurePlt(PlotNum, RowNum="auto", ColNum="auto")
         ResolutionX, ResolutionY = utils_torch.plot.ParseResolution(BoundaryBox.Width, BoundaryBox.Height, Resolution)
@@ -457,7 +457,7 @@ class AgentPoint2D(object):
         }
         # return (inputs, init), outputs
     def GenerateRandomTrajectory(self, param): # StepNum, t_total, random_init=False, arena_index=None, use_test_arenas_=None, full_info=False): #return random trajectories
-        #param = utils_torch.parse.ParsePyObjDynamic(param, ObjRoot=ArgsGlobal.object, ObjCurrent=param) # should already be done
+        #param = utils_torch.parse.ParsePyObjDynamic(param, ObjRoot=GlobalParam.object, ObjCurrent=param) # should already be done
         EnsureAttrs(param, "XYStart.Method", default="UniformInArena") # should already be done
         EnsureAttrs(param, "XYStart.MinDistance2Border", default=0.0) # should already be done
         if param.XYStart.Method in ["UniformInArena"]:

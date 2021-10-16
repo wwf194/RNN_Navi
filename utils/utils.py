@@ -10,14 +10,14 @@ from inspect import getframeinfo, stack
 
 import utils_torch
 
-ArgsGlobal = utils_torch.PyObj({
+GlobalParam = utils_torch.PyObj({
     "logger":{}
 })
 
 def Init(SaveDirName="UnknownTask"):
-    utils_torch.SetArgsGlobal(ArgsGlobal=ArgsGlobal)
-    utils_torch.SetSaveDir(ArgsGlobal=ArgsGlobal, Name=SaveDirName)
-    utils_torch.SetLoggerGlobal(ArgsGlobal=ArgsGlobal)
+    utils_torch.SetGlobalParam(GlobalParam=GlobalParam)
+    utils_torch.SetSaveDir(GlobalParam=GlobalParam, Name=SaveDirName)
+    utils_torch.SetLoggerGlobal(GlobalParam=GlobalParam)
 
 def GetRequiredFile(file_start):
     if isinstance(file_start, str):
@@ -56,7 +56,7 @@ def _GetRequiredFile(file, file_list):
             _GetRequiredFile(file_rel_main, file_list)
 
 # def GetSaveDir():
-#     return ArgsGlobal.SaveDir
+#     return GlobalParam.SaveDir
 
 # basic Json manipulation methods
 def JsonFile2JsonObj(file_path):

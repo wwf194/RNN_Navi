@@ -202,17 +202,6 @@
         "GradientDescend.Type":"GradientDescend"
     },
     "Dynamics":{
-        // "Run":{
-        //     "In":["inputInit", "inputSeries", "time"],
-        //     "Out":["OutputSeries"],
-        //     "Routings":[
-        //         "inputSeries |--> &Inputs.Receive",
-        //         "inputInit |--> &InputInit2StateInit |--> state",
-        //         "state |--> &Splitter |--> hiddenState, cellState",
-        //         "hiddenState, cellState |--> &Iterate |--> hiddenState, cellState || repeat=%time",
-        //         "&Outputs.Send |--> OutputSeries"
-        //     ]
-        // },
         "Run":{
             "In":["inputInit", "inputSeries", "time"],
             "Out":["outputSeries", "hiddenStateSeries", "cellStateSeries", "firingRateSeries"],
@@ -331,6 +320,8 @@
                 "firingRateSeries,  Name=FiringRates |-->   &LogTimeVaryingActivity",
                 "outputSeries,      Name=Outputs |-->       &LogTimeVaryingActivity",
                 "outputTarget,      Name=OutputTargets |--> &LogTimeVaryingActivity",
+                
+                // "firingRateSeries,  Name=FiringRates |-->   &LogSpatialActivity",
             ]
         },
         "Test":{
