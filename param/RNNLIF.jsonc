@@ -202,18 +202,18 @@
         "GradientDescend.Type":"GradientDescend"
     },
     "Dynamics":{
+        // "Run":{
+        //     "In":["inputInit", "inputSeries", "time"],
+        //     "Out":["OutputSeries"],
+        //     "Routings":[
+        //         "inputSeries |--> &Inputs.Receive",
+        //         "inputInit |--> &InputInit2StateInit |--> state",
+        //         "state |--> &Splitter |--> hiddenState, cellState",
+        //         "hiddenState, cellState |--> &Iterate |--> hiddenState, cellState || repeat=%time",
+        //         "&Outputs.Send |--> OutputSeries"
+        //     ]
+        // },
         "Run":{
-            "In":["inputInit", "inputSeries", "time"],
-            "Out":["OutputSeries"],
-            "Routings":[
-                "inputSeries |--> &Inputs.Receive",
-                "inputInit |--> &InputInit2StateInit |--> state",
-                "state |--> &Splitter |--> hiddenState, cellState",
-                "hiddenState, cellState |--> &Iterate |--> hiddenState, cellState || repeat=%time",
-                "&Outputs.Send |--> OutputSeries"
-            ]
-        },
-        "RunTrain":{
             "In":["inputInit", "inputSeries", "time"],
             "Out":["outputSeries", "hiddenStateSeries", "cellStateSeries", "firingRateSeries"],
             "Routings":[
@@ -267,7 +267,6 @@
                 "activity, refLoss |--> &ActivityConstrainLoss |--> activityConstrainLoss"
             ]
         },
-
         "Optimize":{
             "In": ["output", "outputTarget", "activity", "trainParam"],
             "Routings":[
@@ -276,12 +275,14 @@
                 "mainLoss |--> &CalculateWeightConstrainLoss |--> weightConstrainLoss",
                 "mainLoss, activityConstrainLoss, weightConstrainLoss |--> &Add |--> totalLoss",
                 "totalLoss |--> &CalculateGradient",
-                "&*GetTrainWeight |--> trainWeight",
-                "trainWeight, trainParam |--> &GradientDescend",
-                
-                "trainWeight |--> &LogWeightStat",
+
                 "&*GetPlotWeight |--> plotWeight",
-                "plotWeight |--> &LogWeight",
+                "plotWeight |--> &LogWeight", // Log weight before updating
+
+                "&*GetTrainWeight |--> trainWeight",
+                "trainWeight |--> &LogWeightStat",
+                "trainWeight, trainParam |--> &GradientDescend",
+ 
                 "output, Name='output' |--> &LogStat",
                 "outputTarget, Name='outputTarget' |--> &LogStat",
                 
@@ -299,12 +300,14 @@
                 "mainLoss |--> &CalculateWeightConstrainLoss |--> weightConstrainLoss",
                 "mainLoss, activityConstrainLoss, weightConstrainLoss |--> &Add |--> totalLoss",
                 "totalLoss |--> &CalculateGradient",
-                "&*GetTrainWeight |--> trainWeight",
-                //"trainWeight, trainParam |--> &GradientDescend",
                 
-                "trainWeight |--> &LogWeightStat",
                 "&*GetPlotWeight |--> plotWeight",
                 "plotWeight |--> &LogWeight",
+
+                "&*GetTrainWeight |--> trainWeight",
+                "trainWeight |--> &LogWeightStat",
+                "trainWeight, trainParam, Update=False |--> &GradientDescend",
+                
                 "output, Name='output' |--> &LogStat",
                 "outputTarget, Name='outputTarget' |--> &LogStat",
                 
@@ -319,15 +322,15 @@
             "Out":[],
             "Routings":[
                 "input |--> &Split |--> inputInit, inputSeries, time",
-                "inputInit, inputSeries, time |--> &RunTrain |--> outputSeries, hiddenStateSeries, cellStateSeries, firingRateSeries",
+                "inputInit, inputSeries, time |--> &Run |--> outputSeries, hiddenStateSeries, cellStateSeries, firingRateSeries",
                 "hiddenStateSeries, cellStateSeries, firingRateSeries |--> &Merge |--> activity",
                 "outputSeries, outputTarget, activity, trainParam |--> &Optimize",
 
-                "hiddenStateSeries, Name=HiddenStates |--> &LogTimeVaryingActivity",
-                "cellStateSeries,   Name=CellStates |--> &LogTimeVaryingActivity",
-                "firingRateSeries,  Name=FiringRates |--> &LogTimeVaryingActivity",
-                "outputSeries, Name=Outputs |--> &LogTimeVaryingActivity",
-                "outputTarget, Name=OutputTargets |--> &LogTimeVaryingActivity",
+                "hiddenStateSeries, Name=HiddenStates |-->  &LogTimeVaryingActivity",
+                "cellStateSeries,   Name=CellStates |-->    &LogTimeVaryingActivity",
+                "firingRateSeries,  Name=FiringRates |-->   &LogTimeVaryingActivity",
+                "outputSeries,      Name=Outputs |-->       &LogTimeVaryingActivity",
+                "outputTarget,      Name=OutputTargets |--> &LogTimeVaryingActivity",
             ]
         },
         "Test":{
@@ -335,7 +338,7 @@
             "Out":[],
             "Routings":[
                 "input |--> &Split |--> inputInit, inputSeries, time",
-                "inputInit, inputSeries, time |--> &RunTrain |--> outputSeries, hiddenStateSeries, cellStateSeries, firingRateSeries",
+                "inputInit, inputSeries, time |--> &Run |--> outputSeries, hiddenStateSeries, cellStateSeries, firingRateSeries",
                 "hiddenStateSeries, cellStateSeries, firingRateSeries |--> &Merge |--> activity",
                 "outputSeries, outputTarget, activity, trainParam |--> &OptimizeTest",
 

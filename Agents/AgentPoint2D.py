@@ -31,40 +31,28 @@ class AgentPoint2D(object):
             ClassPath="Agents.AgentPoint2D",
             **kw
         )
-    def InitFromParam(self, param=None, IsLoad=False):
-        if param is not None:
-            self.param = param
-        else:
-            param = self.param
-            data = self.data
-            cache = self.cache
-        param.cache.__object__ = self
-        cache.IsLoad = IsLoad
-        cache.IsInit = not IsLoad
+    def InitFromParam(self, IsLoad=False):
+        utils_torch.model.InitFromParamForModel(self, IsLoad)
+        param = self.param
+        data = self.data
+        cache = self.cache
         
-        cache.Modules = utils_torch.EmptyPyObj()
-        cache.Dynamics = utils_torch.EmptyPyObj()
-        self.Modules = cache.Modules
-        self.Dynamics = cache.Dynamics
-        
-        utils_torch.AddLog("Agent: Initializing.")
+        utils_torch.AddLog("AgentPoint2D: Initializing...")
         self.BuildModules()
 
         EnsureAttrs(param, "InitTasks", default=[])
-        InitTasks = utils_torch.ParseTaskObj(param.InitTasks)
-        for Task in InitTasks:
-            utils_torch.DoTask(Task, ObjCurrent=self.param, ObjRoot=utils.ArgsGlobal)
+        utils_torch.DoTasksForModel(param.InitTasks, ObjCurrent=self.param, ObjRoot=utils_torch.GetArgsGlobal())
         self.InitModules()
         self.ParseRouters()
-        utils_torch.AddLog("Agent: Initialized.")
+        utils_torch.AddLog("AgentPoint2D: Initialized.")
         
         self.PlotPlaceCellsActivity(
             Save=True,
-            SavePath=utils_torch.GetSaveDir() + "PlaceCells/" + "PlaceCellsActivity.png"
+            SavePath=utils_torch.GetMainSaveDir() + "PlaceCells/" + "PlaceCellsActivity.png"
         )
         self.PlotPlaceCellsXY(
             Save=True,
-            SavePath=utils_torch.GetSaveDir() + "PlaceCells/" + "PlaceCellsXY.png"
+            SavePath=utils_torch.GetMainSaveDir() + "PlaceCells/" + "PlaceCellsXY.png"
         )
         #self.SetFullName("") # FullName should be set from outside.
     def AddModule(self, name, module):
@@ -109,7 +97,7 @@ class AgentPoint2D(object):
         else:
             raise Exception()
         if param.Modules.model.Input.Type in ["dXY"]:
-            SetAttrs(param, "model.Neurons.Input.Num", value=2)
+            SetAttrs(param, "Modules.model.Neurons.Input.Num", value=2)
         elif param.Modules.model.Input.Type in ["dLDirection"]:
             SetAttrs(param, "Modules.model.Neurons.Input.Num", value=3)
         else:
@@ -121,7 +109,7 @@ class AgentPoint2D(object):
         return
     def PlotPlaceCellsXY(self, Save=True, SavePath=None):
         if SavePath is None:
-            SavePath = utils_torch.GetSaveDir() + "PlaceCells/" + "agent-PlaceCells-XYs.svg"
+            SavePath = utils_torch.GetMainSaveDir() + "PlaceCells/" + "agent-PlaceCells-XYs.svg"
         param = self.param
         cache = self.cache
         ax = utils_torch.GetArgsGlobal().object.world.Arenas[0].PlotArena(Save=False)
@@ -134,7 +122,7 @@ class AgentPoint2D(object):
         cache = self.cache
         
         if SavePath is None:
-            SavePath = utils_torch.GetSaveDir() + "PlaceCells/" + "agent-PlaceCells-XYs.svg"
+            SavePath = utils_torch.GetMainSaveDir() + "PlaceCells/" + "agent-PlaceCells-XYs.svg"
         
         if PlotNum > param.Modules.PlaceCells.Num:
             CellIndices = range(param.Modules.PlaceCells.Num)

@@ -86,7 +86,7 @@ class PlaceCells2D(object):
         return
     def PlotXYs(self, ax=None, Save=False, SavePath=None):
         if SavePath is None:
-            SavePath=utils_torch.GetSaveDir() + "PlaceCells2D-XYs.png"
+            SavePath=utils_torch.GetMainSaveDir() + "PlaceCells2D-XYs.png"
         data = self.data
         if ax is None:
             plt.close("all")

@@ -1,23 +1,49 @@
-[
-    { // Load task json file.
-        "LoadParamFile":[
-            {
-                "FilePath":"./param/task-predictXYs.jsonc",
-                "MountPath":"&^param.task"
-            }
-        ],
-    },
-    { // Build data logger.
-        "BuildObj":{
-            "ModulePath": [
-                "utils_torch.log.LoggerForEpochBatchTrain"
+{
+   "Main":[
+        { // Load task json file.
+            "LoadParamFile":[
+                {
+                    "FilePath":"./param/task-predictXYs.jsonc",
+                    "MountPath":"&^param.task"
+                }
             ],
-            "MountPath":[
-                "&^log.Data"
-            ]
+        },
+        { // Build data logger.
+            "BuildObj":{
+                "ModulePath": [
+                    "utils_torch.log.LoggerForEpochBatchTrain"
+                ],
+                "MountPath":[
+                    "&^log.Data"
+                ]
+            }
+        },
+        { // Do tasks in task json file.
+            "DoTasks": "&^param.task.Main"
         }
-    },
-    { // Do tasks in task json file.
-        "DoTasks": "&^param.task"
-    }
-]
+    ],
+    "AddAnalysis":[
+        { // Load task json file.
+            "LoadParamFile":[
+                {
+                    "FilePath":"./param/task-predictXYs.jsonc",
+                    "MountPath":"&^param.task"
+                }
+            ],
+        },
+        { // Build data logger.
+            "BuildObj":{
+                "ModulePath": [
+                    "utils_torch.log.LoggerForEpochBatchTrain"
+                ],
+                "MountPath":[
+                    "&^log.Data"
+                ]
+            }
+        },
+        //"SetTensorLocation",
+        { // Do tasks in task json file.
+            "FunctionCall": "#utils_torch.train.AddAnalysis"
+        }
+    ]
+}

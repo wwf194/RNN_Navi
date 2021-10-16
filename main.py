@@ -6,11 +6,14 @@ import traceback
 parser = argparse.ArgumentParser()
 parser.add_argument("task", nargs="?", default="DoTasksFromFile")
 parser.add_argument("-IsDebug", default=True)
-parser.add_argument("-sd", "--SaveDir", dest="SaveDir", default=None)
+# parser.add_argument("-sd", "--SaveDir", dest="SaveDir", default=None)
+parser.add_argument("-sd", "--SaveDir", dest="SaveDir", default="./log/DoTasksFromFile-2021-10-16-16:04:16/")
+parser.add_argument("-tf", "--TaskFile", dest="TaskFile", default="./task.jsonc")
+# parser.add_argument("-tn", "--TaskName", dest="TaskName", default="Main")
+parser.add_argument("-tn", "--TaskName", dest="TaskName", default="AddAnalysis")
 Args = parser.parse_args()
 
-TaskFilePath = "./task.jsonc"
-
+TaskFilePath = Args.TaskFile
 def main():
     if Args.task in ["CleanLog", "CleanLog", "cleanlog"]:
         CleanLog()
@@ -18,15 +21,15 @@ def main():
         CleanFigures()
     elif Args.task in ["DoTasksFromFile"]:
         TaskObj = utils_torch.LoadTaskFile(TaskFilePath)
-        TaskList = utils_torch.ParseTaskObj(TaskObj)
+        Tasks = getattr(TaskObj, Args.TaskName)
         if not Args.IsDebug:
             try: # catch all unhandled exceptions
-                utils_torch.DoTasks(TaskList, ObjRoot=utils_torch.GetArgsGlobal())
+                utils_torch.DoTasks(Tasks, ObjRoot=utils_torch.GetArgsGlobal())
             except Exception:
                 utils_torch.AddError(traceback.format_exc())
                 raise Exception()
         else:
-            utils_torch.DoTasks(TaskList, ObjRoot=utils_torch.GetArgsGlobal())
+            utils_torch.DoTasks(Tasks, ObjRoot=utils_torch.GetArgsGlobal())
     elif Args.task in ["TotalLines"]:
         utils_torch.CalculateGitProjectTotalLines()
     else:
@@ -56,10 +59,10 @@ def InitUtils():
     import utils
     Args.task = ParseMainTask(Args.task)
     utils_torch.SetArgsGlobal(ArgsGlobal=utils.ArgsGlobal)
-    if Args.SaveDir is not None: # Create
-        utils_torch.SetSaveDir(ArgsGlobal=utils.ArgsGlobal, Name=utils.SaveDirName)
-    else:
-        utils_torch.SetSaveDir(ArgsGlobal=utils.ArgsGlobal, Name=Args.task)
+    if Args.SaveDir is not None:
+        utils_torch.SetMainSaveDir(ArgsGlobal=utils.ArgsGlobal, SaveDir=Args.SaveDir)
+    else:  # Create
+        utils_torch.SetMainSaveDir(ArgsGlobal=utils.ArgsGlobal, Name=Args.task)
     utils_torch.SetLoggerGlobal(ArgsGlobal=utils.ArgsGlobal)
 InitUtils()
 
@@ -76,3 +79,5 @@ def CleanFigures():
 
 if __name__=="__main__":
     main()
+
+

@@ -126,7 +126,7 @@ class Arena2D():
         return
     def PlotInsideMask(self, ax=None, Save=False, SavePath=None):
         if SavePath is None:
-            SavePath = utils_torch.GetSaveDir() + "Arenas/" + "Arena2D-InsideMask.png"
+            SavePath = utils_torch.GetMainSaveDir() + "Arenas/" + "Arena2D-InsideMask.png"
         if ax is None:
             fig, ax = plt.subplots()
         mask = self.GetInsideMask(ResolutionX=50, ResolutionY=50)

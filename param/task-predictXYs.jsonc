@@ -1,6 +1,6 @@
 {
     "Task": "PredictXYs",
-    "__Tasks__":[
+    "Main":[
         {
             "DoTasks":"&^param.task.Init"
         },
@@ -9,18 +9,14 @@
         }
     ],
     "Load":{
-        "In":["EpochIndex", "BatchIndex"],
+        "In":["SaveDir"],
         "__Tasks__":[
             {
                 "LoadObjFromFile":{
                     "SaveDir":[
-                        ["&^SaveDirManager.GetSaveDirEpochBatch",
-                            [
-                                "Name=SavedModel",
-                                "EpochIndex=&&Load.cache.In.EpochIndex",
-                                "BatchIndex=&&Load.cache.In.BatchIndex"
-                            ],
-                        ],
+                        //"utils_torch.GetMainSaveDirEpochBatch('SavedModel', &&Load.cache.In.EpochIndex, &&Load.cache.In.BatchIndex)",
+                        //"utils_torch.GetMainSaveDirEpochBatch('SavedModel', &&Load.cache.In.EpochIndex, &&Load.cache.In.BatchIndex)",
+                        "&~cache.In.SaveDir", "&~cache.In.SaveDir"
                     ],
                     "SaveName": ["agent", "world"],
                     "MountPath": ["/&^object.agent", "/&^object.world"],
@@ -40,24 +36,33 @@
                 ],
             },
             "ParseParamStatic",
+            "SetTensorLocation",
+            {
+                "FunctionCall": [
+                    "&^object.agent.cache.Modules.model.SetTrainWeight",
+                ]
+            },
         ],
     },
     "Save":{
-        "CallGraph":{
-            "Routings": [
-                "Type=Obj |--> &#utils_torch.GetSaveDir |--> SaveDir",
-                "Name=agent, SaveDir=%SaveDir |--> &^object.agent.Save",
-                "Name=world, SaveDir=%SaveDir |--> &^object.world.Save",
-            ]
-        },
-        "RemoveObj":{
-            "MountPath":[
-                "/&^object.agent",
-                "/&^object.world",
-                "/&^param.agent",
-                "/&^param.world"
-            ]
-        }   
+        "__Tasks__":[
+            {
+                "FunctionCall":[
+                    ["&^object.agent.Save", ["Name=agent", "&~cache.In.SaveDir"]],
+                    ["&^object.world.Save", ["Name=world", "&~cache.In.SaveDir"]],
+                ]
+            },
+            {
+                "RemoveObj":{
+                    "MountPath":[
+                        "/&^object.agent",
+                        "/&^object.world",
+                        "/&^param.agent",
+                        "/&^param.world"
+                    ]
+                },
+            },
+        ],
     },
     "Init":[
         {
@@ -97,13 +102,11 @@
                 ["&^object.agent.SetFullName", "agent"],
                 ["&^object.world.SetFullName", "world"],
                 "&^object.agent.PlotPlaceCellsActivity",
-                // "&^object.agent.cache.Modules.model.SetTrainWeight",
-                //["&^agent.GenerateRandomTrajectoryAndPlot", ["param=50"]]
             ],
         },
         "ParseParamStatic",
         "SetTensorLocation",
-        "ParseSelf",
+        //"ParseSelf",
         {
             "FunctionCall": [
                 "&^object.agent.cache.Modules.model.SetTrainWeight",
@@ -119,7 +122,6 @@
         "Batch.Size": 50,
         "Task": "$^param.task.Task",
         "TrajectoryParam": {
-            //"TrajectoryNum": "$Batch.Size",
             "Trajectory.Num": "$Batch.Size",
             "XYStart.Method": "UniformInArena",
             "StepNum": 500,
@@ -146,21 +148,15 @@
             "In":["TrajectoryParam", "TrainParam"],
             "Routings": [
                 "TrainParam |--> &#utils_torch.train.ParseTrainParamEpochBatch",
-                "TrajectoryParam, TrainParam |--> &^object.agent.cache.Dynamics.Train"
+                "TrajectoryParam, TrainParam |--> &^object.agent.Dynamics.Train"
             ],
         },
         "Batch.Test":{
             "In":["TrajectoryParam", "TrainParam"],
             "Routings": [
-                "TrajectoryParam, TrainParam |--> &^object.agent.cache.Dynamics.Test"
+                "TrajectoryParam, TrainParam |--> &^object.agent.Dynamics.Test"
             ],
         },
 
     },
-    "Analysis":{
-        "Routings":[
-            
-            "&^object.agent.CompareTrajectory"
-        ]
-    }
 }

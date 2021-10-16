@@ -6,13 +6,11 @@
         "PredictXYs": 100,
         "PredictPlaceCellsActivity": 2048
     },
-    
     "InitTasks":[
         {
             "FunctionCall": [
                 "&*SetModelInputOutput",
                 "&*ParseParam",
-                //["&*SetFullName", [""]],
             ]
         },
     ],
@@ -78,7 +76,7 @@
                 "TrajectoryParam |--> &GenerateRandomTrajectory |--> Trajectory",
                 "Trajectory |--> &Trajectory2ModelInput |--> ModelInput",
                 "Trajectory |--> &Trajectory2ModelOutput |--> ModelOutputTarget",
-                "ModelInput, ModelOutputTarget, TrainParam |--> &model.cache.Dynamics.Test",
+                "ModelInput, ModelOutputTarget, TrainParam |--> &model.Dynamics.Test",
             ],
         }
     }

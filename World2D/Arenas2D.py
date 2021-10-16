@@ -42,11 +42,11 @@ class Arenas2D:
         self.PlotInsideMasks()
     def PlotInsideMasks(self, SaveDir=None):
         if SaveDir is None:
-            SaveDir = utils_torch.GetSaveDir()
+            SaveDir = utils_torch.GetMainSaveDir()
         for Index, Arena in enumerate(self.Arenas):
             Arena.PlotInsideMask(
                 Save=True,
-                SavePath=utils_torch.GetSaveDir() + "Arenas/" + "Arenas2D-InsideMask=%d.png"%Index
+                SavePath=utils_torch.GetMainSaveDir() + "Arenas/" + "Arenas2D-InsideMask=%d.png"%Index
             )
     def PlotArenas(self, save=True, save_path='./', **kw):
         for index, arena in enumerate(self.Arenas):
