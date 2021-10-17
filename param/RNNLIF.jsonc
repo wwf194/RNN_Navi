@@ -209,7 +209,7 @@
                 "inputSeries |--> &Inputs.Receive",
                 "inputInit |--> &InputInit2StateInit |--> state",
                 "state |--> &Splitter |--> hiddenState, cellState",
-                "hiddenState, cellState |--> &IterateTrain |--> hiddenState, cellState || repeat=%time",
+                "hiddenState, cellState |--> &Iterate |--> hiddenState, cellState || repeat=%time",
                 "&Outputs.Send |--> outputSeries",
                 "&HiddenStates.Send |--> hiddenStateSeries",
                 "&CellStates.Send |--> cellStateSeries",
@@ -217,18 +217,6 @@
             ]
         },
         "Iterate":{
-            "In":["hiddenState", "cellState"],
-            "Out":["hiddenState", "cellState"],
-            "Routings":[
-                "&Inputs.Send |--> input",
-                "input |--> &Input |--> inputProcessed",
-                "hiddenState, cellState, inputProcessed |--> &Recurrent |--> hiddenState, cellState, output, firingRate",
-                "output |--> &Outputs.Receive",
-                "hiddenState |--> &HiddenStates.Receive",
-                "cellState |--> &CellStates.Receive"
-            ]
-        },
-        "IterateTrain":{
             "In":["hiddenState", "cellState"],
             "Out":["hiddenState", "cellState"],
             "Routings":[
@@ -291,19 +279,19 @@
                 "totalLoss |--> &CalculateGradient",
                 
                 "&*GetPlotWeight |--> plotWeight",
-                "plotWeight |--> &LogWeight",
+                "plotWeight, logger=DataTest |--> &LogWeight",
 
                 "&*GetTrainWeight |--> trainWeight",
-                "trainWeight |--> &LogWeightStat",
+                "trainWeight, logger=DataTest |--> &LogWeightStat",
                 "trainWeight, trainParam, Update=False |--> &GradientDescend",
                 
-                "output, Name='output' |--> &LogStat",
-                "outputTarget, Name='outputTarget' |--> &LogStat",
+                "output, Name='output', logger=DataTest |--> &LogStat",
+                "outputTarget, Name='outputTarget', logger=DataTest |--> &LogStat",
                 
-                "totalLoss, Name=TotalLoss |--> &LogLoss",
-                "mainLoss, Name=MainLoss |--> &LogLoss",
-                "activityConstrainLoss, Name=ActivityConstrainLoss |--> &LogLoss",
-                "weightConstrainLoss, Name=WeightConstrainLoss |--> &LogLoss",
+                "totalLoss, Name=TotalLoss, logger=DataTest |--> &LogLoss",
+                "mainLoss, Name=MainLoss, logger=DataTest |--> &LogLoss",
+                "activityConstrainLoss, Name=ActivityConstrainLoss, logger=DataTest |--> &LogLoss",
+                "weightConstrainLoss, Name=WeightConstrainLoss, logger=DataTest |--> &LogLoss",
             ],
         },
         "Train":{
@@ -333,11 +321,11 @@
                 "hiddenStateSeries, cellStateSeries, firingRateSeries |--> &Merge |--> activity",
                 "outputSeries, outputTarget, activity, trainParam |--> &OptimizeTest",
 
-                "hiddenStateSeries, Name=HiddenStates |--> &LogTimeVaryingActivity",
-                "cellStateSeries,   Name=CellStates |--> &LogTimeVaryingActivity",
-                "firingRateSeries,  Name=FiringRates |--> &LogTimeVaryingActivity",
-                "outputSeries, Name=Outputs |--> &LogTimeVaryingActivity",
-                "outputTarget, Name=OutputTargets |--> &LogTimeVaryingActivity",
+                "hiddenStateSeries, Name=HiddenStates, logger=DataTest |--> &LogTimeVaryingActivity",
+                "cellStateSeries,   Name=CellStates, logger=DataTest   |--> &LogTimeVaryingActivity",
+                "firingRateSeries,  Name=FiringRates, logger=DataTest  |--> &LogTimeVaryingActivity",
+                "outputSeries, Name=Outputs, logger=DataTest           |--> &LogTimeVaryingActivity",
+                "outputTarget, Name=OutputTargets, logger=DataTest     |--> &LogTimeVaryingActivity",
             ]
         },
         "__Entry__":"&Dynamics.Run"

@@ -36,16 +36,21 @@ class AgentPoint2D(object):
         param = self.param
         data = self.data
         cache = self.cache
-        
-        utils_torch.AddLog("AgentPoint2D: Initializing...")
+        if cache.IsInit:
+            utils_torch.AddLog("AgentPoint2D: Initializing...")
+        else:
+            utils_torch.AddLog("AgentPoint2D: Loading...")
         self.BuildModules()
 
         EnsureAttrs(param, "InitTasks", default=[])
         utils_torch.DoTasksForModel(param.InitTasks, ObjCurrent=self.param, ObjRoot=utils_torch.GetGlobalParam())
         self.InitModules()
         self.ParseRouters()
-        utils_torch.AddLog("AgentPoint2D: Initialized.")
-        
+
+        if cache.IsInit:
+            utils_torch.AddLog("AgentPoint2D: Initialized.")
+        else:
+            utils_torch.AddLog("AgentPoint2D: Loaded.")
         self.PlotPlaceCellsActivity(
             Save=True,
             SavePath=utils_torch.GetMainSaveDir() + "PlaceCells/" + "PlaceCellsActivity.png"
@@ -129,7 +134,7 @@ class AgentPoint2D(object):
         else:
             CellIndices = utils_torch.RandomSelect(range(param.Modules.PlaceCells.Num), PlotNum)
         if Arena is None:
-            Arena = utils.GlobalParam.object.world.Arenas[0]
+            Arena = utils_torch.GlobalParam.object.world.Arenas[0]
         BoundaryBox = Arena.param.BoundaryBox
         fig, axes = utils_torch.plot.CreateFigurePlt(PlotNum, RowNum="auto", ColNum="auto")
         ResolutionX, ResolutionY = utils_torch.plot.ParseResolution(BoundaryBox.Width, BoundaryBox.Height, Resolution)

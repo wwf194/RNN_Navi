@@ -11,7 +11,7 @@ from inspect import getframeinfo, stack
 import utils_torch
 
 GlobalParam = utils_torch.PyObj({
-    "logger":{}
+    "log":{}
 })
 
 def Init(SaveDirName="UnknownTask"):

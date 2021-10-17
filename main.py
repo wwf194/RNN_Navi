@@ -85,7 +85,9 @@ utils_torch.RegisterExternalMethods("AddObjRefForParseRouters", AddObjRefForPars
 
 def RegisterExternalMethods():
     utils_torch.RegisterExternalMethods("InitSpatialActivity", utils.model.InitSpatialActivity)
+    utils_torch.RegisterExternalMethods("LogSpatialActivity", utils.model.LogSpatialActivity)
     utils_torch.RegisterExternalMethods("CalculateSpatialActivity", utils.model.CalculateSpatialActivity)
+    utils_torch.RegisterExternalMethods("PlotSpatialActivity", utils.model.PlotSpatialActivity)
 utils_torch.RegisterExternalMethods("RegisterExternalMethods", RegisterExternalMethods)
 
 if __name__=="__main__":

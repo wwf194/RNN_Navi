@@ -145,6 +145,9 @@
             "Dampening": 0.0, 
             "Nesterov": false,
         },
+        "NotifyEpochBatchList":[
+            "&^log.Data", "&^log.DataTest",
+        ],
         "Batch.Input": ["&TrajectoryParam", "&TrainParam"],
         "Batch.Train":{
             "In":["TrajectoryParam", "TrainParam"],
@@ -163,8 +166,11 @@
             "SpatialActivityMap":{
                 "Resolution": 50,
                 "BoundaryBox": "&^object.world.Arenas[0].GetBoundaryBox()",
+                "NeuronNum": "&^object.agent.Modules.model.param.Neurons.Recurrent.Num"
             },
-            "Arena":"&^object.world.Arenas[0]"
+            "Arena":"&^object.world.Arenas[0]",
+            "Batch.Num": 5,
+            "Batch.Internal":"$Test.Batch.Internal"
         }
     },
 }
